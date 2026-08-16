@@ -261,17 +261,39 @@ def check_counter_sync(url, key):
 
 
 def check_completeness(items, decks):
+    """
+    完整度只對「該有這個欄位的條目」計算。
+
+    以前 pos 的分母是全部條目，於是 271 條句子被算成「缺詞性」——
+    但句子沒有詞性，那不是缺，是不適用。分母放錯會讓這個數字
+    永遠停在偏低，看起來像有一大筆待辦，實際上沒有。
+
+    example_ko 同理：句子本身就是例句，不需要再附一句。
+    """
+    # 欄位 → 哪些條目該有它。None = 全部都該有。
+    APPLIES = {
+        "romanization": None,
+        "hanja":        None,                                  # 漢字詞才有，本就非全有
+        "pos":          lambda x: x["item_type"] != "sentence",
+        "example_ko":   lambda x: x["item_type"] != "sentence",
+        "note":         None,
+    }
     by_deck = defaultdict(list)
     for x in items:
         by_deck[x["deck"]].append(x)
     lines = []
     for deck, rows in sorted(by_deck.items()):
         parts = []
-        for f in ("romanization", "hanja", "pos", "example_ko", "note"):
-            n = sum(1 for x in rows if x.get(f))
-            parts.append(f"{f} {n*100//len(rows)}%")
+        for f, applies in APPLIES.items():
+            scope = [x for x in rows if applies(x)] if applies else rows
+            if not scope:
+                continue
+            n = sum(1 for x in scope if x.get(f))
+            mark = "" if applies is None else f"/{len(scope)}"
+            parts.append(f"{f} {n*100//len(scope)}%{mark}")
         lines.append(f"{deck}（{len(rows)} 條）  " + " · ".join(parts))
-    issue("info", "欄位完整度", lines)
+    issue("info", "欄位完整度", lines,
+          "pos 與 example_ko 的分母已排除句子 —— 句子沒有詞性，本身就是例句。")
 
 
 # =====================================================================
