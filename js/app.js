@@ -24,6 +24,7 @@ let shownAt = 0;
 let sessionStats = { n: 0, correct: 0 };
 let isSignUp = false;
 let profile = null;
+let weakIds = [];
 let pool = [];          // 選擇題干擾項來源
 let answered = false;   // 選擇題本題是否已作答
 const graded = new Set();   // 已作答過的佇列位置（← 回看時不可重複計分）
@@ -128,12 +129,13 @@ $('btn-signout').onclick = () => auth.signOut();
 async function loadHome() {
   try {
     const dirs = selectedDirs();
-    const [decks, due, today, overall, weak] = await Promise.all([
+    const [decks, due, today, overall, weak, daily] = await Promise.all([
       db.listDecks(),
       db.fetchDue(user.id, dirs, 500),
       db.todayStats(user.id),
       db.overallStats(user.id),
       db.weakItems(user.id, 8).catch(() => []),
+      db.dailyStats(user.id, 30).catch(() => []),
     ]);
 
     $('s-due').textContent = due.length;
@@ -141,6 +143,7 @@ async function loadHome() {
     $('s-acc').textContent = pct(today.accuracy);
     $('s-all-acc').textContent = pct(overall.accuracy);
 
+    renderStreak(daily, today);
     $('btn-review').disabled = due.length === 0;
     $('btn-review').textContent = due.length ? `開始複習（${due.length}）` : '今日複習已清空 ✓';
 
@@ -165,6 +168,8 @@ async function loadHome() {
     }
 
     // 弱項
+    weakIds = [...new Set(weak.map((w) => w.item_id))];
+    $('btn-drill-weak').classList.toggle('hidden', !weakIds.length);
     $('weak-list').innerHTML = weak.length
       ? weak.map((w) => {
           const a = w.accuracy == null ? null : Number(w.accuracy);
@@ -205,6 +210,26 @@ function renderChart(daily) {
   $('chart-legend').textContent =
     `30 天共 ${total} 題 · 學習 ${active} 天 · 連續 ${streak} 天${today.n ? '' : '（今天還沒開始）'}`;
 }
+
+// 連續天數：從最近一天往回數，遇到沒學的那天為止。
+// 今天還沒開始不算斷 —— 只是還沒開始，別讓人一早看到「連續 0 天」而洩氣。
+function renderStreak(daily, today) {
+  if (!daily?.length) { $('streak').textContent = ''; return; }
+  let n = 0;
+  for (let i = daily.length - 1; i >= 0; i--) {
+    if (daily[i].n > 0) n++;
+    else if (i === daily.length - 1 && today.reviewed === 0) continue;  // 今天尚未開始
+    else break;
+  }
+  $('streak').innerHTML = n
+    ? `🔥 連續 <b>${n}</b> 天${today.reviewed ? '' : ' · 今天還沒開始'}`
+    : '今天是新的開始 👋';
+}
+
+$('btn-drill-weak').onclick = () => {
+  if (!weakIds.length) return msg('還沒有足夠的資料判斷弱項');
+  startFree({ ids: weakIds });
+};
 
 $('dir-pick').addEventListener('change', () => { if (user) loadHome(); });
 
@@ -836,7 +861,7 @@ async function bulkDelete() {
 }
 
 async function renderBrowse() {
-  $('b-list').innerHTML = '<p class="muted">載入中…</p>';
+  if (!$('b-list').querySelector('.b-row')) $('b-list').innerHTML = `<div class="skel">${'<i></i>'.repeat(6)}</div>`;
   try {
     const rows = await db.browseItems(user.id, { q: $('b-search').value, tag: browseTag });
     $('b-count').textContent = `${rows.length} 條${browseTag ? ` · ${browseTag}` : ''}`;
@@ -915,6 +940,7 @@ function speakText(text) { speech.speak(text); }
 document.addEventListener('keydown', (e) => {
   if ($('view-study').classList.contains('hidden')) return;
   if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Escape') { flushPending(); finish(); return; }
   if (e.code === 'ArrowLeft')  { e.preventDefault(); goto(-1); return; }
   if (e.code === 'ArrowRight') { e.preventDefault(); goto(1); return; }
   if (e.code === 'Space') { e.preventDefault(); reveal(); return; }
@@ -1072,8 +1098,10 @@ let hDir = '';
 
 const RATE_LABEL = { 1: '忘了', 2: '有點難', 3: '記得', 4: '很簡單' };
 
+const SKEL = (n = 5) => `<div class="card"><div class="skel">${'<i></i>'.repeat(n)}</div></div>`;
+
 async function loadHistory(reset = true) {
-  if (reset) { hCursor = null; $('h-list').innerHTML = '<p class="muted center">載入中…</p>'; }
+  if (reset) { hCursor = null; $('h-list').innerHTML = SKEL(6); }
   try {
     const rows = await db.listHistory(user.id, { limit: 100, before: hCursor, dir: hDir || null });
     if (reset) $('h-list').innerHTML = '';
@@ -1129,6 +1157,33 @@ $('h-filter').addEventListener('change', () => {
   loadHistory(true);
 });
 
+// =====================================================================
+// 外觀主題（跟隨系統／淺色／深色）
+//
+// 三態而非開關：使用者可能想固定一種，也可能想跟著系統日夜切換。
+// 「跟隨系統」不寫 data-theme，讓 CSS 的 prefers-color-scheme 生效。
+// =====================================================================
+const LS_THEME = 'kr.theme';
+
+function applyTheme(t) {
+  if (t === 'system') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme', t);
+  // 讓瀏覽器 UI（iOS 狀態列等）跟著換色
+  const bg = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim();
+  document.querySelector('meta[name=theme-color]')?.setAttribute('content', bg || '#4c6ef5');
+}
+
+function initTheme() {
+  const saved = localStorage.getItem(LS_THEME) || 'system';
+  applyTheme(saved);
+  const el = document.querySelector(`#theme-pick input[value="${saved}"]`);
+  if (el) el.checked = true;
+  $('theme-pick').addEventListener('change', (e) => {
+    localStorage.setItem(LS_THEME, e.target.value);
+    applyTheme(e.target.value);
+  });
+}
+
 // ---------------------------------------------------------------------
 // 朗讀語音設定
 // ---------------------------------------------------------------------
@@ -1180,6 +1235,7 @@ async function onUser(u) {
   await loadHome();
 }
 
+initTheme();
 initVoiceUI();
 syncModeUI();
 auth.onChange(onUser);

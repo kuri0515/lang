@@ -59,6 +59,7 @@
         <div><b id="s-acc">–</b><small>今日正確</small></div>
         <div><b id="s-all-acc">–</b><small>總正確率</small></div>
       </div>
+      <div id="streak" class="streak"></div>
       <button id="btn-review" class="primary block big">開始複習</button>
       <button id="btn-free" class="block ghost">自由練習</button>
     </div>
@@ -92,7 +93,10 @@
     </div>
 
     <div class="card" id="weak-card">
-      <h2>我的弱項</h2>
+      <div class="card-head">
+        <h2>我的弱項</h2>
+        <button id="btn-drill-weak" class="small hidden">集中練這些</button>
+      </div>
       <div id="weak-list"></div>
     </div>
   </section>
@@ -135,6 +139,27 @@
 
   <!-- ══════════════ ④ 我的 ══════════════ -->
   <section id="view-me" class="hidden">
+    <div class="card">
+      <h2>外觀</h2>
+      <div class="seg seg-3" id="theme-pick">
+        <label><input type="radio" name="theme" value="system" checked><span>跟隨系統</span></label>
+        <label><input type="radio" name="theme" value="light"><span>淺色</span></label>
+        <label><input type="radio" name="theme" value="dark"><span>深色</span></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>鍵盤快捷鍵</h2>
+      <div class="keys">
+        <div><kbd>空白</kbd><span>顯示答案</span></div>
+        <div><kbd>1</kbd>–<kbd>4</kbd><span>評分／選項</span></div>
+        <div><kbd>←</kbd><kbd>→</kbd><span>上一個／下一個</span></div>
+        <div><kbd>S</kbd><span>朗讀</span></div>
+        <div><kbd>U</kbd><span>撤銷</span></div>
+        <div><kbd>Esc</kbd><span>結束本輪</span></div>
+      </div>
+    </div>
+
     <div class="card">
       <h2>朗讀語音</h2>
       <div class="voice-row">
