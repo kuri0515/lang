@@ -8,7 +8,12 @@ import * as speech from './speech.js';
 import { parseTable } from './parse-table.js';
 
 const $ = (id) => document.getElementById(id);
-const views = ['view-auth', 'view-home', 'view-study', 'view-done', 'view-browse', 'view-history', 'view-import'];
+const views = ['view-auth', 'view-home', 'view-study', 'view-done',
+               'view-browse', 'view-history', 'view-me', 'view-import'];
+// 有 Tab 的視圖；學習中／完成／匯入是「臨時視圖」，不高亮任何 Tab
+const TABS = ['view-home', 'view-browse', 'view-history', 'view-me'];
+// 學習中隱藏 Tab，避免誤觸中斷（要離開請按 ✕）
+const NO_TAB = ['view-auth', 'view-study'];
 
 const TYPE_LABEL = { word: '單字', phrase: '詞組', sentence: '句子' };
 
@@ -38,7 +43,25 @@ const MODE_HINT = {
 };
 
 // ---------------------------------------------------------------------
-function show(view) { views.forEach((v) => $(v).classList.toggle('hidden', v !== view)); }
+function show(view) {
+  views.forEach((v) => $(v).classList.toggle('hidden', v !== view));
+  $('tabbar').classList.toggle('hidden', NO_TAB.includes(view));
+  $('tabbar').querySelectorAll('button').forEach((b) => {
+    b.classList.toggle('on', b.dataset.tab === view);
+  });
+  window.scrollTo({ top: 0 });
+}
+
+// Tab 切換：每個 Tab 進入時自己刷新資料
+$('tabbar').querySelectorAll('button').forEach((b) => {
+  b.onclick = async () => {
+    const t = b.dataset.tab;
+    show(t);
+    if (t === 'view-home') await loadHome();
+    else if (t === 'view-browse') await openBrowse();
+    else if (t === 'view-history') { renderChart(await db.dailyStats(user.id, 30).catch(() => [])); loadHistory(true); }
+  };
+});
 function msg(text, kind = 'err') {
   $('msg').innerHTML = text ? `<div class="msg ${kind}">${esc(text)}</div>` : '';
   if (text) setTimeout(() => { $('msg').innerHTML = ''; }, 6000);
@@ -54,10 +77,15 @@ function selectedDir() {
 function effectiveDir() { return MODE_DIR[studyMode()] || selectedDir(); }
 function selectedDirs() { return [effectiveDir()]; }
 
+const MODE_NAME = { flip: '翻卡自評', choice: '四選一', scramble: '詞序重組', listen: '聽音選義' };
+const DIR_SHORT = { ko2zh: '韓→中', zh2ko: '中→韓' };
+
 function syncModeUI() {
   const m = studyMode();
   const forced = MODE_DIR[m];
   $('mode-hint').textContent = MODE_HINT[m] || '';
+  // 收起時也要一眼看得出目前設定
+  $('opt-summary').textContent = `${MODE_NAME[m]} · ${DIR_SHORT[effectiveDir()]}`;
   $('dir-pick').querySelectorAll('input').forEach((i) => {
     i.disabled = !!forced;
     if (forced) i.checked = i.value === forced;
@@ -100,13 +128,12 @@ $('btn-signout').onclick = () => auth.signOut();
 async function loadHome() {
   try {
     const dirs = selectedDirs();
-    const [decks, due, today, overall, weak, daily] = await Promise.all([
+    const [decks, due, today, overall, weak] = await Promise.all([
       db.listDecks(),
       db.fetchDue(user.id, dirs, 500),
       db.todayStats(user.id),
       db.overallStats(user.id),
       db.weakItems(user.id, 8).catch(() => []),
-      db.dailyStats(user.id, 30).catch(() => []),
     ]);
 
     $('s-due').textContent = due.length;
@@ -120,7 +147,8 @@ async function loadHome() {
     // 詞庫
     if (!decks.length) {
       $('deck-list').innerHTML =
-        '<p class="muted">還沒有詞庫。把詞表放進 <code>raw/</code>，執行 <code>scripts/import_words.py</code> 匯入。</p>';
+        '<div class="empty"><span class="e-icon">📦</span>還沒有詞庫<br>'
+        + '到「我的 → 批次匯入」貼上你的詞表</div>';
     } else {
       const counts = await Promise.all(decks.map((d) => db.countItems(d.id).catch(() => 0)));
       $('deck-list').innerHTML = decks.map((d, i) => `
@@ -136,9 +164,6 @@ async function loadHome() {
       });
     }
 
-    // 學習曲線
-    renderChart(daily);
-
     // 弱項
     $('weak-list').innerHTML = weak.length
       ? weak.map((w) => {
@@ -150,7 +175,7 @@ async function loadHome() {
             <div class="pct ${cls}">${pct(a)} <span class="muted">(${w.total_reviews})</span></div>
           </div>`;
         }).join('')
-      : '<p class="muted">答滿 3 次後才會出現統計。</p>';
+      : '<div class="empty"><span class="e-icon">🎯</span>同一條答滿 3 次後<br>這裡會列出最需要加強的</div>';
   } catch (e) {
     msg('載入失敗：' + (e.message || e));
   }
@@ -746,8 +771,7 @@ $('btn-edit-card').onclick = () => {
 let browseTag = '';
 let browseTimer = null;
 
-$('btn-browse').onclick = async () => {
-  show('view-browse');
+async function openBrowse() {
   if (!$('b-tags').children.length) {
     try {
       const tags = await db.listTags();
@@ -763,10 +787,10 @@ $('btn-browse').onclick = async () => {
       });
     } catch (e) { msg(e.message || e); }
   }
-  renderBrowse();
-};
+  await renderBrowse();
+}
 
-$('btn-browse-back').onclick = async () => { show('view-home'); await loadHome(); };
+
 
 $('btn-study-tag').onclick = () => { if (browseTag) startNew(null, browseTag); };
 
@@ -819,7 +843,10 @@ async function renderBrowse() {
     $('btn-study-tag').classList.toggle('hidden', !browseTag);
     $('btn-practice-sel').classList.toggle('hidden', !picked.size);
     $('btn-study-tag').textContent = `學「${browseTag}」`;
-    if (!rows.length) { $('b-list').innerHTML = '<p class="muted">沒有符合的條目。</p>'; return; }
+    if (!rows.length) {
+      $('b-list').innerHTML = '<div class="empty"><span class="e-icon">🔍</span>沒有符合的條目</div>';
+      return;
+    }
 
     $('b-list').innerHTML = rows.map((r) => {
       const badge = (dir, label) => {
@@ -938,7 +965,7 @@ $('btn-import').onclick = async () => {
   show('view-import');
   await loadDecksInto($('i-deck'));
 };
-$('btn-import-back').onclick = async () => { show('view-home'); await loadHome(); };
+$('btn-import-back').onclick = () => show('view-me');
 
 let parsed = null;
 
@@ -1051,7 +1078,8 @@ async function loadHistory(reset = true) {
     const rows = await db.listHistory(user.id, { limit: 100, before: hCursor, dir: hDir || null });
     if (reset) $('h-list').innerHTML = '';
     if (!rows.length) {
-      if (reset) $('h-list').innerHTML = '<div class="card"><p class="muted center" style="margin:0">還沒有學習記錄。去練幾題吧 👋</p></div>';
+      if (reset) $('h-list').innerHTML =
+        '<div class="card"><div class="empty"><span class="e-icon">📖</span>還沒有學習記錄<br>去「學習」練幾題吧</div></div>';
       $('h-more').classList.add('hidden');
       return;
     }
@@ -1093,8 +1121,8 @@ async function loadHistory(reset = true) {
   }
 }
 
-$('btn-history').onclick = () => { show('view-history'); loadHistory(true); };
-$('btn-history-back').onclick = async () => { show('view-home'); await loadHome(); };
+
+
 $('h-more').onclick = () => loadHistory(false);
 $('h-filter').addEventListener('change', () => {
   hDir = document.querySelector('#h-filter input:checked').value;
@@ -1143,7 +1171,10 @@ async function onUser(u) {
   profile = await myProfile(u.id).catch(() => null);
   const isAdmin = profile?.role === 'admin';
   $('admin-tag').classList.toggle('hidden', !isAdmin);
-  $('admin-row').classList.toggle('hidden', !isAdmin);
+  $('admin-card').classList.toggle('hidden', !isAdmin);
+  $('me-account').innerHTML =
+    `帳號 <b>${esc(profile?.username || '')}</b>　角色 ${isAdmin ? '管理員' : '一般使用者'}<br>`
+    + `<span class="hint">${esc(u.email || '')}</span>`;
 
   show('view-home');
   await loadHome();
