@@ -142,6 +142,8 @@ def main():
     ap.add_argument("--deck", required=True, help="詞庫 slug，如 basic-01")
     ap.add_argument("--title", help="詞庫顯示名（首次建立時用）")
     ap.add_argument("--level", default=None, help="如 topik1")
+    ap.add_argument("--allow-dup", action="store_true",
+                    help="即使該詞已存在於其他詞庫也照樣收錄（預設會略過）")
     ap.add_argument("--append", action="store_true",
                     help="累積模式：slug 由詞條內容產生，同一詞庫可分多次匯入不互相覆蓋")
     ap.add_argument("--deactivate-missing", action="store_true",
@@ -185,7 +187,11 @@ def main():
                    rest(url, key, "GET", "decks", None, "?select=id,slug")}
     clash = [(r["ko"], decks_by_id.get(existing[r["ko"]]["deck_id"], "?"))
              for r in rows if r["ko"] in existing]
-    if clash:
+    if clash and args.allow_dup:
+        print(f"\n   ℹ️  {len(clash)} 條已存在於其他詞庫，依 --allow-dup 照樣收錄：")
+        for ko, dk in clash[:10]:
+            print(f"        {ko}  （另一份在 {dk}）")
+    elif clash:
         print(f"\n   ⚠️  {len(clash)} 條已存在於其他詞庫，將被略過：")
         for ko, dk in clash[:10]:
             print(f"        {ko}  （已在 {dk}）")
