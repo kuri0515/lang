@@ -156,7 +156,7 @@ export async function todayStats(userId) {
 
 export async function overallStats(userId) {
   const { data, error } = await sb
-    .from('user_cards').select('total_reviews, correct_reviews, state')
+    .from('user_cards').select('total_reviews, correct_reviews, state, interval_days')
     .eq('user_id', userId);
   if (error) throw error;
   const rows = data ?? [];
@@ -164,7 +164,8 @@ export async function overallStats(userId) {
   const correct = rows.reduce((s, r) => s + r.correct_reviews, 0);
   return {
     cards: rows.length,
-    mastered: rows.filter((r) => r.state === 'review' && r.interval_days >= 21).length,
+    // 「已掌握」= 進入複習期且間隔已拉到 21 天以上
+    mastered: rows.filter((r) => r.state === 'review' && Number(r.interval_days) >= 21).length,
     accuracy: total ? correct / total : null,
   };
 }

@@ -23,7 +23,10 @@ supabase/migrations/
   0001_init.sql     schema + RLS + 統計 view
 scripts/
   import_words.py   CSV → Supabase，零依賴、冪等、預設 dry-run
-  sample_words.csv  25 條範例資料
+  create_user.py    建立帳號（Admin API），支援帳號名與管理員角色
+data/
+  daily_korean.csv  169 條日常用語詞表
+  sample_words.csv  25 條精簡範例
 raw/                你的原始素材（不進 git）
 ```
 
@@ -57,12 +60,12 @@ cp .env.example .env.local   # 填入 service_role key（已被 .gitignore 擋�
 
 ```bash
 # 先 dry-run 看要寫什麼
-python3 scripts/import_words.py scripts/sample_words.csv \
-    --deck basic-01 --title "基礎 · 第一單元"
+python3 scripts/import_words.py data/daily_korean.csv \
+    --deck daily-01 --title "日常用語 · 入門"
 
 # 確認無誤再寫庫
-python3 scripts/import_words.py scripts/sample_words.csv \
-    --deck basic-01 --title "基礎 · 第一單元" --apply
+python3 scripts/import_words.py data/daily_korean.csv \
+    --deck daily-01 --title "日常用語 · 入門" --apply
 ```
 
 ### 4. 本地預覽
