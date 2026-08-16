@@ -203,3 +203,52 @@ export async function weakItems(userId, limit = 20) {
   if (error) throw error;
   return data ?? [];
 }
+
+// ---------- 詞庫瀏覽 ----------
+/** 搜尋 / 篩選條目，並附上「我學到哪了」的狀態 */
+export async function browseItems(userId, { q = '', tag = '', deckId = null, limit = 300 } = {}) {
+  let query = sb.from('items')
+    .select('id, ko, zh, romanization, pos, item_type, example_ko, example_zh, note, tags, audio_url')
+    .eq('is_active', true);
+
+  if (deckId) query = query.eq('deck_id', deckId);
+  if (tag) query = query.contains('tags', [tag]);
+  if (q.trim()) {
+    const k = q.trim().replace(/[%,()]/g, '');   // 這些字元會擾亂 PostgREST 的 or 語法
+    query = query.or(`ko.ilike.*${k}*,zh.ilike.*${k}*,romanization.ilike.*${k}*`);
+  }
+
+  const { data, error } = await query.order('sort_order').limit(limit);
+  if (error) throw error;
+  const items = data ?? [];
+  if (!items.length || !userId) return items.map((i) => ({ ...i, cards: {} }));
+
+  // 附上兩個方向的學習狀態
+  const { data: cards } = await sb.from('user_cards')
+    .select('item_id, direction, state, total_reviews, correct_reviews')
+    .eq('user_id', userId)
+    .in('item_id', items.map((i) => i.id));
+
+  const byItem = {};
+  for (const c of cards ?? []) (byItem[c.item_id] ||= {})[c.direction] = c;
+  return items.map((i) => ({ ...i, cards: byItem[i.id] || {} }));
+}
+
+/** 所有標籤與各自條目數 */
+export async function listTags() {
+  const { data, error } = await sb.from('items').select('tags').eq('is_active', true);
+  if (error) throw error;
+  const count = {};
+  for (const r of data ?? []) for (const t of r.tags || []) count[t] = (count[t] || 0) + 1;
+  return Object.entries(count).sort((a, b) => b[1] - a[1]);
+}
+
+/** 今日已學的新卡數（用來套用每日新卡上限） */
+export async function newCardsToday(userId) {
+  const start = new Date(); start.setHours(0, 0, 0, 0);
+  const { count, error } = await sb.from('user_cards')
+    .select('item_id', { count: 'exact', head: true })
+    .eq('user_id', userId).gte('created_at', start.toISOString());
+  if (error) throw error;
+  return count ?? 0;
+}

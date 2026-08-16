@@ -6,7 +6,7 @@ import { auth, myProfile, DIR_LABEL } from './db.js';
 import { schedule, previewIntervals, RATING } from './srs.js';
 
 const $ = (id) => document.getElementById(id);
-const views = ['view-auth', 'view-home', 'view-study', 'view-done'];
+const views = ['view-auth', 'view-home', 'view-study', 'view-done', 'view-browse'];
 
 const TYPE_LABEL = { word: '單字', phrase: '詞組', sentence: '句子' };
 
@@ -133,14 +133,25 @@ $('btn-review').onclick = async () => {
 
 async function startNew(deckId) {
   try {
-    const rows = await db.fetchNewItems(user.id, deckId, selectedDirs(), 20);
+    // 套用每日新卡上限：一次灌太多新詞，隔天的複習量會爆掉
+    const limit = profile?.daily_new_limit ?? 20;
+    const done = await db.newCardsToday(user.id).catch(() => 0);
+    const room = Math.max(0, limit - done);
+    if (room === 0) {
+      return msg(`今日新卡已達上限（${limit} 張）。先把複習做完，明天再來 👍`, 'ok');
+    }
+
+    const rows = await db.fetchNewItems(user.id, deckId, selectedDirs(), room);
     if (!rows.length) return msg('這個詞庫的新內容已經學完了 👍', 'ok');
+    if (rows.length < room) msg(`本輪 ${rows.length} 張新卡`, 'ok');
     queue = rows;
     beginSession();
   } catch (e) { msg(e.message || e); }
 }
 
 function beginSession() {
+  flushPending();
+  $('btn-undo').disabled = true;
   idx = 0;
   sessionStats = { n: 0, correct: 0 };
   show('view-study');
@@ -214,31 +225,80 @@ $('grade').querySelectorAll('button').forEach((b) => {
   b.onclick = () => grade(Number(b.dataset.r));
 });
 
+// ---------------------------------------------------------------------
+// 評分 —— 寫入延遲 UNDO_MS，這段時間內可完整撤銷（連記錄都不會產生）
+//
+// 為什麼要延遲而不是「寫了再刪」：reviews 是只追加的日誌，
+// RLS 沒開放 delete。誤點若已寫入就洗不掉，會污染正確率。
+// 延遲寫入讓「撤銷」語意上等於「這一題根本沒答過」。
+// ---------------------------------------------------------------------
+const UNDO_MS = 2500;
+let pending = null;   // { timer, payload, snapshot }
+
+function flushPending(immediate = true) {
+  if (!pending) return;
+  const { timer, payload } = pending;
+  clearTimeout(timer);
+  pending = null;
+  $('btn-undo').disabled = true;
+  if (immediate) {
+    db.saveReview(payload).catch((e) => msg('儲存失敗：' + (e.message || e)));
+  }
+}
+
 async function grade(rating) {
+  flushPending();                      // 上一題定案，只有最近一題可撤銷
+
   const entry = queue[idx];
   const next = schedule(entry.card || {}, rating);
   const elapsed = Date.now() - shownAt;
 
+  const snapshot = { idx, queueLen: queue.length, stats: { ...sessionStats } };
+
   sessionStats.n += 1;
   if (rating >= 3) sessionStats.correct += 1;
 
-  // 樂觀推進：先翻下一張，寫庫在背景；失敗再提示
   idx += 1;
   if (rating === RATING.AGAIN) {
     queue.push({ ...entry, card: { ...(entry.card || {}), ...next } });
   }
-  render();
 
-  try {
-    await db.saveReview({
-      userId: user.id, item: entry.item, direction: entry.direction,
-      prevCard: entry.card, rating, next, elapsedMs: elapsed,
-    });
-  } catch (e) { msg('儲存失敗：' + (e.message || e)); }
+  const payload = {
+    userId: user.id, item: entry.item, direction: entry.direction,
+    prevCard: entry.card, rating, next, elapsedMs: elapsed,
+  };
+  pending = { payload, snapshot, timer: setTimeout(() => flushPending(true), UNDO_MS) };
+
+  render();
+  $('btn-undo').disabled = false;
 }
 
-$('btn-quit').onclick = finish;
-$('btn-back').onclick = async () => { show('view-home'); await loadHome(); };
+function undo() {
+  if (!pending) return;
+  const { snapshot } = pending;
+  clearTimeout(pending.timer);
+  pending = null;
+
+  idx = snapshot.idx;
+  queue.length = snapshot.queueLen;      // 丟掉 AGAIN 補進佇列的那張
+  sessionStats = snapshot.stats;
+
+  $('btn-undo').disabled = true;
+  render();
+  reveal();                              // 撤銷後直接停在答案面，方便重新評分
+  msg('已撤銷，這一題沒有被記錄。', 'ok');
+}
+
+$('btn-undo').onclick = undo;
+
+// 離開頁面前把還沒定案的那題寫掉，避免資料遺失
+window.addEventListener('pagehide', () => flushPending(true));
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') flushPending(true);
+});
+
+$('btn-quit').onclick = () => { flushPending(); finish(); };
+$('btn-back').onclick = async () => { flushPending(); show('view-home'); await loadHome(); };
 
 function finish() {
   const { n, correct } = sessionStats;
@@ -249,6 +309,82 @@ function finish() {
 }
 
 // ---------------------------------------------------------------------
+// 瀏覽詞庫：搜尋 / 標籤篩選 / 朗讀 / 顯示雙向學習狀態
+// ---------------------------------------------------------------------
+let browseTag = '';
+let browseTimer = null;
+
+$('btn-browse').onclick = async () => {
+  show('view-browse');
+  if (!$('b-tags').children.length) {
+    try {
+      const tags = await db.listTags();
+      $('b-tags').innerHTML =
+        `<button class="tag on" data-tag="">全部</button>` +
+        tags.map(([t, n]) => `<button class="tag" data-tag="${esc(t)}">${esc(t)} ${n}</button>`).join('');
+      $('b-tags').querySelectorAll('.tag').forEach((b) => {
+        b.onclick = () => {
+          browseTag = b.dataset.tag;
+          $('b-tags').querySelectorAll('.tag').forEach((x) => x.classList.toggle('on', x === b));
+          renderBrowse();
+        };
+      });
+    } catch (e) { msg(e.message || e); }
+  }
+  renderBrowse();
+};
+
+$('btn-browse-back').onclick = async () => { show('view-home'); await loadHome(); };
+
+$('b-search').addEventListener('input', () => {
+  clearTimeout(browseTimer);
+  browseTimer = setTimeout(renderBrowse, 250);   // 防抖，避免每個字都打一次 API
+});
+
+const STATE_LABEL = { new: '新', learning: '學習中', review: '複習中', suspended: '暫停' };
+
+async function renderBrowse() {
+  $('b-list').innerHTML = '<p class="muted">載入中…</p>';
+  try {
+    const rows = await db.browseItems(user.id, { q: $('b-search').value, tag: browseTag });
+    $('b-count').textContent = `${rows.length} 條`;
+    if (!rows.length) { $('b-list').innerHTML = '<p class="muted">沒有符合的條目。</p>'; return; }
+
+    $('b-list').innerHTML = rows.map((r) => {
+      const badge = (dir, label) => {
+        const c = r.cards[dir];
+        const cls = c ? c.state : '';
+        const acc = c && c.total_reviews
+          ? ` ${Math.round((c.correct_reviews / c.total_reviews) * 100)}%` : '';
+        return `<span class="dot ${cls}" title="${label}：${c ? STATE_LABEL[c.state] : '未學'}">${label}${acc}</span>`;
+      };
+      return `<div class="b-row">
+        <div class="b-main">
+          <div>
+            <span class="b-ko">${esc(r.ko)}</span>
+            <span class="muted"> — </span><span class="b-zh">${esc(r.zh)}</span>
+          </div>
+          <div class="b-badges">
+            ${badge('ko2zh', '韓→中')}${badge('zh2ko', '中→韓')}
+            <button class="b-speak" data-ko="${esc(r.ko)}" title="朗讀">🔊</button>
+          </div>
+        </div>
+        <div class="b-sub">${[r.romanization, r.pos, TYPE_LABEL[r.item_type]].filter(Boolean).map(esc).join(' · ')}</div>
+        ${r.example_ko ? `<div class="b-ex">${esc(r.example_ko)}<br>${esc(r.example_zh || '')}</div>` : ''}
+        ${r.note ? `<div class="b-sub">💡 ${esc(r.note)}</div>` : ''}
+      </div>`;
+    }).join('');
+
+    $('b-list').querySelectorAll('.b-speak').forEach((b) => {
+      b.onclick = () => speakText(b.dataset.ko);
+    });
+  } catch (e) {
+    $('b-list').innerHTML = '';
+    msg('載入失敗：' + (e.message || e));
+  }
+}
+
+// ---------------------------------------------------------------------
 // 朗讀：優先用條目自帶音檔，否則瀏覽器 TTS（ko-KR）
 // ---------------------------------------------------------------------
 $('btn-speak').onclick = () => speak();
@@ -256,8 +392,13 @@ function speak() {
   const item = queue[idx]?.item;
   if (!item) return;
   if (item.audio_url) { new Audio(item.audio_url).play().catch(() => {}); return; }
+  speakText(item.ko);
+}
+
+function speakText(text) {
   if (!('speechSynthesis' in window)) return msg('目前瀏覽器不支援朗讀');
-  const u = new SpeechSynthesisUtterance(item.ko);
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
   u.lang = 'ko-KR';
   speechSynthesis.speak(u);
 }
@@ -270,6 +411,7 @@ document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT') return;
   if (e.code === 'Space') { e.preventDefault(); reveal(); return; }
   if (e.key.toLowerCase() === 's') { speak(); return; }
+  if (e.key.toLowerCase() === 'u') { undo(); return; }
   if (['1', '2', '3', '4'].includes(e.key) && !$('grade').classList.contains('hidden')) {
     grade(Number(e.key));
   }

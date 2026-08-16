@@ -1,0 +1,16 @@
+{
+  "name": "한국어 · 韓語單字卡",
+  "short_name": "韓語單字卡",
+  "description": "韓文 ↔ 中文（繁體）雙向間隔重複學習",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6f7fb",
+  "theme_color": "#4c6ef5",
+  "lang": "zh-Hant",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

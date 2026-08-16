@@ -4,6 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>한국어 · 韓語單字卡</title>
+  <meta name="theme-color" content="#4c6ef5">
+  <meta name="description" content="韓文 ↔ 中文（繁體）雙向間隔重複學習">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="韓語單字卡">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -51,7 +58,10 @@
           <label class="chip"><input type="checkbox" value="zh2ko" checked><span>看中文 → 想韓文</span></label>
         </div>
 
-        <button id="btn-review" class="primary" style="width:100%;margin-top:14px">開始複習</button>
+        <div class="row2" style="margin-top:14px">
+          <button id="btn-review" class="primary">開始複習</button>
+          <button id="btn-browse">瀏覽詞庫</button>
+        </div>
       </div>
 
       <div class="card">
@@ -99,7 +109,26 @@
         <button data-r="3"><span class="g3">記得</span><small id="p3"></small></button>
         <button data-r="4"><span class="g4">很簡單</span><small id="p4"></small></button>
       </div>
-      <p class="center"><button id="btn-quit" class="link">結束本輪</button></p>
+      <p class="center">
+        <button id="btn-undo" class="link" disabled>↩︎ 撤銷上一題</button>
+        <span class="muted"> · </span>
+        <button id="btn-quit" class="link">結束本輪</button>
+      </p>
+    </section>
+
+    <!-- ============ 瀏覽詞庫 ============ -->
+    <section id="view-browse" class="hidden">
+      <div class="card">
+        <input id="b-search" type="search" placeholder="搜尋韓文／中文／羅馬音…" style="margin:0">
+        <div id="b-tags" class="tag-row"></div>
+      </div>
+      <div class="card">
+        <div class="browse-head">
+          <span id="b-count" class="muted"></span>
+        </div>
+        <div id="b-list"></div>
+      </div>
+      <p class="center"><button id="btn-browse-back" class="link">← 返回</button></p>
     </section>
 
     <!-- ============ 本輪完成 ============ -->
