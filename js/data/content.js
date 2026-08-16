@@ -67,6 +67,24 @@ export async function sharesHanja(char, excludeId = null, limit = 5) {
   return (data ?? []).filter((x) => x.id !== excludeId).slice(0, limit);
 }
 
+/**
+ * 中文意思相同的其他韓文詞。
+ *
+ * 為什麼需要：「中→韓」方向看到「謝謝」，學生想的可能是 고맙습니다，
+ * 卡片答案卻是 감사합니다 —— 明明答對了卻會自評成答錯。
+ *
+ * 用完全相等而非模糊比對：쓰다 的 zh 是「寫／用／戴／苦」，
+ * 拆開來比對會把「寫」的其他詞也牽進來，那些並不是同義詞。
+ */
+export async function sameMeaning(zh, excludeId = null, limit = 4) {
+  if (!zh) return [];
+  const { data, error } = await sb.from('items')
+    .select('id, ko, zh, note, romanization')
+    .eq('is_active', true).eq('zh', zh).limit(limit + 1);
+  if (error) throw error;
+  return (data ?? []).filter((x) => x.id !== excludeId).slice(0, limit);
+}
+
 /** 選擇題干擾項池：一次抓好放記憶體，避免每題都打一次 API */
 export async function distractorPool(deckId = null) {
   return fetchAll(() => {

@@ -24,6 +24,7 @@ export function initStudy({ session: s, getCtx, onQuit: quitCb }) {
     roman: $('c-roman'), pos: $('c-pos'), type: $('c-type'), dir: $('c-dir'),
     example: $('c-example'), exKo: $('c-ex-ko'), exZh: $('c-ex-zh'),
     note: $('c-note'), acc: $('c-acc'), hanja: $('c-hanja'), hanjaRel: $('c-hanja-rel'),
+    same: $('c-same'),
     listen: $('c-listen'), listenSlow: $('c-listen-slow'), listenBox: $('listen-box'),
     choices: $('choices'), grade: $('grade'),
     scramble: $('scramble'), sAnswer: $('s-answer'), sPool: $('s-pool'), sResult: $('s-result'),
@@ -93,6 +94,7 @@ export function render(state) {
   active?.teardown?.();
   active = null;
   hanjaToken++;      // 讓上一張卡還在飛的漢字查詢作廢
+  sameToken++;       // 同義詞查詢同理，否則舊結果會畫到新卡上
 
   // ---- 靜態內容 ----
   els.prog.style.width = `${(idx / total) * 100}%`;
@@ -117,6 +119,7 @@ export function render(state) {
   els.note.classList.toggle('hidden', !item.note);
   els.hanja.classList.add('hidden');
   els.hanjaRel.classList.add('hidden');
+  els.same.classList.add('hidden');
 
   const tot = card?.total_reviews ?? 0;
   els.acc.textContent = tot ? `過往正確率 ${pct(card.correct_reviews / tot)}（${tot} 次）` : '';
@@ -183,6 +186,34 @@ export function reveal() {
     (direction === 'ko2zh' ? els.front : els.backText).after(els.roman);
   }
   showHanja(item);
+  showSameMeaning(item);
+}
+
+/**
+ * 中文意思相同的其他韓文詞。揭曉後才顯示，理由同漢字：提前顯示等於送分。
+ *
+ * 解決的是一個會讓人白白扣分的情況 ——「中→韓」看到「謝謝」想出 고맙습니다，
+ * 卡片答案是 감사합니다，學生會把答對記成答錯。
+ *
+ * 措辭刻意用「中文相同的還有」而不是「這樣答也對」：
+ * 일 和 하나 中文都是「一」，但漢字數詞與固有數詞不能互換，
+ * 說「也對」是教錯的。所以只陳述事實，並把每個詞自己的 note 一起帶出來 ——
+ * 那裡正好寫著該學的辨析（謙稱 vs 半語、漢字數詞 vs 固有數詞）。
+ */
+let sameToken = 0;
+
+async function showSameMeaning(item) {
+  const token = ++sameToken;
+  const rel = await content.sameMeaning(item.zh, item.id).catch(() => []);
+  if (token !== sameToken || !rel.length) return;   // 已翻頁就丟棄
+
+  els.same.innerHTML = '<div class="sm-title">中文相同的還有</div>'
+    + rel.map((r) => '<div class="sm-row">'
+      + `<span class="sm-ko">${esc(r.ko)}</span>`
+      + (r.romanization ? `<span class="sm-roman">${esc(r.romanization)}</span>` : '')
+      + (r.note ? `<span class="sm-note">${esc(r.note)}</span>` : '')
+      + '</div>').join('');
+  els.same.classList.remove('hidden');
 }
 
 /**
