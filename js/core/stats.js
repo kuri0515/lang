@@ -45,15 +45,19 @@ export function summarize(daily) {
  * 總共多少詞、走到哪一階段、離掌握還有多遠。
  * 這比任何單項數字都更能回答那個問題。
  */
-export function funnel(words, notStartedCount) {
+export function funnel(words, notStartedCount, practicedCount = 0) {
   const mastered = words.filter((w) => w.mastered).length;
   const review = words.filter((w) => w.state === 'review' && !w.mastered).length;
   const learning = words.filter((w) => ['learning', 'new'].includes(w.state)).length;
   const started = words.length;
-  const total = started + notStartedCount;
+  // 「練習過」= 自由練習碰過但還沒進複習輪轉；算接觸過，不算已開始學
+  const total = started + practicedCount + notStartedCount;
+  const touched = started + practicedCount;
   return {
-    total, started, mastered, review, learning, notStarted: notStartedCount,
+    total, started, mastered, review, learning,
+    practiced: practicedCount, notStarted: notStartedCount, touched,
     startedPct: total ? started / total : 0,
+    touchedPct: total ? touched / total : 0,
     masteredPct: total ? mastered / total : 0,
   };
 }

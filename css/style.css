@@ -628,3 +628,7 @@ kbd {
 .dc-val { width: 88px; flex-shrink: 0; text-align: right; color: var(--faint);
           font-variant-numeric: tabular-nums; }
 .dc-val b { color: var(--text); font-weight: 600; }
+.funnel .f-practiced { background: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+.funnel-legend .f-practiced { background: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+.stage.practiced { background: var(--accent-soft); border-color: var(--border);
+                   color: var(--muted); }

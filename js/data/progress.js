@@ -308,14 +308,48 @@ export async function wordProgress(userId) {
   return [...byItem.values()];
 }
 
-/** 還沒建過卡的條目 —— 「未開始」清單 */
+/**
+ * 練過但還沒進複習輪轉的詞（自由練習只寫記錄、不建卡）。
+ * 與「完全沒碰過」分開，才不會把練過的詞誤標成未開始。
+ */
+export async function practicedOnly(userId) {
+  const { data, error } = await sb.from('v_practiced_only')
+    .select('item_id, direction, ko, zh, hanja, item_type, attempts, correct, accuracy, first_at, last_at')
+    .eq('user_id', userId).limit(2000);
+  if (error) throw error;
+
+  const byItem = new Map();
+  for (const r of data ?? []) {
+    let w = byItem.get(r.item_id);
+    if (!w) {
+      w = { item_id: r.item_id, ko: r.ko, zh: r.zh, hanja: r.hanja,
+            item_type: r.item_type, practicedOnly: true, dirs: {},
+            total: 0, correct: 0 };
+      byItem.set(r.item_id, w);
+    }
+    w.dirs[r.direction] = r;
+    w.total += r.attempts;
+    w.correct += r.correct;
+  }
+  for (const w of byItem.values()) {
+    w.accuracy = w.total ? w.correct / w.total : null;
+    w.state = 'practiced';
+    w.mastered = false;
+    w.firstLearnedAt = Object.values(w.dirs).map((d) => d.first_at).sort()[0];
+    w.lastReviewedAt = Object.values(w.dirs).map((d) => d.last_at).sort().pop();
+  }
+  return [...byItem.values()];
+}
+
+/** 完全沒碰過的條目 —— 既沒有卡片，也沒有任何作答記錄 */
 export async function notStartedItems(userId) {
-  const [{ data: cards }, { data: items }] = await Promise.all([
+  const [{ data: cards }, { data: revs }, { data: items }] = await Promise.all([
     sb.from('user_cards').select('item_id').eq('user_id', userId),
+    sb.from('reviews').select('item_id').eq('user_id', userId).limit(5000),
     sb.from('items').select('id, ko, zh, hanja, item_type, tags').eq('is_active', true).limit(2000),
   ]);
-  const seen = new Set((cards ?? []).map((c) => c.item_id));
-  return (items ?? []).filter((i) => !seen.has(i.id));
+  const touched = new Set([...(cards ?? []), ...(revs ?? [])].map((c) => c.item_id));
+  return (items ?? []).filter((i) => !touched.has(i.id));
 }
 
 /** 某個詞的作答歷程（含題型），新到舊 */

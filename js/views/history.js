@@ -16,12 +16,13 @@ export async function open() {
   const user = deps.user();
   if (!user) return;
   // 總覽與單詞進度共用同一份資料，一次載入不重複查
-  const [daily, w, ns] = await Promise.all([
+  const [daily, w, po, ns] = await Promise.all([
     progress.dailyStats(user.id, 30).catch(() => []),
     progress.wordProgress(user.id).catch(() => []),
+    progress.practicedOnly(user.id).catch(() => []),
     progress.notStartedItems(user.id).catch(() => []),
   ]);
-  words = w; notStarted = ns;
+  words = w; practiced = po; notStarted = ns;
   renderChart(daily);
   renderOverview(daily);
   if (tab === 'words') renderWords(); else await load(true);
@@ -189,12 +190,14 @@ export function renderChart(daily) {
 let tab = 'sessions';
 let filter = 'all';
 let words = [];        // 已建卡的詞
-let notStarted = [];   // 尚未開始的詞
+let notStarted = [];   // 完全沒碰過的詞
+let practiced = [];    // 練過但未進輪轉的詞
 
 const STAGE = {
   mastered: { cls: 'mastered', label: '已掌握' },
   review:   { cls: 'review',   label: '複習中' },
   learning: { cls: 'learning', label: '學習中' },
+  practiced:{ cls: 'practiced', label: '練習過' },
   new:      { cls: 'new',      label: '未開始' },
 };
 const MODE_SHORT = { flip: '翻卡', choice: '四選一', scramble: '重組', listen: '聽音' };
@@ -225,8 +228,9 @@ export async function loadWords() {
   if (!user) return;
   $('w-list').innerHTML = skeleton(6);
   try {
-    [words, notStarted] = await Promise.all([
+    [words, practiced, notStarted] = await Promise.all([
       progress.wordProgress(user.id),
+      progress.practicedOnly(user.id).catch(() => []),
       progress.notStartedItems(user.id).catch(() => []),
     ]);
     renderWords();
@@ -244,9 +248,12 @@ function visible() {
   let list;
   if (filter === 'new') {
     list = notStarted.map((i) => ({ ...i, item_id: i.id, state: 'new', dirs: {}, total: 0 }));
+  } else if (filter === 'practiced') {
+    list = practiced;
+  } else if (filter === 'all') {
+    list = [...words, ...practiced];
   } else {
     list = words.filter((w) => {
-      if (filter === 'all') return true;
       if (filter === 'mastered') return w.mastered;
       // 已掌握的不該再出現在「複習中」——否則兩個篩選互相重疊，數字對不上
       if (filter === 'review') return w.state === 'review' && !w.mastered;
@@ -261,7 +268,9 @@ function visible() {
 function renderWords() {
   const list = visible();
   const counts = {
-    all: words.length, mastered: words.filter((w) => w.mastered).length,
+    all: words.length + practiced.length,
+    practiced: practiced.length,
+    mastered: words.filter((w) => w.mastered).length,
     review: words.filter((w) => w.state === 'review' && !w.mastered).length,
     learning: words.filter((w) => ['learning', 'new'].includes(w.state)).length,
     weak: words.filter((w) => w.total >= 3 && w.accuracy != null && w.accuracy < 0.7).length,
@@ -284,10 +293,12 @@ function renderWords() {
   $('w-list').innerHTML = list.slice(0, 200).map((w) => {
     const st = w.mastered ? STAGE.mastered : (STAGE[w.state] || STAGE.new);
     const acc = w.accuracy != null ? `${Math.round(w.accuracy * 100)}%` : '–';
-    const sub = w.total
-      ? `答過 ${w.total} 次 · 正確率 ${acc}`
-        + (w.nextDueAt ? ` · 下次 ${fmtDate(w.nextDueAt)}` : '')
-      : '尚未開始學';
+    const sub = w.practicedOnly
+      ? `自由練習 ${w.total} 次 · 正確率 ${acc} · 尚未排入複習`
+      : w.total
+        ? `答過 ${w.total} 次 · 正確率 ${acc}`
+          + (w.nextDueAt ? ` · 下次 ${fmtDate(w.nextDueAt)}` : '')
+        : '尚未開始學';
     return `<div class="w-row" data-id="${esc(w.item_id)}">
       <button class="w-head">
         <span class="w-main">
@@ -338,6 +349,19 @@ function renderWordDetail(w, atts) {
   if (!w.total) {
     return `<p class="muted center" style="padding:10px 0">這個詞還沒開始學。到「學習」頁選個題型就會排進來。</p>`;
   }
+  if (w.practicedOnly) {
+    const ds = Object.entries(w.dirs).map(([dir, d]) =>
+      `<div class="dir-block"><h4><span>${DIR_SHORT[dir]}</span>
+        <span class="stage practiced">練習過</span></h4>
+        <div class="dir-facts">
+          <span>作答 <b>${d.attempts} 次</b></span>
+          <span>正確率 <b>${Math.round(Number(d.accuracy) * 100)}%</b>（${d.correct}/${d.attempts}）</span>
+          <span>第一次 <b>${fmtStamp(d.first_at)}</b></span>
+          <span>最近 <b>${fmtStamp(d.last_at)}</b></span>
+        </div></div>`).join('');
+    return ds + `<p class="hint">自由練習只記成績、不排複習。要讓它進入複習輪轉，
+      到「學習」頁按詞庫的「學新的」。</p>`;
+  }
   const dirBlock = (dir) => {
     const d = w.dirs[dir];
     if (!d) return `<div class="dir-block"><h4>${DIR_SHORT[dir]}</h4>
@@ -377,14 +401,15 @@ function renderWordDetail(w, atts) {
 // 進度總覽 —— 從學習者視角，先回答「我到哪了」
 // =====================================================================
 function renderOverview(daily) {
-  const f = funnel(words, notStarted.length);
-  $('ov-started').textContent = f.started;
+  const f = funnel(words, notStarted.length, practiced.length);
+  $('ov-started').textContent = f.touched;
   $('ov-total').textContent = f.total;
-  $('ov-pct').textContent = `${Math.round(f.startedPct * 100)}%`;
+  $('ov-pct').textContent = `${Math.round(f.touchedPct * 100)}%`;
 
   const seg = (cls, n) => n ? `<i class="${cls}" style="width:${(n / f.total) * 100}%"></i>` : '';
   $('funnel').innerHTML =
-    seg('f-mastered', f.mastered) + seg('f-review', f.review) + seg('f-learning', f.learning);
+    seg('f-mastered', f.mastered) + seg('f-review', f.review)
+    + seg('f-learning', f.learning) + seg('f-practiced', f.practiced);
 
   const dot = (cls, label, n) =>
     `<span><i class="${cls}"></i>${label} <b>${n}</b></span>`;
@@ -392,6 +417,7 @@ function renderOverview(daily) {
     dot('f-mastered', '已掌握', f.mastered)
     + dot('f-review', '複習中', f.review)
     + dot('f-learning', '學習中', f.learning)
+    + dot('f-practiced', '練習過', f.practiced)
     + `<span><i style="background:var(--border)"></i>未開始 <b>${f.notStarted}</b></span>`;
 
   // 兩個方向分開看 —— 混在一起會把真正的弱項藏起來。
