@@ -50,9 +50,12 @@ LIAISON = {1: "g", 2: "kk", 4: "n", 7: "d", 8: "r", 16: "m", 17: "b",
 #   읽어요 → 일거요（ilgeoyo）
 # (終聲索引) → (留下的音, 移過去的音)
 CLUSTER_LIAISON = {
-    3: ("k", "s"), 5: ("n", "j"), 6: ("n", ""), 9: ("l", "g"), 10: ("l", "m"),
+    3: ("k", "s"), 5: ("n", "j"), 9: ("l", "g"), 10: ("l", "m"),
     11: ("l", "b"), 12: ("l", "s"), 13: ("l", "t"), 14: ("l", "p"),
-    15: ("l", ""), 18: ("p", "s"),
+    18: ("p", "s"),
+    # ㄶ 與 ㅀ 特殊：遇母音時 ㅎ 脫落，前一個子音整個移到下一音節當初聲，
+    # 前面不留音。많아요＝[마나요]、싫어요＝[시러요]（不是 sileoyo）。
+    6: ("", "n"), 15: ("", "r"),
 }
 
 # 激音化：終聲帶 ㅎ（ㅎ/ㄶ/ㅀ）後接 ㄱ/ㄷ/ㅈ 時，下一個初聲送氣。
@@ -72,6 +75,12 @@ NASAL_ONSETS = {2, 6}                          # 後接 ㄴ / ㅁ
 
 # 流音的鼻音化：ㅁ/ㅇ 之後的 ㄹ 讀作 ㄴ。음료수 → eumnyosu
 LIQUID_TO_N = {16, 21}                         # 前面是 ㅁ / ㅇ
+
+# 流音化（標準發音法第20項）：ㄴ 與 ㄹ 相鄰時一律同化為 ㄹㄹ。
+#   ㄴ + ㄹ → 난로[날로] nallo、신라[실라] silla
+#   ㄹ + ㄴ → 설날[설랄] seollal、일년[일련] illyeon
+# 羅馬字表記法規定流音化要反映（신라 Silla、별내 Byeollae），
+# 與硬音化（不反映）相反。
 
 # ★ 刻意不做「逆向激音化」（終聲 ㄱ/ㄷ/ㅂ + 初聲 ㅎ → 送氣）。
 #
@@ -123,6 +132,10 @@ def romanize(text):
                 onset = "l"
             elif cho == 5 and pj in LIQUID_TO_N:  # ㅁ/ㅇ + ㄹ → ㄴ
                 onset = "n"
+            elif cho == 5 and pj == 4:           # ㄴ + ㄹ → ll（前面的 ㄴ 已改讀 l）
+                onset = "l"
+            elif cho == 2 and pj == 8:           # ㄹ + ㄴ → ll
+                onset = "l"
 
         coda = ""
         if jong:
@@ -132,6 +145,8 @@ def romanize(text):
                 coda = CLUSTER_LIAISON[jong][0]  # 複合終聲拆開，前半留下
             elif jong in H_FINALS and isinstance(nxt, list) and nxt[0] in ASPIRATE:
                 coda = H_FINALS[jong]            # 激音化：ㅎ 併入下一個初聲
+            elif jong == 4 and isinstance(nxt, list) and nxt[0] == 5:
+                coda = "l"                       # ㄴ + ㄹ：ㄴ 同化為 ㄹ
             elif isinstance(nxt, list) and nxt[0] in NASAL_ONSETS:
                 # 鼻音化
                 if jong in NASAL_K: coda = "ng"
