@@ -12,7 +12,22 @@ export const DIRECTIONS = ['ko2zh', 'zh2ko'];
 export const DIR_LABEL = { ko2zh: '看韓文 → 想中文', zh2ko: '看中文 → 想韓文' };
 
 // ---------- Auth ----------
-// 對外一律用「帳號名」，email 映射封在這一層，UI 不需要知道。
+// 對外一律用「帳號名」，email 解析封在這一層，UI 不需要知道。
+//
+// 解析順序：
+//   1. 輸入含 @ → 本來就是 email，直接用
+//   2. 問後端 email_for_username()（帳號可能綁真實信箱）
+//   3. 查無 → 退回 <name>@kuri0515.local 的機械映射
+async function resolveEmail(input) {
+  const raw = String(input || '').trim();
+  if (raw.includes('@')) return raw.toLowerCase();
+  try {
+    const { data, error } = await sb.rpc('email_for_username', { p_username: raw });
+    if (!error && data) return data;
+  } catch { /* RPC 不存在或網路失敗時靜默退回機械映射 */ }
+  return toEmail(raw);
+}
+
 export const auth = {
   signUp: (username, password, displayName) =>
     sb.auth.signUp({
@@ -27,8 +42,16 @@ export const auth = {
         },
       },
     }),
-  signIn: (username, password) =>
-    sb.auth.signInWithPassword({ email: toEmail(username), password: toPassword(password) }),
+  signIn: async (username, password) =>
+    sb.auth.signInWithPassword({
+      email: await resolveEmail(username),
+      password: toPassword(password),
+    }),
+  /** 寄密碼重置信到帳號綁定的真實信箱 */
+  resetPassword: async (username) =>
+    sb.auth.resetPasswordForEmail(await resolveEmail(username), {
+      redirectTo: window.location.origin + window.location.pathname,
+    }),
   signOut: () => sb.auth.signOut(),
   async user() {
     const { data } = await sb.auth.getUser();

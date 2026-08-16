@@ -77,11 +77,13 @@ def main():
     ap.add_argument("username")
     ap.add_argument("--password", required=True)
     ap.add_argument("--display-name", default=None)
+    ap.add_argument("--email", default=None,
+                    help="真實信箱（收密碼重置信）；不給則用 <帳號名>@%s" % EMAIL_DOMAIN)
     ap.add_argument("--admin", action="store_true", help="設為管理員")
     ap.add_argument("--apply", action="store_true", help="真正建立（預設 dry-run）")
     args = ap.parse_args()
 
-    email = to_email(args.username)
+    email = (args.email or to_email(args.username)).strip().lower()
     pwd = to_password(args.password)
 
     print(f"👤 帳號名   : {args.username}")
@@ -108,7 +110,31 @@ def main():
     })
 
     if "__error__" in res:
-        sys.exit(f"❌ 建立失敗 HTTP {res['__error__']}\n{res['__detail__']}")
+        # 帳號已存在 → 改為更新（信箱／密碼／角色），讓本腳本冪等可重跑
+        if res["__error__"] in (409, 422) or "already" in res["__detail__"].lower():
+            existing = api(url, key, "GET",
+                           f"/rest/v1/profiles?username=eq.{args.username.strip().lower()}&select=id")
+            if isinstance(existing, list) and existing:
+                uid0 = existing[0]["id"]
+                upd = api(url, key, "PUT", f"/auth/v1/admin/users/{uid0}", {
+                    "email": email, "password": pwd, "email_confirm": True,
+                    "user_metadata": {
+                        "username": args.username.strip().lower(),
+                        "display_name": args.display_name or args.username,
+                        **({"role": "admin"} if args.admin else {}),
+                    },
+                })
+                if "__error__" in upd:
+                    sys.exit(f"❌ 更新失敗 HTTP {upd['__error__']}\n{upd['__detail__']}")
+                api(url, key, "PATCH", f"/rest/v1/profiles?id=eq.{uid0}",
+                    {"role": "admin" if args.admin else "user",
+                     "display_name": args.display_name or args.username})
+                res = {"id": uid0}
+                print("\nℹ️  帳號已存在 → 改為更新信箱／密碼／角色")
+            else:
+                sys.exit(f"❌ 建立失敗 HTTP {res['__error__']}\n{res['__detail__']}")
+        else:
+            sys.exit(f"❌ 建立失敗 HTTP {res['__error__']}\n{res['__detail__']}")
 
     uid = res.get("id")
     print(f"\n✅ 已建立 auth 使用者 {uid}")
