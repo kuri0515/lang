@@ -235,11 +235,17 @@ def check_tags(items):
     分開後每個都湊不滿一組，篩選就失去意義。
     """
     tags = Counter(t for x in items for t in (x["tags"] or []))
-    singles = sorted(t for t, n in tags.items() if n == 1)
-    issue("info", f"標籤共 {len(tags)} 個，只用過一次的 {len(singles)} 個",
+    # 收音系列是刻意保留的教學序列（複合收音 ㄼ·ㅀ·ㄻ·ㅄ·ㄿ·ㄺ·ㄶ·ㄳ·ㄵ·ㄾ·ㄽ），
+    # 其中兩個只用過一次。那是「只用一次」而不是「漂移」——
+    # 兩者不能劃等號。已經做過判斷的事就別每次再勸一遍，
+    # 否則遲早有人照著建議把教學結構拆掉。
+    singles = sorted(t for t, n in tags.items() if n == 1 and not t.startswith("收音"))
+    issue("info", f"標籤共 {len(tags)} 個，只用過一次的 {len(singles)} 個（收音教學序列不計）",
           [", ".join(singles)] if singles else [],
           "只用一次的標籤篩選時沒有意義，考慮併入既有標籤。")
-    # 近義標籤：一個是另一個的子字串
+    # 近義標籤。原本只比「一個是另一個的子字串」——
+    # 那抓不到 家庭／家人、情緒／情感 這種共享首字卻互不包含的，
+    # 而那正是最常見的漂移形態。檢查一直顯示通過，其實是看不見。
     near = []
     ts = list(tags)
     for a in ts:
@@ -248,8 +254,21 @@ def check_tags(items):
                 pair = tuple(sorted((a, b)))
                 if pair not in near:
                     near.append(pair)
-    issue("warn", "疑似近義標籤",
+
+    # 共享首字：中文標籤同頭多半是同一個概念被拆開寫
+    # （家庭／家人／家具、情緒／情感）。收音系列是刻意的教學序列，排除。
+    by_head = defaultdict(list)
+    for t in ts:
+        if t.startswith("收音"):
+            continue
+        by_head[t[0]].append(t)
+    head_groups = [f"{head}…：" + "、".join(f"{t}({tags[t]})" for t in sorted(g))
+                   for head, g in sorted(by_head.items()) if len(g) > 1]
+
+    issue("warn", "疑似近義標籤（互為子字串）",
           [f"{a}({tags[a]}) ／ {b}({tags[b]})" for a, b in near])
+    issue("info", "標籤共享首字（可能是同一概念被拆開，請人眼確認）", head_groups,
+          "時間／時刻／時態 這類確實不同，不必合併；家庭／家人 就該併。")
 
 
 def check_counter_sync(url, key):
