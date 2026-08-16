@@ -328,3 +328,34 @@ select {
   .s-result.right { background: #16301f; color: #8ce99a; }
   .s-result.wrong { background: #3a1f22; color: #ffa8a8; }
 }
+
+textarea {
+  font: inherit; width: 100%; padding: 11px 13px; margin: 6px 0 14px;
+  border: 1px solid var(--border); border-radius: 12px;
+  background: var(--bg); color: var(--text); resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;
+}
+
+/* ---------- 學習記錄 ---------- */
+.h-day { margin-bottom: 16px; }
+.h-day > h3 {
+  margin: 0 0 8px; font-size: 13px; color: var(--muted); font-weight: 500;
+  display: flex; justify-content: space-between; align-items: baseline;
+}
+.h-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px;
+}
+.h-item:last-child { border-bottom: none; }
+.h-time { font-size: 11px; color: var(--muted); width: 42px; flex-shrink: 0;
+          font-variant-numeric: tabular-nums; }
+.h-word { flex: 1; min-width: 0; }
+.h-word small { color: var(--muted); }
+.h-mark { width: 20px; text-align: center; flex-shrink: 0; }
+.h-rate { font-size: 11px; color: var(--muted); width: 48px; text-align: right; flex-shrink: 0; }
+
+/* ---------- 匯入預覽 ---------- */
+.i-row { padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.i-row:last-child { border-bottom: none; }
+.i-row.warn { color: var(--hard); }
+.i-row .t { font-size: 11px; color: var(--muted); }

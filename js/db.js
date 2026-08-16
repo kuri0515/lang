@@ -324,3 +324,87 @@ export async function setItemsActive(ids, active) {
   if (error) throw error;
   return data ?? [];
 }
+
+// ---------- 學習記錄（歷史）----------
+/**
+ * 逐筆答題記錄，新到舊。
+ * @param before ISO 時間字串，用於分頁（取比它更早的）
+ */
+export async function listHistory(userId, { limit = 100, before = null, dir = null } = {}) {
+  let q = sb.from('reviews')
+    .select('id, direction, rating, is_correct, elapsed_ms, reviewed_at, items(id, ko, zh, romanization, item_type)')
+    .eq('user_id', userId)
+    .order('reviewed_at', { ascending: false })
+    .limit(limit);
+  if (before) q = q.lt('reviewed_at', before);
+  if (dir) q = q.eq('direction', dir);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []).filter((r) => r.items);
+}
+
+// ---------- 自由練習 ----------
+/**
+ * 只寫答題記錄，不動 user_cards 的排程。
+ *
+ * ★ 為什麼分開：自由練習若也更新到期時間，臨時多背幾遍就會把
+ *   下次複習日往後推，等於破壞了間隔重複的節奏。歷史與正確率照記，
+ *   排程留給正規複習決定。
+ */
+export async function logPractice({ userId, item, direction, rating, elapsedMs }) {
+  const { error } = await sb.from('reviews').insert({
+    user_id: userId, item_id: item.id, direction, rating,
+    elapsed_ms: elapsedMs ?? null,
+  });
+  if (error) throw error;
+}
+
+/** 自由練習取材：可依標籤／搜尋／指定 id 取任意條目，不看到期時間 */
+export async function pickItems({ ids = null, tag = '', q = '', limit = 50 } = {}) {
+  let query = sb.from('items')
+    .select('id, ko, zh, romanization, pos, item_type, example_ko, example_zh, note, tags, audio_url')
+    .eq('is_active', true);
+  if (ids?.length) query = query.in('id', ids);
+  if (tag) query = query.contains('tags', [tag]);
+  if (q.trim()) {
+    const k = q.trim().replace(/[%,()]/g, '');
+    query = query.or(`ko.ilike.*${k}*,zh.ilike.*${k}*,romanization.ilike.*${k}*`);
+  }
+  const { data, error } = await query.limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+// ---------- 管理員：新增內容 ----------
+/** 建立或取得詞庫 */
+export async function ensureDeck(slug, title, level = null) {
+  const { data, error } = await sb.from('decks')
+    .upsert({ slug, title, level }, { onConflict: 'slug' })
+    .select('id, slug, title').single();
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * 批次新增條目。slug 需全域唯一，這裡用「詞庫 slug + 時間戳 + 序號」，
+ * 同一批不會撞，重跑也不會覆蓋既有資料。
+ */
+export async function insertItems(deckId, deckSlug, rows) {
+  const stamp = Date.now().toString(36);
+  const payload = rows.map((r, i) => ({
+    deck_id: deckId,
+    slug: `${deckSlug}-${stamp}-${String(i + 1).padStart(3, '0')}`,
+    item_type: r.item_type || 'word',
+    ko: r.ko, zh: r.zh,
+    romanization: r.romanization || null,
+    pos: r.pos || null,
+    example_ko: r.example_ko || null,
+    example_zh: r.example_zh || null,
+    note: r.note || null,
+    tags: r.tags || [],
+    sort_order: 9000 + i,      // 排在既有內容之後
+  }));
+  const { data, error } = await sb.from('items').insert(payload).select('id');
+  if (error) throw error;
+  return data ?? [];
+}

@@ -5,9 +5,10 @@ import * as db from './db.js';
 import { auth, myProfile, DIR_LABEL } from './db.js';
 import { schedule, previewIntervals, RATING } from './srs.js';
 import * as speech from './speech.js';
+import { parseTable } from './parse-table.js';
 
 const $ = (id) => document.getElementById(id);
-const views = ['view-auth', 'view-home', 'view-study', 'view-done', 'view-browse'];
+const views = ['view-auth', 'view-home', 'view-study', 'view-done', 'view-browse', 'view-history', 'view-import'];
 
 const TYPE_LABEL = { word: '單字', phrase: '詞組', sentence: '句子' };
 
@@ -189,6 +190,7 @@ $('btn-review').onclick = async () => {
   try {
     const rows = await db.fetchDue(user.id, selectedDirs(), 200);
     if (!rows.length) return msg('沒有待複習的卡片', 'ok');
+    freeMode = false;
     queue = shuffle(rows.map((c) => ({ item: c.items, direction: c.direction, card: c })));
     await ensurePool();
     beginSession();
@@ -208,6 +210,7 @@ async function startNew(deckId, tag = '') {
     const rows = await db.fetchNewItems(user.id, deckId, selectedDirs(), room, tag);
     if (!rows.length) return msg(tag ? `「${tag}」這組已經學完了 👍` : '這個詞庫的新內容已經學完了 👍', 'ok');
     if (rows.length < room) msg(`本輪 ${rows.length} 張新卡`, 'ok');
+    freeMode = false;
     queue = rows;
     await ensurePool();
     beginSession();
@@ -545,7 +548,12 @@ function flushPending(immediate = true) {
   pending = null;
   $('btn-undo').disabled = true;
   if (immediate) {
-    db.saveReview(payload).catch((e) => msg('儲存失敗：' + (e.message || e)));
+    const write = payload.free
+      ? db.logPractice({ userId: payload.userId, item: payload.item,
+                         direction: payload.direction, rating: payload.rating,
+                         elapsedMs: payload.elapsedMs })
+      : db.saveReview(payload);
+    write.catch((e) => msg('儲存失敗：' + (e.message || e)));
   }
 }
 
@@ -571,6 +579,7 @@ async function grade(rating) {
   const payload = {
     userId: user.id, item: entry.item, direction: entry.direction,
     prevCard: entry.card, rating, next, elapsedMs: elapsed,
+    free: freeMode,
   };
   pending = { payload, snapshot, timer: setTimeout(() => flushPending(true), UNDO_MS) };
 
@@ -627,6 +636,7 @@ function finish() {
   const { n, correct } = sessionStats;
   $('done-text').textContent = n
     ? `本輪答了 ${n} 題，正確率 ${pct(correct / n)}。`
+      + (freeMode ? '（自由練習：已記錄成績，複習排程未變動）' : '')
     : '本輪沒有作答。';
   show('view-done');
 }
@@ -649,6 +659,10 @@ function openEditor(item) {
   $('e-tags').value  = (item.tags || []).join(', ');
   $('e-msg').textContent = '';
   $('e-msg').className = 'editor-msg';
+  if (item.id) {
+    $('e-deck-row').classList.add('hidden');
+    $('editor').querySelector('h2').textContent = '編輯條目';
+  }
   $('editor').classList.remove('hidden');
   $('e-ko').focus();
 }
@@ -683,11 +697,20 @@ $('e-save').onclick = async () => {
   $('e-msg').textContent = '同步中…';
   $('e-msg').className = 'editor-msg';
   try {
-    // updateItem 回傳的是資料庫回讀的那一行 —— 用它更新畫面，
-    // 而不是用我們送出去的 patch，才能確定雲端真的存成這樣。
-    const saved = await db.updateItem(editing.id, patch);
-    syncLocal(saved);
-    $('e-msg').textContent = '✓ 已同步到雲端';
+    let saved;
+    if (editing.id) {
+      // updateItem 回傳的是資料庫回讀的那一行 —— 用它更新畫面，
+      // 而不是用我們送出去的 patch，才能確定雲端真的存成這樣。
+      saved = await db.updateItem(editing.id, patch);
+      syncLocal(saved);
+    } else {
+      const [deckId, deckSlug] = await resolveDeck($('e-deck'));
+      if (!deckId) { $('e-save').disabled = false; $('e-msg').textContent = ''; return; }
+      const [row] = await db.insertItems(deckId, deckSlug, [patch]);
+      saved = row;
+      pool = [];
+    }
+    $('e-msg').textContent = editing.id ? '✓ 已同步到雲端' : '✓ 已新增';
     $('e-msg').className = 'editor-msg ok';
     setTimeout(closeEditor, 700);
   } catch (e) {
@@ -794,6 +817,7 @@ async function renderBrowse() {
     const rows = await db.browseItems(user.id, { q: $('b-search').value, tag: browseTag });
     $('b-count').textContent = `${rows.length} 條${browseTag ? ` · ${browseTag}` : ''}`;
     $('btn-study-tag').classList.toggle('hidden', !browseTag);
+    $('btn-practice-sel').classList.toggle('hidden', !picked.size);
     $('btn-study-tag').textContent = `學「${browseTag}」`;
     if (!rows.length) { $('b-list').innerHTML = '<p class="muted">沒有符合的條目。</p>'; return; }
 
@@ -838,6 +862,7 @@ async function renderBrowse() {
         c.checked ? picked.add(c.dataset.pick) : picked.delete(c.dataset.pick);
         c.closest('.b-row').classList.toggle('sel', c.checked);
         renderBulkBar();
+        $('btn-practice-sel').classList.toggle('hidden', !picked.size);
       };
     });
     renderBulkBar();
@@ -891,6 +916,187 @@ function esc(s) {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
+// =====================================================================
+// 管理員：新增條目 / 批次匯入
+// =====================================================================
+let decksCache = [];
+
+async function loadDecksInto(sel) {
+  if (!decksCache.length) decksCache = await db.listDecks().catch(() => []);
+  sel.innerHTML = decksCache.map((d) => `<option value="${d.id}|${esc(d.slug)}">${esc(d.title)}</option>`).join('')
+    + `<option value="__new__">＋ 新增詞庫…</option>`;
+}
+
+$('btn-add').onclick = async () => {
+  await loadDecksInto($('e-deck'));
+  $('e-deck-row').classList.remove('hidden');
+  openEditor({ id: null, ko: '', zh: '', tags: [], item_type: 'word' });
+  $('editor').querySelector('h2').textContent = '新增條目';
+};
+
+$('btn-import').onclick = async () => {
+  show('view-import');
+  await loadDecksInto($('i-deck'));
+};
+$('btn-import-back').onclick = async () => { show('view-home'); await loadHome(); };
+
+let parsed = null;
+
+$('i-parse').onclick = () => {
+  const res = parseTable($('i-text').value);
+  $('i-preview-card').classList.remove('hidden');
+  if (res.error) {
+    parsed = null;
+    $('i-apply').disabled = true;
+    $('i-summary').innerHTML = `<span style="color:var(--again)">${esc(res.error)}</span>`;
+    $('i-preview').innerHTML = '';
+    return;
+  }
+  parsed = res.rows;
+  const warns = res.rows.filter((r) => r.warn).length;
+  $('i-apply').disabled = !res.rows.length;
+  $('i-summary').innerHTML =
+    `解析出 <b>${res.rows.length}</b> 列（跳過 ${res.skipped} 列缺欄位的）· `
+    + `分隔符 ${res.sep === '\t' ? 'Tab' : '逗號'} · 欄位對應：${esc(JSON.stringify(res.headers))}`
+    + (warns ? `<br><span style="color:var(--hard)">⚠️ ${warns} 列的韓文欄裡沒有諺文字元，請確認欄位沒錯位</span>` : '');
+  $('i-preview').innerHTML = res.rows.slice(0, 30).map((r) =>
+    `<div class="i-row${r.warn ? ' warn' : ''}">
+       <b>${esc(r.ko)}</b> — ${esc(r.zh)}
+       <span class="t">${[r.romanization, r.pos, TYPE_LABEL[r.item_type], (r.tags || []).join('/')].filter(Boolean).map(esc).join(' · ')}</span>
+       ${r.warn ? `<span class="t"> ⚠️ ${esc(r.warn)}</span>` : ''}
+     </div>`).join('')
+    + (res.rows.length > 30 ? `<p class="muted">…以下省略 ${res.rows.length - 30} 列</p>` : '');
+};
+
+$('i-apply').onclick = async () => {
+  if (!parsed?.length) return;
+  const [deckId, deckSlug] = await resolveDeck($('i-deck'));
+  if (!deckId) return;
+  if (!confirm(`確定匯入 ${parsed.length} 條到「${$('i-deck').selectedOptions[0].textContent}」？`)) return;
+
+  $('i-apply').disabled = true;
+  $('i-summary').innerHTML = '匯入中…';
+  try {
+    const done = await db.insertItems(deckId, deckSlug, parsed);
+    // 回讀筆數核對，不靠斷言
+    $('i-summary').innerHTML =
+      `<span style="color:var(--good)">✓ 已匯入 ${done.length} 條`
+      + `${done.length !== parsed.length ? `（送出 ${parsed.length} 條，請檢查）` : ''}</span>`;
+    $('i-text').value = ''; $('i-preview').innerHTML = ''; parsed = null;
+    pool = [];                        // 干擾項池失效
+    decksCache = [];
+  } catch (e) {
+    $('i-summary').innerHTML = `<span style="color:var(--again)">匯入失敗：${esc(e.message || e)}</span>`;
+    $('i-apply').disabled = false;
+  }
+};
+
+/** 取得選中的詞庫；選「新增」時當場建一個 */
+async function resolveDeck(sel) {
+  if (sel.value !== '__new__') return sel.value.split('|');
+  const title = prompt('新詞庫名稱', '我的詞庫');
+  if (!title) return [null, null];
+  const slug = prompt('詞庫代號（英數與連字號）', 'my-deck-' + Date.now().toString(36));
+  if (!slug) return [null, null];
+  try {
+    const d = await db.ensureDeck(slug.trim(), title.trim());
+    decksCache = [];
+    await loadDecksInto(sel);
+    sel.value = `${d.id}|${d.slug}`;
+    return [d.id, d.slug];
+  } catch (e) { msg('建立詞庫失敗：' + (e.message || e)); return [null, null]; }
+}
+
+// =====================================================================
+// 自由練習
+//
+// 不看到期時間、不受每日新卡上限限制，想練什麼練什麼。
+// ★ 只寫答題記錄，不動 user_cards 的排程 ——
+//   否則臨時多背幾遍就會把下次複習日往後推，破壞間隔重複的節奏。
+// =====================================================================
+let freeMode = false;
+
+async function startFree({ ids = null, tag = '', q = '' } = {}) {
+  try {
+    const items = await db.pickItems({ ids, tag, q, limit: 60 });
+    if (!items.length) return msg('沒有符合的內容');
+    const dir = effectiveDir();
+    freeMode = true;
+    queue = shuffle(items.map((item) => ({ item, direction: dir, card: null })));
+    await ensurePool();
+    beginSession();
+    if (queue.length) {
+      msg(`自由練習 ${queue.length} 題 · 只記錄成績，不影響複習排程`, 'ok');
+    }
+  } catch (e) { msg(e.message || e); }
+}
+
+$('btn-free').onclick = () => startFree({ tag: browseTag });
+$('btn-practice-sel').onclick = () => {
+  if (!picked.size) return msg('先勾選要練的條目');
+  startFree({ ids: [...picked] });
+};
+
+// =====================================================================
+// 學習記錄
+// =====================================================================
+let hCursor = null;   // 分頁游標：目前最舊那筆的時間
+let hDir = '';
+
+const RATE_LABEL = { 1: '忘了', 2: '有點難', 3: '記得', 4: '很簡單' };
+
+async function loadHistory(reset = true) {
+  if (reset) { hCursor = null; $('h-list').innerHTML = '<p class="muted center">載入中…</p>'; }
+  try {
+    const rows = await db.listHistory(user.id, { limit: 100, before: hCursor, dir: hDir || null });
+    if (reset) $('h-list').innerHTML = '';
+    if (!rows.length) {
+      if (reset) $('h-list').innerHTML = '<div class="card"><p class="muted center" style="margin:0">還沒有學習記錄。去練幾題吧 👋</p></div>';
+      $('h-more').classList.add('hidden');
+      return;
+    }
+    hCursor = rows[rows.length - 1].reviewed_at;
+    $('h-more').classList.toggle('hidden', rows.length < 100);
+
+    // 依日期分組
+    const groups = [];
+    for (const r of rows) {
+      const d = new Date(r.reviewed_at);
+      const key = d.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
+      if (!groups.length || groups[groups.length - 1].key !== key) groups.push({ key, rows: [] });
+      groups[groups.length - 1].rows.push(r);
+    }
+
+    $('h-list').insertAdjacentHTML('beforeend', groups.map((g) => {
+      const ok = g.rows.filter((r) => r.is_correct).length;
+      return `<div class="card h-day">
+        <h3><span>${esc(g.key)}</span>
+            <span>${g.rows.length} 題 · 正確率 ${Math.round((ok / g.rows.length) * 100)}%</span></h3>
+        ${g.rows.map((r) => {
+          const t = new Date(r.reviewed_at);
+          return `<div class="h-item">
+            <span class="h-time">${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}</span>
+            <span class="h-mark">${r.is_correct ? '✅' : '❌'}</span>
+            <span class="h-word">${esc(r.items.ko)} <small>${esc(r.items.zh)}</small>
+              <small> · ${DIR_LABEL[r.direction].replace('看', '').replace(' → 想', '→')}</small></span>
+            <span class="h-rate">${RATE_LABEL[r.rating] || ''}</span>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }).join(''));
+  } catch (e) {
+    msg('載入記錄失敗：' + (e.message || e));
+  }
+}
+
+$('btn-history').onclick = () => { show('view-history'); loadHistory(true); };
+$('btn-history-back').onclick = async () => { show('view-home'); await loadHome(); };
+$('h-more').onclick = () => loadHistory(false);
+$('h-filter').addEventListener('change', () => {
+  hDir = document.querySelector('#h-filter input:checked').value;
+  loadHistory(true);
+});
+
 // ---------------------------------------------------------------------
 // 朗讀語音設定
 // ---------------------------------------------------------------------
@@ -931,7 +1137,9 @@ async function onUser(u) {
 
   // isAdmin 僅供 UX（顯示徽章 / 未來的後台入口）；真正的寫入邊界是 RLS
   profile = await myProfile(u.id).catch(() => null);
-  $('admin-tag').classList.toggle('hidden', profile?.role !== 'admin');
+  const isAdmin = profile?.role === 'admin';
+  $('admin-tag').classList.toggle('hidden', !isAdmin);
+  $('admin-row').classList.toggle('hidden', !isAdmin);
 
   show('view-home');
   await loadHome();

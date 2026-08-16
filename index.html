@@ -68,7 +68,15 @@
 
         <div class="row2" style="margin-top:14px">
           <button id="btn-review" class="primary">開始複習</button>
+          <button id="btn-free">自由練習</button>
+        </div>
+        <div class="row2" style="margin-top:8px">
           <button id="btn-browse">瀏覽詞庫</button>
+          <button id="btn-history">學習記錄</button>
+        </div>
+        <div class="row2 hidden" id="admin-row" style="margin-top:8px">
+          <button id="btn-add">＋ 新增條目</button>
+          <button id="btn-import">批次匯入</button>
         </div>
       </div>
 
@@ -174,7 +182,10 @@
       <div class="card">
         <div class="browse-head">
           <span id="b-count" class="muted"></span>
-          <button id="btn-study-tag" class="primary hidden" style="padding:6px 14px;font-size:13px">學這組</button>
+          <span>
+            <button id="btn-practice-sel" class="hidden" style="padding:6px 12px;font-size:13px">練所選</button>
+            <button id="btn-study-tag" class="primary hidden" style="padding:6px 14px;font-size:13px">學這組</button>
+          </span>
         </div>
         <div id="b-list"></div>
       </div>
@@ -189,6 +200,48 @@
     </section>
   </div>
 
+    <!-- ============ 學習記錄 ============ -->
+    <section id="view-history" class="hidden">
+      <div class="card">
+        <h2 style="margin-top:0">學習記錄</h2>
+        <div class="dir-pick" id="h-filter">
+          <label class="chip"><input type="radio" name="hf" value="" checked><span>全部</span></label>
+          <label class="chip"><input type="radio" name="hf" value="ko2zh"><span>韓 → 中</span></label>
+          <label class="chip"><input type="radio" name="hf" value="zh2ko"><span>中 → 韓</span></label>
+        </div>
+      </div>
+      <div id="h-list"></div>
+      <p class="center">
+        <button id="h-more" class="link hidden">載入更早的記錄</button>
+      </p>
+      <p class="center"><button id="btn-history-back" class="link">← 返回</button></p>
+    </section>
+
+    <!-- ============ 批次匯入（管理員）============ -->
+    <section id="view-import" class="hidden">
+      <div class="card">
+        <h2 style="margin-top:0">批次匯入</h2>
+        <p class="muted" style="margin-top:0">
+          直接從 Excel／Google 試算表複製貼上，或貼 CSV。
+          第一列可以是表頭（<code>ko,zh,romanization,type,pos,example_ko,example_zh,note,tags</code>，
+          中文欄名也認）；沒有表頭則按「韓文,中文,羅馬音…」的順序解讀。
+        </p>
+        <label>目標詞庫</label>
+        <select id="i-deck"></select>
+        <label>貼上內容</label>
+        <textarea id="i-text" rows="9" placeholder="사랑,愛,sarang,單字,명사,,,,情感"></textarea>
+        <div class="row2">
+          <button id="i-parse">解析預覽</button>
+          <button id="i-apply" class="primary" disabled>確認匯入</button>
+        </div>
+      </div>
+      <div class="card hidden" id="i-preview-card">
+        <div id="i-summary" class="muted"></div>
+        <div id="i-preview"></div>
+      </div>
+      <p class="center"><button id="btn-import-back" class="link">← 返回</button></p>
+    </section>
+
   <!-- ============ 編輯條目（管理員）============ -->
   <div id="editor" class="overlay hidden">
     <div class="editor-card">
@@ -197,6 +250,10 @@
         <button id="e-close" class="link">✕</button>
       </div>
       <div class="editor-body">
+        <div id="e-deck-row" class="hidden">
+          <label>詞庫</label>
+          <select id="e-deck"></select>
+        </div>
         <label>韓文 *</label>          <input id="e-ko" type="text">
         <label>中文（繁體）*</label>    <input id="e-zh" type="text">
         <div class="row2">
