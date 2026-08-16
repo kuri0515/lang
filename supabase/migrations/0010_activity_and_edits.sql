@@ -40,8 +40,12 @@ where activity is null;
 create index if not exists reviews_activity_idx
   on public.reviews(user_id, activity, reviewed_at desc);
 
--- 場次彙總帶上活動類型
-create or replace view public.v_sessions as
+-- 場次彙總帶上活動類型。
+-- ★ 必須先 drop：create or replace view 不能改變欄位的順序或名稱，
+--   在中間插一欄會讓後面的欄位位移，Postgres 會報
+--   「cannot change name of view column」。view 沒有資料，drop 是安全的。
+drop view if exists public.v_sessions;
+create view public.v_sessions as
 select
   user_id,
   session_id,
