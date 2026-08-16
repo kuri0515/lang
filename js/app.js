@@ -25,6 +25,17 @@ const graded = new Set();   // 已作答過的佇列位置（← 回看時不可
 const studyMode = () =>
   document.querySelector('#mode-pick input:checked')?.value || 'flip';
 
+// 有些模式本身就綁定了方向，不該讓使用者另外選：
+//   詞序重組 = 看中文排出韓文 → zh2ko
+//   聽音選義 = 聽韓文選中文   → ko2zh
+const MODE_DIR = { scramble: 'zh2ko', listen: 'ko2zh' };
+const MODE_HINT = {
+  flip:     '看到題目自己回想，再按四鍵評估熟練度。',
+  choice:   '四選一，答對記「記得」、答錯記「忘了」。',
+  scramble: '看中文，把打散的韓文詞塊排回正確語序。方向固定為「中 → 韓」。',
+  listen:   '只聽發音，選出對應的中文。方向固定為「韓 → 中」。',
+};
+
 // ---------------------------------------------------------------------
 function show(view) { views.forEach((v) => $(v).classList.toggle('hidden', v !== view)); }
 function msg(text, kind = 'err') {
@@ -39,7 +50,20 @@ const pct = (x) => (x == null ? '–' : `${Math.round(x * 100)}%`);
 function selectedDir() {
   return document.querySelector('#dir-pick input:checked')?.value || 'ko2zh';
 }
-function selectedDirs() { return [selectedDir()]; }
+function effectiveDir() { return MODE_DIR[studyMode()] || selectedDir(); }
+function selectedDirs() { return [effectiveDir()]; }
+
+function syncModeUI() {
+  const m = studyMode();
+  const forced = MODE_DIR[m];
+  $('mode-hint').textContent = MODE_HINT[m] || '';
+  $('dir-pick').querySelectorAll('input').forEach((i) => {
+    i.disabled = !!forced;
+    if (forced) i.checked = i.value === forced;
+  });
+  $('dir-pick').style.opacity = forced ? '.5' : '1';
+}
+$('mode-pick').addEventListener('change', () => { syncModeUI(); if (user) loadHome(); });
 
 // ---------------------------------------------------------------------
 // Auth
@@ -195,8 +219,28 @@ async function ensurePool() {
   try { pool = await db.distractorPool(); } catch { pool = []; }
 }
 
+/**
+ * 依模式過濾佇列。
+ * 詞序重組需要韓文可拆成 2 個以上詞塊 —— 單字類多半拆不開，
+ * 不濾掉的話會抽到沒東西可排的空卡。
+ * @returns {boolean} 是否還有可練的內容
+ */
+function filterQueueForMode() {
+  if (studyMode() !== 'scramble') return true;
+  const before = queue.length;
+  queue = queue.filter((e) => scrambleSource(e.item));
+  if (!queue.length) {
+    msg('這批內容沒有可重組的詞組或句子（需要韓文能拆成 2 個以上詞塊）。'
+      + '換個模式，或先學一些帶例句的條目。');
+    return false;
+  }
+  if (queue.length < before) msg(`本輪 ${queue.length} 題可重組（已略過 ${before - queue.length} 條拆不開的）`, 'ok');
+  return true;
+}
+
 function beginSession() {
   flushPending();
+  if (!filterQueueForMode()) return show('view-home');
   $('btn-undo').disabled = true;
   graded.clear();
   idx = 0;
@@ -238,12 +282,32 @@ function render() {
   $('c-back').classList.add('hidden');
   $('grade').classList.add('hidden');
 
-  if (studyMode() === 'choice' && pool.length >= 4) {
-    $('btn-show').classList.add('hidden');
+  const mode = studyMode();
+  const done = graded.has(idx);
+
+  // 先全部收起，再依模式打開需要的
+  $('choices').classList.add('hidden');
+  $('scramble').classList.add('hidden');
+  $('c-listen').classList.add('hidden');
+  $('btn-show').classList.add('hidden');
+
+  if (done) {
+    // 回看已作答的卡：只攤開內容，不給作答介面
+  } else if (mode === 'scramble' && scrambleSource(item)) {
+    $('scramble').classList.remove('hidden');
+    setText('c-front', scrambleSource(item).zh, true);
+    renderScramble(item);
+  } else if (mode === 'listen' && pool.length >= 4) {
+    $('c-listen').classList.remove('hidden');
+    $('c-front').textContent = '';          // 聽音模式不給字
+    $('c-roman').classList.add('hidden');
+    $('choices').classList.remove('hidden');
+    renderChoices(item, 'ko2zh');
+    speech.speak(item.ko, item.audio_url);  // 進卡自動播一次
+  } else if (mode === 'choice' && pool.length >= 4) {
     $('choices').classList.remove('hidden');
     renderChoices(item, direction);
   } else {
-    $('choices').classList.add('hidden');
     $('btn-show').classList.remove('hidden');
   }
 
@@ -256,10 +320,7 @@ function render() {
   $('btn-next').disabled = idx >= queue.length - 1;
   $('btn-edit-card').classList.toggle('hidden', profile?.role !== 'admin');
 
-  // 已作答過 → 鎖住作答，只供回看
-  const done = graded.has(idx);
-  $('choices').classList.toggle('hidden', done || studyMode() !== 'choice' || pool.length < 4);
-  $('btn-show').classList.toggle('hidden', done || (studyMode() === 'choice' && pool.length >= 4));
+  // 已作答過 → 只供回看
   let note = $('peek-note');
   if (done) {
     if (!note) {
@@ -274,6 +335,96 @@ function render() {
   shownAt = Date.now();
 }
 
+// =====================================================================
+// 詞序重組
+//
+// 素材來源：條目本身若有 2 個以上詞塊就用本身，否則退而用例句。
+// 169 條裡條目本身可拆的只有 26 條（且多半只有 2 塊、太簡單），
+// 加上例句後有 96 條、其中 28 條達 3 塊以上，難度才夠。
+// =====================================================================
+// 句末標點要剝掉再切塊：帶著「.」或「?」的詞塊一眼就能看出是最後一塊，
+// 等於白送答案，練不到語序判斷。標點只在對答案時顯示。
+const TAIL_PUNCT = /[.?!。？！]+$/;
+
+function tokenize(text) {
+  return text.trim().replace(TAIL_PUNCT, '').split(/\s+/).filter(Boolean);
+}
+
+function scrambleSource(item) {
+  const self = (item.ko || '').trim();
+  const selfTok = tokenize(self);
+  if (selfTok.length >= 2) {
+    return { ko: self, zh: item.zh, tokens: selfTok, from: 'self' };
+  }
+  const ex = (item.example_ko || '').trim();
+  const exTok = tokenize(ex);
+  if (exTok.length >= 2) {
+    return { ko: ex, zh: item.example_zh || item.zh, tokens: exTok, from: 'example' };
+  }
+  return null;
+}
+
+let scrambleState = null;
+
+function renderScramble(item) {
+  const src = scrambleSource(item);
+  scrambleState = { src, placed: [] };
+  answered = false;
+
+  // 打亂到與正解不同。2 塊時隨機有 1/2 機率原樣，光靠重試不保險，
+  // 最後兜底直接交換前兩塊，保證一定被打亂。
+  let order = shuffle(src.tokens.map((t, i) => i));
+  for (let i = 0; i < 6 && order.every((v, k) => v === k); i++) {
+    order = shuffle(src.tokens.map((t, j) => j));
+  }
+  if (order.every((v, k) => v === k)) [order[0], order[1]] = [order[1], order[0]];
+
+  $('s-answer').innerHTML = '';
+  $('s-result').className = 's-result hidden';
+  $('s-pool').innerHTML = order.map((oi) =>
+    `<button class="tok" data-oi="${oi}">${esc(src.tokens[oi])}</button>`).join('');
+  $('s-pool').querySelectorAll('.tok').forEach((b) => { b.onclick = () => placeToken(b); });
+}
+
+function placeToken(btn) {
+  if (answered) return;
+  btn.classList.add('used');
+  const oi = Number(btn.dataset.oi);
+  scrambleState.placed.push(oi);
+
+  const chip = document.createElement('button');
+  chip.className = 'tok';
+  chip.textContent = scrambleState.src.tokens[oi];
+  chip.onclick = () => {                       // 點答案區的塊可退回
+    if (answered) return;
+    const pos = scrambleState.placed.lastIndexOf(oi);
+    if (pos >= 0) scrambleState.placed.splice(pos, 1);
+    chip.remove();
+    btn.classList.remove('used');
+  };
+  $('s-answer').appendChild(chip);
+
+  if (scrambleState.placed.length === scrambleState.src.tokens.length) checkScramble();
+}
+
+function checkScramble() {
+  answered = true;
+  const { src, placed } = scrambleState;
+  const mine = placed.map((i) => src.tokens[i]).join(' ');
+  const correct = mine === src.tokens.join(' ');
+
+  const box = $('s-result');
+  box.className = `s-result ${correct ? 'right' : 'wrong'}`;
+  box.innerHTML = correct
+    ? `✓ 正確<b>${esc(src.ko)}</b>`
+    : `✗ 正確語序是<b>${esc(src.ko)}</b>`;
+
+  speech.speak(src.ko);
+  reveal();
+  $('grade').classList.add('hidden');
+  setTimeout(() => grade(correct ? RATING.GOOD : RATING.AGAIN), correct ? 1400 : 2800);
+}
+
 // ---------------------------------------------------------------------
 // 選擇題：從條目池挑 3 個干擾項
 //
@@ -282,7 +433,8 @@ function render() {
 // 練不到真正的辨義。
 // ---------------------------------------------------------------------
 function buildChoices(item, direction) {
-  const key = direction === 'ko2zh' ? 'zh' : 'ko';
+  const key = direction === 'ko2zh' ? 'zh' : 'ko';   // 答案面
+  const ask = direction === 'ko2zh' ? 'ko' : 'zh';   // 題面
   const answer = item[key];
   const tags = new Set(item.tags || []);
 
@@ -295,7 +447,12 @@ function buildChoices(item, direction) {
   };
 
   const cands = pool
-    .filter((o) => o.id !== item.id && o[key] && o[key] !== answer)
+    .filter((o) =>
+      o.id !== item.id && o[key] && o[key] !== answer &&
+      // ★ 同義詞排除：題面相同的條目不能當干擾項。
+      //   例：감사합니다 與 고맙습니다 中文都是「謝謝」，
+      //   中→韓問「謝謝」時兩者都對，拿其一當干擾項會把正確答案判成錯。
+      o[ask] !== item[ask])
     .map((o) => ({ o, s: score(o) + Math.random() }))   // 加隨機打破同分僵局
     .sort((a, b) => b.s - a.s)
     .map((x) => x.o);
@@ -550,6 +707,11 @@ function syncLocal(saved) {
   if (!$('view-browse').classList.contains('hidden')) renderBrowse();
 }
 
+$('c-listen').onclick = () => {
+  const item = queue[idx]?.item;
+  if (item) speech.speak(item.ko, item.audio_url);
+};
+
 $('btn-edit-card').onclick = () => {
   const item = queue[idx]?.item;
   if (item) openEditor(item);
@@ -776,5 +938,6 @@ async function onUser(u) {
 }
 
 initVoiceUI();
+syncModeUI();
 auth.onChange(onUser);
 (async () => { await onUser(await auth.user()); })();

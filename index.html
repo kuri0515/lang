@@ -61,7 +61,10 @@
         <div class="mode-pick" id="mode-pick">
           <label class="chip"><input type="radio" name="mode" value="flip" checked><span>翻卡自評</span></label>
           <label class="chip"><input type="radio" name="mode" value="choice"><span>四選一</span></label>
+          <label class="chip"><input type="radio" name="mode" value="scramble"><span>詞序重組</span></label>
+          <label class="chip"><input type="radio" name="mode" value="listen"><span>聽音選義</span></label>
         </div>
+        <p id="mode-hint" class="muted" style="margin:8px 0 0"></p>
 
         <div class="row2" style="margin-top:14px">
           <button id="btn-review" class="primary">開始複習</button>
@@ -112,6 +115,9 @@
         <div class="dir-tag" id="c-dir"></div>
         <div class="type-tag" id="c-type"></div>
 
+        <!-- 聽音選義：正面不給字，只給聲音 -->
+        <button id="c-listen" class="listen-btn hidden">🔊</button>
+
         <!-- 正面：依方向顯示韓文或中文 -->
         <div class="front" id="c-front"></div>
         <div class="roman hidden" id="c-roman"></div>
@@ -134,6 +140,11 @@
         </div>
       </div>
 
+      <div id="scramble" class="scramble hidden">
+        <div id="s-answer" class="s-answer" data-empty="點下方詞塊，依正確語序排列"></div>
+        <div id="s-pool" class="s-pool"></div>
+        <div id="s-result" class="s-result hidden"></div>
+      </div>
       <div id="choices" class="choices hidden"></div>
       <button id="btn-show" class="primary" style="width:100%">顯示答案</button>
       <div id="grade" class="grade hidden">
