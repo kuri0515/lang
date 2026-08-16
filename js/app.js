@@ -13,7 +13,7 @@ import * as content from './data/content.js';
 import * as progress from './data/progress.js';
 import { createSession } from './study/session.js';
 import { getMode, needsPool } from './study/modes/index.js';
-import { show, onEnter, initTabs } from './views/router.js';
+import { show, onEnter, initTabs, viewFromHash } from './views/router.js';
 import { initTheme } from './views/theme.js';
 import { initVoiceUI } from './views/voice.js';
 import { initAuth } from './views/auth.js';
@@ -176,7 +176,8 @@ async function onUser(u) {
   $('me-account').innerHTML =
     `帳號 <b>${esc(profile?.username)}</b>　角色 ${isAdmin() ? '管理員' : '一般使用者'}<br>`
     + `<span class="hint">${esc(u.email)}</span>`;
-  await show('view-home');
+  // 重新整理後回到原本那一頁
+  await show(viewFromHash());
 }
 
 auth.onChange(onUser);

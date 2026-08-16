@@ -513,3 +513,15 @@ kbd {
 .hanja-rel .rel { display: inline-block; margin: 3px 4px 0 0; }
 .hanja-rel .rel b { color: var(--text); font-weight: 600; }
 .b-hanja { font-size: 11.5px; color: var(--faint); letter-spacing: 1px; }
+
+/* ---------- 已掌握 ---------- */
+.m-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 9px 0; border-bottom: 1px solid var(--border-soft); font-size: 13.5px;
+}
+.m-row:first-child { padding-top: 0; }
+.m-row:last-child { border-bottom: none; padding-bottom: 0; }
+.m-word { min-width: 0; }
+.m-when { flex-shrink: 0; text-align: right; font-size: 11.5px; color: var(--faint);
+          font-variant-numeric: tabular-nums; }
+.m-when small { display: block; font-size: 10.5px; }

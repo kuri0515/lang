@@ -16,7 +16,7 @@ global.confirm=()=>true; global.prompt=()=>null;
 let f=0; const chk=(n,c,e='')=>{console.log(`  ${c?'✅':'❌'} ${n}${e?' — '+e:''}`); if(!c)f++;};
 
 // 真實模組（不碰網路的那些）
-const { show, initTabs, onEnter } = await import(ROOT+'/js/views/router.js');
+const { show, initTabs, onEnter, viewFromHash } = await import(ROOT+'/js/views/router.js');
 const { initTheme, applyTheme } = await import(ROOT+'/js/views/theme.js');
 const { createSession } = await import(ROOT+'/js/study/session.js');
 const { RATING } = await import(ROOT+'/js/core/srs.js');
@@ -36,6 +36,20 @@ await show('view-study'); chk('學習中隱藏 Tabbar', $('tabbar').classList.co
 await show('view-home');  chk('首頁高亮對應 Tab', $('tabbar').querySelector('button.on')?.dataset.tab==='view-home');
 let entered=0; onEnter('view-me',()=>{entered++;}); await show('view-me');
 chk('onEnter 鉤子被呼叫', entered===1, '各畫面自行註冊進入行為，router 不認識它們');
+
+// 重新整理回到原頁：切畫面會同步網址，啟動時再從網址還原
+await show('view-browse');
+chk('切畫面時網址同步', window.location.hash==='#browse', window.location.hash);
+chk('從網址還原畫面', viewFromHash()==='view-browse');
+await show('view-history');
+chk('再切一次網址跟著變', window.location.hash==='#history');
+window.location.hash='#me';
+chk('網址指向我的 → 還原為 view-me', viewFromHash()==='view-me');
+window.location.hash='';
+chk('沒有網址時預設首頁', viewFromHash()==='view-home');
+window.location.hash='#study';
+chk('學習中不可由網址還原（佇列已不在）', viewFromHash()==='view-home');
+window.location.hash='';
 
 console.log('\n【事件匯流排解耦】');
 let gotUpdate=null, gotChange=0;

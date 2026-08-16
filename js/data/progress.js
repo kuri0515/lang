@@ -176,3 +176,26 @@ export async function cardsByItem(userId, itemIds, batch = 80) {
   }
   return out;
 }
+
+// ---------- 學習軌跡 ----------
+/**
+ * 已掌握的詞，最近達成的在前。
+ * mastered_at 由資料庫 trigger 維護 —— 跨過門檻那一刻蓋時間戳，
+ * 遺忘掉出門檻則清空，所以這裡讀到的一定是「目前確實掌握著」的。
+ */
+export async function masteredItems(userId, limit = 200) {
+  const { data, error } = await sb.from('v_learning_timeline')
+    .select('item_id, direction, ko, zh, hanja, mastered_at, first_learned_at, accuracy, total_reviews')
+    .eq('user_id', userId).not('mastered_at', 'is', null)
+    .order('mastered_at', { ascending: false }).limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** 單一條目的完整學習軌跡（兩個方向） */
+export async function itemTimeline(userId, itemId) {
+  const { data, error } = await sb.from('v_learning_timeline')
+    .select('*').eq('user_id', userId).eq('item_id', itemId);
+  if (error) throw error;
+  return data ?? [];
+}
