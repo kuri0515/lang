@@ -57,11 +57,16 @@
         <div><b id="s-due">–</b><small>待複習</small></div>
         <div><b id="s-done">–</b><small>今日已答</small></div>
         <div><b id="s-acc">–</b><small>今日正確</small></div>
-        <div><b id="s-all-acc">–</b><small>總正確率</small></div>
+        <div><b id="s-all-acc">–</b><small>已掌握</small></div>
       </div>
       <div id="streak" class="streak"></div>
-      <button id="btn-review" class="primary block big">開始複習</button>
-      <button id="btn-free" class="block ghost">自由練習</button>
+
+      <div id="suggest" class="suggest"></div>
+      <button id="btn-primary" class="primary block big">開始複習</button>
+      <div class="row2" style="margin-top:8px">
+        <button id="btn-review" class="ghost">複習</button>
+        <button id="btn-free" class="ghost">自由練習</button>
+      </div>
     </div>
 
     <details class="card details" id="opt-box">
@@ -122,22 +127,21 @@
   <!-- ══════════════ ③ 學習記錄 ══════════════ -->
   <section id="view-history" class="hidden">
     <div class="card">
-      <h2>我的進度</h2>
       <div class="prog-head">
-        <b id="ov-started">–</b><span class="muted"> / <span id="ov-total">–</span> 詞已開始學</span>
-        <span id="ov-pct" class="muted"></span>
+        <div>
+          <b id="ov-started">–</b><span class="muted"> / <span id="ov-total">–</span> 詞已接觸</span>
+        </div>
+        <span id="ov-pct" class="prog-pct"></span>
       </div>
       <div class="funnel" id="funnel"></div>
-      <div class="funnel-legend" id="funnel-legend"></div>
+      <div class="funnel-legend scroll-x" id="funnel-legend"></div>
 
       <div class="dir-compare" id="dir-compare"></div>
-      <p class="hint center nomargin" id="ov-foot"></p>
-    </div>
 
-    <div class="card">
-      <h2>近 30 天</h2>
-      <div id="chart" class="chart"></div>
-      <div id="chart-legend" class="hint center"></div>
+      <details class="mini-details">
+        <summary><span>近 30 天</span><span id="chart-legend" class="muted"></span></summary>
+        <div class="chart" id="chart"></div>
+      </details>
     </div>
 
     <div class="seg seg-2 subtabs" id="h-tabs">
@@ -154,7 +158,7 @@
     <!-- 單詞視圖 -->
     <div id="h-pane-words" class="hidden">
       <div class="card">
-        <div class="tag-row" id="w-filter">
+        <div class="tag-row scroll-x" id="w-filter">
           <button class="tag on" data-f="all">全部</button>
           <button class="tag" data-f="mastered">已掌握</button>
           <button class="tag" data-f="review">複習中</button>

@@ -179,8 +179,7 @@ export function renderChart(daily) {
   // 與首頁共用同一份實作 —— 兩處數字必須一致
   const { total, activeDays, days, startedToday } = summarize(daily);
   $('chart-legend').textContent =
-    `30 天共 ${total} 題 · 學習 ${activeDays} 天 · 連續 ${days} 天`
-    + (startedToday ? '' : '（今天還沒開始）');
+    `${total} 題 · ${activeDays} 天 · 連續 ${days} 天${startedToday ? '' : ' · 今天未開始'}`;
 }
 
 
@@ -435,7 +434,5 @@ function renderOverview(daily) {
     </div>`;
   }).join('');
 
-  const su = summarize(daily);
-  $('ov-foot').textContent =
-    `30 天累計 ${su.total} 次作答 · 學習 ${su.activeDays} 天 · 連續 ${su.days} 天`;
+  // 30 天摘要現在掛在曲線的收合標題上，收起時也看得到重點
 }

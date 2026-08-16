@@ -9,6 +9,8 @@ import { computeStreak } from '../core/stats.js';
 
 let deps = null;      // { user, profile, onReview, onFree, onNewDeck, onDrillWeak }
 let weakIds = [];
+let primaryAction = null;
+let firstDeckId = null;
 
 export const studyMode = () => qs('#mode-pick input:checked')?.value || 'flip';
 export const selectedDir = () => qs('#dir-pick input:checked')?.value || 'ko2zh';
@@ -29,6 +31,7 @@ export function syncModeUI() {
 export function initHome(d) {
   deps = d;
   $('btn-review').onclick = () => deps.onReview();
+  $('btn-primary').onclick = () => primaryAction?.();
   $('btn-free').onclick = () => deps.onFree();
   $('btn-drill-weak').onclick = () => {
     if (!weakIds.length) return msg('還沒有足夠的資料判斷弱項');
@@ -72,11 +75,13 @@ export async function load() {
     $('s-due').textContent = due.length;
     $('s-done').textContent = today.reviewed;
     $('s-acc').textContent = pct(today.accuracy);
-    $('s-all-acc').textContent = pct(overall.accuracy);
+    $('s-all-acc').textContent = overall.mastered;
     renderStreak(daily);
 
     $('btn-review').disabled = due.length === 0;
-    $('btn-review').textContent = due.length ? `開始複習（${due.length}）` : '今日複習已清空 ✓';
+    $('btn-review').textContent = due.length ? `複習 ${due.length}` : '複習已清空';
+
+    renderSuggestion(due.length, today, decks);
 
     renderDecks(decks);
     renderWeak(weak);
@@ -93,6 +98,45 @@ function renderStreak(daily) {
 }
 
 let deckCounts = null;
+
+/**
+ * 下一步建議 —— 首頁最該回答的是「現在做什麼」。
+ *
+ * 原本只有一顆「開始複習」，待複習歸零時就變灰，然後沒有下文 ——
+ * 使用者得自己想到去詞庫按「學新的」。這裡把當下最該做的那件事
+ * 直接放進主按鈕。
+ */
+function renderSuggestion(dueCount, today, decks) {
+  const box = $('suggest');
+  const btn = $('btn-primary');
+  box.classList.remove('done');
+  firstDeckId = decks[0]?.id ?? null;
+
+  if (dueCount > 0) {
+    box.innerHTML = `今天有 <b>${dueCount}</b> 個詞到期，先把複習做完最划算 ——
+      間隔重複的效果全靠準時複習。`;
+    btn.textContent = `開始複習（${dueCount}）`;
+    btn.disabled = false;
+    primaryAction = () => deps.onReview();
+    return;
+  }
+
+  if (firstDeckId) {
+    box.classList.add('done');
+    box.innerHTML = today.reviewed
+      ? `✓ 今日複習已清空，答了 <b>${today.reviewed}</b> 題。想再前進就學幾個新詞。`
+      : '✓ 今天沒有到期的複習。要不要學幾個新詞？';
+    btn.textContent = '學新的詞';
+    btn.disabled = false;
+    primaryAction = () => deps.onNewDeck(firstDeckId);
+    return;
+  }
+
+  box.innerHTML = '還沒有詞庫。到「我的 → 批次匯入」貼上你的詞表。';
+  btn.textContent = '沒有可學的內容';
+  btn.disabled = true;
+  primaryAction = null;
+}
 
 async function renderDecks(decks) {
   if (!decks.length) {

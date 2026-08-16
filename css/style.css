@@ -632,3 +632,42 @@ kbd {
 .funnel-legend .f-practiced { background: color-mix(in srgb, var(--accent) 35%, var(--border)); }
 .stage.practiced { background: var(--accent-soft); border-color: var(--border);
                    color: var(--muted); }
+
+/* ---------- 下一步建議 ---------- */
+.suggest {
+  font-size: 13px; color: var(--muted); text-align: center;
+  padding: 10px 12px; margin-bottom: 10px; border-radius: var(--r-sm);
+  background: var(--surface-2); border: 1px dashed var(--border);
+}
+.suggest b { color: var(--text); font-weight: 600; }
+.suggest.done { border-style: solid; border-color: var(--ok-bd);
+                background: var(--ok-bg); color: var(--ok-fg); }
+
+/* 標籤列橫向捲動：7 個標籤換行會擠成兩排，破壞節奏 */
+.scroll-x {
+  flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+  -webkit-overflow-scrolling: touch; padding-bottom: 2px;
+}
+.scroll-x::-webkit-scrollbar { display: none; }
+.scroll-x .tag { flex-shrink: 0; }
+
+/* ---------- 單詞列：長句不撐破 ---------- */
+.w-ko, .w-zh { overflow-wrap: anywhere; }
+.w-main { overflow: hidden; }
+.w-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- 進度卡（合併版）---------- */
+.prog-pct { font-size: 15px; font-weight: 650; color: var(--accent);
+            font-variant-numeric: tabular-nums; }
+.mini-details { margin-top: 15px; padding-top: 12px; border-top: 1px solid var(--border-soft); }
+.mini-details summary {
+  list-style: none; cursor: pointer; display: flex; align-items: baseline;
+  justify-content: space-between; gap: 10px; font-size: 13px; font-weight: 550;
+}
+.mini-details summary::-webkit-details-marker { display: none; }
+.mini-details summary::after {
+  content: '⌄'; color: var(--faint); font-size: 14px; transition: transform .2s; margin-left: 6px;
+}
+.mini-details[open] summary::after { transform: rotate(180deg); }
+.mini-details summary .muted { font-size: 11.5px; font-weight: 400; text-align: right; }
+.mini-details .chart { margin-top: 12px; }
