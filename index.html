@@ -10,7 +10,7 @@
   <header class="top">
     <div class="brand">한국어 <span>· 單字卡</span></div>
     <div class="who">
-      <span id="whoami"></span>
+      <span id="whoami"></span><span id="admin-tag" class="admin-tag hidden">管理員</span>
       <button id="btn-signout" class="link hidden">登出</button>
     </div>
   </header>
@@ -21,10 +21,10 @@
     <!-- ============ 登入 / 註冊 ============ -->
     <section id="view-auth" class="card hidden">
       <h2 id="auth-title" style="margin-top:0">登入</h2>
-      <label>電子郵件</label>
-      <input id="f-email" type="email" autocomplete="email" placeholder="you@example.com">
+      <label>帳號名</label>
+      <input id="f-email" type="text" autocomplete="username" placeholder="kuri">
       <label>密碼</label>
-      <input id="f-pass" type="password" autocomplete="current-password" placeholder="至少 6 位">
+      <input id="f-pass" type="password" autocomplete="current-password" placeholder="密碼">
       <div id="row-name" class="hidden">
         <label>暱稱（選填）</label>
         <input id="f-name" type="text" placeholder="怎麼稱呼你">

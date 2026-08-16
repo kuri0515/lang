@@ -4,6 +4,7 @@
 // =====================================================================
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
+import { toEmail, toPassword, toUsername } from './auth-map.js';
 
 export const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -11,17 +12,42 @@ export const DIRECTIONS = ['ko2zh', 'zh2ko'];
 export const DIR_LABEL = { ko2zh: '看韓文 → 想中文', zh2ko: '看中文 → 想韓文' };
 
 // ---------- Auth ----------
+// 對外一律用「帳號名」，email 映射封在這一層，UI 不需要知道。
 export const auth = {
-  signUp: (email, password, displayName) =>
-    sb.auth.signUp({ email, password, options: { data: { display_name: displayName || null } } }),
-  signIn: (email, password) => sb.auth.signInWithPassword({ email, password }),
+  signUp: (username, password, displayName) =>
+    sb.auth.signUp({
+      email: toEmail(username),
+      password: toPassword(password),
+      options: {
+        data: {
+          username: String(username).trim().toLowerCase(),
+          display_name: displayName || username,
+          // 注意：這裡就算塞 role:'admin' 也沒用 ——
+          // handle_new_user trigger 只在 service_role 建號時採信 role。
+        },
+      },
+    }),
+  signIn: (username, password) =>
+    sb.auth.signInWithPassword({ email: toEmail(username), password: toPassword(password) }),
   signOut: () => sb.auth.signOut(),
   async user() {
     const { data } = await sb.auth.getUser();
     return data?.user ?? null;
   },
   onChange: (cb) => sb.auth.onAuthStateChange((_e, s) => cb(s?.user ?? null)),
+  displayName: (u) =>
+    u?.user_metadata?.display_name || u?.user_metadata?.username || toUsername(u?.email),
 };
+
+/** 讀自己的 profile（含 role）。isAdmin 僅供 UX，真門禁在 RLS。 */
+export async function myProfile(userId) {
+  const { data, error } = await sb
+    .from('profiles')
+    .select('username, display_name, role, study_mode, daily_new_limit')
+    .eq('id', userId).maybeSingle();
+  if (error) throw error;
+  return data;
+}
 
 // ---------- 內容 ----------
 export async function listDecks() {

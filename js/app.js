@@ -2,7 +2,7 @@
 // UI 編排層 —— 只負責視圖切換與事件；演算法在 srs.js，資料在 db.js
 // =====================================================================
 import * as db from './db.js';
-import { auth, DIR_LABEL } from './db.js';
+import { auth, myProfile, DIR_LABEL } from './db.js';
 import { schedule, previewIntervals, RATING } from './srs.js';
 
 const $ = (id) => document.getElementById(id);
@@ -16,6 +16,7 @@ let idx = 0;
 let shownAt = 0;
 let sessionStats = { n: 0, correct: 0 };
 let isSignUp = false;
+let profile = null;
 
 // ---------------------------------------------------------------------
 function show(view) { views.forEach((v) => $(v).classList.toggle('hidden', v !== view)); }
@@ -42,16 +43,16 @@ $('btn-toggle').onclick = () => {
 };
 
 $('btn-submit').onclick = async () => {
-  const email = $('f-email').value.trim();
+  const username = $('f-email').value.trim();
   const pass = $('f-pass').value;
-  if (!email || !pass) return msg('請填寫電子郵件與密碼');
+  if (!username || !pass) return msg('請填寫帳號名與密碼');
   $('btn-submit').disabled = true;
   try {
     const { data, error } = isSignUp
-      ? await auth.signUp(email, pass, $('f-name').value.trim())
-      : await auth.signIn(email, pass);
+      ? await auth.signUp(username, pass, $('f-name').value.trim())
+      : await auth.signIn(username, pass);
     if (error) throw error;
-    if (isSignUp && !data.session) msg('註冊成功，請到信箱點擊確認連結後再登入。', 'ok');
+    if (isSignUp && !data.session) msg('註冊成功，現在可以直接登入。', 'ok');
   } catch (e) { msg(e.message || String(e)); }
   finally { $('btn-submit').disabled = false; }
 };
@@ -291,14 +292,19 @@ function esc(s) {
 // ---------------------------------------------------------------------
 // 啟動
 // ---------------------------------------------------------------------
-auth.onChange(async (u) => {
+async function onUser(u) {
   user = u;
-  $('whoami').textContent = u ? (u.user_metadata?.display_name || u.email) : '';
+  $('whoami').textContent = u ? auth.displayName(u) : '';
   $('btn-signout').classList.toggle('hidden', !u);
-  if (u) { show('view-home'); await loadHome(); } else { show('view-auth'); }
-});
+  if (!u) { profile = null; $('admin-tag').classList.add('hidden'); return show('view-auth'); }
 
-(async () => {
-  user = await auth.user();
-  if (user) { show('view-home'); await loadHome(); } else { show('view-auth'); }
-})();
+  // isAdmin 僅供 UX（顯示徽章 / 未來的後台入口）；真正的寫入邊界是 RLS
+  profile = await myProfile(u.id).catch(() => null);
+  $('admin-tag').classList.toggle('hidden', profile?.role !== 'admin');
+
+  show('view-home');
+  await loadHome();
+}
+
+auth.onChange(onUser);
+(async () => { await onUser(await auth.user()); })();

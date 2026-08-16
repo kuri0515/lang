@@ -30,7 +30,10 @@ exception when duplicate_object then null; end $$;
 -- ---------------------------------------------------------------------
 create table if not exists public.profiles (
   id           uuid primary key references auth.users(id) on delete cascade,
+  username     text unique,                  -- 登入用帳號名（前端映射成 email）
   display_name text,
+  role         text not null default 'user'
+               check (role in ('user', 'admin')),
   daily_new_limit    int not null default 20,
   daily_review_limit int not null default 200,
   -- 學習方向偏好：both = 一個條目產生兩張卡
@@ -43,11 +46,28 @@ create table if not exists public.profiles (
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into public.profiles (id, display_name)
-  values (new.id, coalesce(new.raw_user_meta_data->>'display_name', split_part(new.email, '@', 1)))
+  insert into public.profiles (id, username, display_name, role)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'username', split_part(new.email, '@', 1)),
+    coalesce(new.raw_user_meta_data->>'display_name', split_part(new.email, '@', 1)),
+    -- 角色只認 metadata；而 metadata 只有 service_role 建號時能設，
+    -- 一般註冊走 anon key 無法偽造，故不會被提權。
+    case when new.raw_user_meta_data->>'role' = 'admin' then 'admin' else 'user' end
+  )
   on conflict (id) do nothing;
   return new;
 end;
+$$;
+
+-- 管理員判定：給 RLS policy 用。
+-- security definer 才能繞過 profiles 自身的 RLS，避免遞迴。
+create or replace function public.is_admin()
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.role = 'admin'
+  );
 $$;
 
 drop trigger if exists on_auth_user_created on auth.users;
@@ -198,15 +218,19 @@ alter table public.items      enable row level security;
 alter table public.user_cards enable row level security;
 alter table public.reviews    enable row level security;
 
+-- profiles：自己可讀寫；管理員可讀全部（後台看使用者用）
 drop policy if exists profiles_self_select on public.profiles;
 create policy profiles_self_select on public.profiles
-  for select using (auth.uid() = id);
+  for select using (auth.uid() = id or public.is_admin());
 
 drop policy if exists profiles_self_update on public.profiles;
 create policy profiles_self_update on public.profiles
   for update using (auth.uid() = id) with check (auth.uid() = id);
 
--- 內容對所有人唯讀（含未登入 anon）；寫入只走 service_role 匯入腳本
+-- ⚠️ 沒有給一般使用者 update role 的路徑：role 欄位只能由 service_role 改，
+--    否則任何人都能把自己升成 admin。
+
+-- 內容：所有人唯讀（含未登入 anon）
 drop policy if exists decks_public_read on public.decks;
 create policy decks_public_read on public.decks
   for select using (is_public = true or auth.uid() is not null);
@@ -220,6 +244,16 @@ create policy items_public_read on public.items
         and (d.is_public = true or auth.uid() is not null)
     )
   );
+
+-- 內容寫入：管理員可在網站上直接增刪改詞表；一般使用者完全不能寫。
+-- （批次匯入仍走 service_role 腳本，兩條路互不影響）
+drop policy if exists decks_admin_write on public.decks;
+create policy decks_admin_write on public.decks
+  for all using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists items_admin_write on public.items;
+create policy items_admin_write on public.items
+  for all using (public.is_admin()) with check (public.is_admin());
 
 -- 學習狀態：嚴格 owner-only
 drop policy if exists user_cards_owner_all on public.user_cards;

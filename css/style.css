@@ -149,3 +149,6 @@ label { font-size: 13px; color: var(--muted); }
   .msg.err { background: #3a1f22; border-color: #5c2b30; color: #ffb3b3; }
   .msg.ok  { background: #16301f; border-color: #24502f; color: #a7e0bd; }
 }
+
+.admin-tag { font-size: 10px; letter-spacing: .5px; color: #fff; background: var(--accent);
+             padding: 2px 8px; border-radius: 999px; }
