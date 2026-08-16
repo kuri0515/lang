@@ -332,7 +332,7 @@ export async function setItemsActive(ids, active) {
  */
 export async function listHistory(userId, { limit = 100, before = null, dir = null } = {}) {
   let q = sb.from('reviews')
-    .select('id, direction, rating, is_correct, elapsed_ms, reviewed_at, items(id, ko, zh, romanization, item_type)')
+    .select('id, direction, rating, is_correct, elapsed_ms, reviewed_at, source, items(id, ko, zh, romanization, item_type)')
     .eq('user_id', userId)
     .order('reviewed_at', { ascending: false })
     .limit(limit);

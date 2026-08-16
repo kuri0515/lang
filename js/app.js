@@ -1069,8 +1069,9 @@ async function loadHistory(reset = true) {
 
     $('h-list').insertAdjacentHTML('beforeend', groups.map((g) => {
       const ok = g.rows.filter((r) => r.is_correct).length;
+      const recon = g.rows.filter((r) => r.source && r.source !== 'live').length;
       return `<div class="card h-day">
-        <h3><span>${esc(g.key)}</span>
+        <h3><span>${esc(g.key)}${recon ? ` <span class="h-src">${recon} 筆為補回</span>` : ''}</span>
             <span>${g.rows.length} 題 · 正確率 ${Math.round((ok / g.rows.length) * 100)}%</span></h3>
         ${g.rows.map((r) => {
           const t = new Date(r.reviewed_at);
@@ -1079,7 +1080,10 @@ async function loadHistory(reset = true) {
             <span class="h-mark">${r.is_correct ? '✅' : '❌'}</span>
             <span class="h-word">${esc(r.items.ko)} <small>${esc(r.items.zh)}</small>
               <small> · ${DIR_LABEL[r.direction].replace('看', '').replace(' → 想', '→')}</small></span>
-            <span class="h-rate">${RATE_LABEL[r.rating] || ''}</span>
+            <span class="h-rate">${RATE_LABEL[r.rating] || ''}${
+              r.source && r.source !== 'live'
+                ? `<span class="h-src" title="這筆不是作答當下寫入的，而是事後從複習排程反推補回">補</span>` : ''
+            }</span>
           </div>`;
         }).join('')}
       </div>`;

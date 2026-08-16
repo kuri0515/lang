@@ -359,3 +359,9 @@ textarea {
 .i-row:last-child { border-bottom: none; }
 .i-row.warn { color: var(--hard); }
 .i-row .t { font-size: 11px; color: var(--muted); }
+
+.h-src {
+  display: inline-block; font-size: 10px; margin-left: 4px;
+  padding: 0 5px; border-radius: 999px;
+  background: var(--border); color: var(--muted); cursor: help;
+}
