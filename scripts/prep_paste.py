@@ -61,6 +61,18 @@ CLUSTER_LIAISON = {
 H_FINALS = {6: "n", 15: "l", 27: ""}          # ㄶ→n殘留、ㅀ→l殘留、ㅎ→無
 ASPIRATE = {0: "k", 3: "t", 12: "ch"}          # 初聲 ㄱ/ㄷ/ㅈ 的索引 → 送氣音
 
+# 鼻音化：終聲遇到後接的 ㄴ/ㅁ 時同化為同部位鼻音。
+#   -습니다 → seumnida（不是 seupnida）、맛있는 → masinneun
+#   這條與激音化一樣是純語音規則，不需要詞彙知識，可以安全自動化。
+# (終聲索引集合) → 同化後的音
+NASAL_K = {1, 2, 3, 9, 24}                    # ㄱ ㄲ ㄳ ㄺ ㅋ → ng
+NASAL_T = {7, 19, 20, 22, 23, 25, 27}         # ㄷ ㅅ ㅆ ㅈ ㅊ ㅌ ㅎ → n
+NASAL_P = {11, 14, 17, 18, 26}                # ㄼ ㄿ ㅂ ㅄ ㅍ → m
+NASAL_ONSETS = {2, 6}                          # 後接 ㄴ / ㅁ
+
+# 流音的鼻音化：ㅁ/ㅇ 之後的 ㄹ 讀作 ㄴ。음료수 → eumnyosu
+LIQUID_TO_N = {16, 21}                         # 前面是 ㅁ / ㅇ
+
 # ★ 刻意不做「逆向激音化」（終聲 ㄱ/ㄷ/ㅂ + 初聲 ㅎ → 送氣）。
 #
 #   羅馬字法規定：體言（名詞）中 ㄱ/ㄷ/ㅂ 後接 ㅎ 要保留 ㅎ ——
@@ -109,6 +121,8 @@ def romanize(text):
                 onset = ASPIRATE[cho]            # 激音化
             elif pj == 8 and cho == 5:           # ㄹ + ㄹ → ll
                 onset = "l"
+            elif cho == 5 and pj in LIQUID_TO_N:  # ㅁ/ㅇ + ㄹ → ㄴ
+                onset = "n"
 
         coda = ""
         if jong:
@@ -118,6 +132,12 @@ def romanize(text):
                 coda = CLUSTER_LIAISON[jong][0]  # 複合終聲拆開，前半留下
             elif jong in H_FINALS and isinstance(nxt, list) and nxt[0] in ASPIRATE:
                 coda = H_FINALS[jong]            # 激音化：ㅎ 併入下一個初聲
+            elif isinstance(nxt, list) and nxt[0] in NASAL_ONSETS:
+                # 鼻音化
+                if jong in NASAL_K: coda = "ng"
+                elif jong in NASAL_T: coda = "n"
+                elif jong in NASAL_P: coda = "m"
+                else: coda = JONG[jong]
             elif jong == 27:
                 coda = ""                        # ㅎ 終聲基本不發音
             else:
