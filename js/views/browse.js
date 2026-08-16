@@ -3,6 +3,7 @@ import { $, esc, msg, qsa, debounce, skeleton, emptyState, createPager } from '.
 import { on, emit, EVENTS } from '../core/bus.js';
 import { STATE_LABEL, TYPE_LABEL, DIR_SHORT } from '../data/client.js';
 import * as content from '../data/content.js';
+import { groupTags, GROUPS } from '../core/taxonomy.js';
 import * as admin from '../data/admin.js';
 import * as progress from '../data/progress.js';
 import { openEditor } from './editor.js';
@@ -32,8 +33,15 @@ export async function open() {
   if (!tagsLoaded) {
     try {
       const tags = await content.listTags();
+      // 分組呈現：主題是篩選器，發音是課程。平鋪在一起，
+      // 想找「食物」得先滑過「收音ㄼ」。分組與順序的判準在 core/taxonomy.js
+      const g = groupTags(tags);
+      const btn = ([t, n]) => `<button class="tag" data-tag="${esc(t)}">${esc(t)} ${n}</button>`;
       $('b-tags').innerHTML = '<button class="tag on" data-tag="">全部</button>'
-        + tags.map(([t, n]) => `<button class="tag" data-tag="${esc(t)}">${esc(t)} ${n}</button>`).join('');
+        + GROUPS.filter((x) => g[x.key].length).map((x) =>
+            `<div class="tag-group"><div class="tag-group-h">${esc(x.label)}`
+            + `<span>${esc(x.hint)}</span></div>`
+            + `<div class="tag-row">${g[x.key].map(btn).join('')}</div></div>`).join('');
       qsa('.tag', $('b-tags')).forEach((b) => {
         b.onclick = () => {
           tag = b.dataset.tag;

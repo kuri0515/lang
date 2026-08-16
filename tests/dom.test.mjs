@@ -110,5 +110,36 @@ chk('點答案區詞塊可退回', $('s-answer').querySelectorAll('.tok').length
 si.teardown();
 chk('teardown 收起', $('scramble').classList.contains('hidden'));
 
+// ---------------------------------------------------------------------
+// 標籤分類：發音組必須依教學順序，不能被數量排序帶跑
+// ---------------------------------------------------------------------
+console.log('\n【標籤分類】');
+const { groupTags, PRON_ORDER } = await import(ROOT+'/js/core/taxonomy.js');
+{
+  const pairs = [['食物',80],['動詞',41],['收音ㄽ',1],['連音練習',8],['問候',18],
+                 ['收音ㄱ',4],['收音ㄼ',3],['激音化',14],['句型',39],['家庭',22]];
+  const g = groupTags(pairs);
+  chk('主題組只收主題標籤',
+      g.topic.every(([t]) => ['食物','家庭','問候'].includes(t)));
+  chk('語法組只收語法標籤', g.grammar.map(([t])=>t).join()==='動詞,句型');
+  chk('起步主題置頂 — 問候(18) 排在 食物(80) 之前',
+      g.topic[0][0]==='問候',
+      '自學者沒有老師說「先學這個」，先背 80 個食物名詞不如先會打招呼');
+  const p = g.pron.map(([t]) => t);
+  chk('基本收音排在複合收音之前', p.indexOf('收音ㄱ') < p.indexOf('收音ㄼ'));
+  chk('★ 連音排在複合收音之前',
+      p.indexOf('連音練習') < p.indexOf('收音ㄼ'),
+      '넓다[널따] 與 넓어요[널버요] 的差別要先懂連音才講得通，否則只能死背');
+  chk('複合收音排在音變規則之前', p.indexOf('收音ㄼ') < p.indexOf('激音化'));
+  chk('發音組不按數量排 — 收音ㄼ(3) 在 激音化(14) 之前',
+      p.indexOf('收音ㄼ') < p.indexOf('激音化'),
+      '按數量排會把教學序列打散成人氣榜');
+  // 硬名單漏列時標籤不能憑空消失
+  const g2 = groupTags([['收音ㅆ', 3]]);
+  chk('未列進教學序列的 收音* 仍歸發音組', g2.pron.length===1 && g2.topic.length===0,
+      '日後新增收音標籤時不會掉出分組');
+  chk('教學序列無重複', new Set(PRON_ORDER).size === PRON_ORDER.length);
+}
+
 console.log(f?`\n❌ 失敗 ${f} 項`:'\n✅ 全部通過');
 process.exit(f?1:0);

@@ -715,3 +715,15 @@ kbd {
 /* ---------- 分頁 ---------- */
 .pager { margin-top: 12px; }
 .pager:empty { margin-top: 0; }
+
+/* ---------- 標籤分組 ----------
+   主題是篩選器、發音是課程，兩者性質不同，視覺上要分開。
+   組標題壓得很輕 —— 它是路標，不是內容。 */
+.tag-group { margin-top: 13px; }
+.tag-group-h {
+  font-size: 11.5px; color: var(--faint); letter-spacing: .5px;
+  display: flex; align-items: baseline; gap: 7px; margin-bottom: 2px;
+}
+.tag-group-h span { font-size: 11px; opacity: .75; font-weight: 400; }
+/* 組標題已提供間距，這裡用既有的 .nomargin 取消 .tag-row 的上緣，不另立新類 */
+.tag-group .tag-row { margin-top: 5px !important; }
