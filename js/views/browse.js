@@ -1,5 +1,5 @@
 // 詞庫瀏覽：搜尋、標籤、雙向學習狀態、批次下架（管理員）
-import { $, esc, msg, qsa, debounce, skeleton, emptyState } from '../core/dom.js';
+import { $, esc, msg, qsa, debounce, skeleton, emptyState, createPager } from '../core/dom.js';
 import { on, emit, EVENTS } from '../core/bus.js';
 import { STATE_LABEL, TYPE_LABEL, DIR_SHORT } from '../data/client.js';
 import * as content from '../data/content.js';
@@ -11,6 +11,8 @@ import * as speech from '../core/speech.js';
 let deps = null;              // { user, isAdmin, onPractice }
 let tag = '';
 const picked = new Set();
+let pager = null;
+let lastRows = [];
 
 export function initBrowse(d) {
   deps = d;
@@ -58,10 +60,15 @@ export async function render() {
     $('btn-study-tag').textContent = `學「${tag}」`;
     $('btn-practice-sel').classList.toggle('hidden', !picked.size);
 
-    if (!rows.length) { $('b-list').innerHTML = emptyState('🔍', '沒有符合的條目'); return; }
+    if (!rows.length) {
+      $('b-list').innerHTML = emptyState('🔍', '沒有符合的條目');
+      $('b-more').innerHTML = '';
+      return;
+    }
 
+    lastRows = rows;
     const admin_ = deps.isAdmin();
-    $('b-list').innerHTML = rows.map((r) => {
+    const rowHtml = (r) => {
       const badge = (dir) => {
         const c = r.cards[dir];
         const acc = c?.total_reviews ? ` ${Math.round(c.correct_reviews / c.total_reviews * 100)}%` : '';
@@ -83,27 +90,40 @@ export async function render() {
         ${r.example_ko ? `<div class="b-ex">${esc(r.example_ko)}<br>${esc(r.example_zh || '')}</div>` : ''}
         ${r.note ? `<div class="b-sub">💡 ${esc(r.note)}</div>` : ''}
       </div>`;
-    }).join('');
+    };
 
-    qsa('[data-ko]', $('b-list')).forEach((b) => { b.onclick = () => speech.speak(b.dataset.ko); });
-    qsa('[data-edit]', $('b-list')).forEach((b) => {
-      b.onclick = () => openEditor(rows.find((r) => r.id === b.dataset.edit));
-    });
-    qsa('[data-pick]', $('b-list')).forEach((c) => {
-      c.checked = picked.has(c.dataset.pick);
-      c.closest('.b-row').classList.toggle('sel', c.checked);
-      c.onchange = () => {
-        c.checked ? picked.add(c.dataset.pick) : picked.delete(c.dataset.pick);
-        c.closest('.b-row').classList.toggle('sel', c.checked);
-        renderBulkBar();
-        $('btn-practice-sel').classList.toggle('hidden', !picked.size);
-      };
-    });
+    if (!pager) {
+      pager = createPager({
+        list: $('b-list'), footer: $('b-more'), pageSize: 60,
+        render: (slice) => slice.map(rowHtml).join(''),
+        afterRender: bindRows,
+      });
+    }
+    pager.set(rows);
+
     renderBulkBar();
   } catch (e) {
     $('b-list').innerHTML = '';
     msg('載入失敗：' + (e.message || e));
   }
+}
+
+/** 每次重畫清單後重掛事件（分頁載入更多會整份重畫） */
+function bindRows() {
+  qsa('[data-ko]', $('b-list')).forEach((b) => { b.onclick = () => speech.speak(b.dataset.ko); });
+  qsa('[data-edit]', $('b-list')).forEach((b) => {
+    b.onclick = () => openEditor(lastRows.find((r) => r.id === b.dataset.edit));
+  });
+  qsa('[data-pick]', $('b-list')).forEach((c) => {
+    c.checked = picked.has(c.dataset.pick);
+    c.closest('.b-row').classList.toggle('sel', c.checked);
+    c.onchange = () => {
+      c.checked ? picked.add(c.dataset.pick) : picked.delete(c.dataset.pick);
+      c.closest('.b-row').classList.toggle('sel', c.checked);
+      renderBulkBar();
+      $('btn-practice-sel').classList.toggle('hidden', !picked.size);
+    };
+  });
 }
 
 function renderBulkBar() {

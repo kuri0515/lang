@@ -41,3 +41,45 @@ export function debounce(fn, ms = 250) {
   let t = null;
   return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 }
+
+/**
+ * 分頁渲染。
+ *
+ * 【為什麼不一次畫完】
+ *   查詢已改為分頁撈完（見 data/client.js 的 fetchAll），
+ *   但「撈得到」不等於「該一次畫出來」。詞庫上千條時，
+ *   一次插入幾千個 DOM 節點會讓手機明顯卡頓，而且使用者
+ *   一次也看不完那麼多。
+ *
+ *   採「先畫一批 + 載入更多」而非頁碼：清單是用來瀏覽與搜尋的，
+ *   不是用來翻頁定位的；載入更多不會跳動捲軸位置。
+ */
+export function createPager({ list, footer, pageSize = 60, render, afterRender }) {
+  let rows = [];
+  let shown = 0;
+
+  function paint() {
+    const slice = rows.slice(0, shown);
+    list.innerHTML = render(slice);
+    const rest = rows.length - shown;
+    if (rest > 0) {
+      footer.innerHTML = `<button class="block ghost" id="${footer.id}-more">載入更多（還有 ${rest} 條）</button>`;
+      footer.querySelector('button').onclick = () => { shown += pageSize; paint(); };
+    } else {
+      footer.innerHTML = rows.length > pageSize
+        ? `<p class="hint center nomargin">已顯示全部 ${rows.length} 條</p>` : '';
+    }
+    // 每次重畫都要重掛事件 —— 「載入更多」會整份重繪
+    afterRender?.(slice);
+    return slice;
+  }
+
+  return {
+    /** 換一批資料，回捲到第一頁 */
+    set(next) { rows = next; shown = Math.min(pageSize, rows.length); return paint(); },
+    /** 重畫目前這批（例如某列狀態變了） */
+    repaint: paint,
+    get total() { return rows.length; },
+    get visible() { return rows.slice(0, shown); },
+  };
+}

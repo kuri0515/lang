@@ -1,7 +1,7 @@
 // =====================================================================
 // 內容層（decks / items）—— 唯讀為主，寫入在 admin.js
 // =====================================================================
-import { sb, ITEM_FIELDS } from './client.js';
+import { sb, ITEM_FIELDS, fetchAll } from './client.js';
 
 export async function listDecks() {
   const { data, error } = await sb.from('decks')
@@ -33,21 +33,24 @@ function applyFilters(q, { tag, search, deckId, ids }) {
 }
 
 /** 任意取材：瀏覽、自由練習、弱項集中練都走這裡 */
-export async function pickItems({ ids = null, tag = '', search = '', deckId = null, limit = 300 } = {}) {
-  const q = applyFilters(
+export async function pickItems({ ids = null, tag = '', search = '', deckId = null, limit = null } = {}) {
+  const build = () => applyFilters(
     sb.from('items').select(ITEM_FIELDS).eq('is_active', true),
-    { tag, search, deckId, ids });
-  const { data, error } = await q.order('sort_order').limit(limit);
-  if (error) throw error;
-  return data ?? [];
+    { tag, search, deckId, ids }).order('sort_order');
+  // limit 有值時是刻意取樣（例如自由練習抽 60 題）；沒給就撈完整
+  if (limit) {
+    const { data, error } = await build().limit(limit);
+    if (error) throw error;
+    return data ?? [];
+  }
+  return fetchAll(build);
 }
 
 /** 所有標籤與各自條目數 */
 export async function listTags() {
-  const { data, error } = await sb.from('items').select('tags').eq('is_active', true);
-  if (error) throw error;
+  const rows = await fetchAll(() => sb.from('items').select('tags').eq('is_active', true));
   const count = {};
-  for (const r of data ?? []) for (const t of r.tags || []) count[t] = (count[t] || 0) + 1;
+  for (const r of rows) for (const t of r.tags || []) count[t] = (count[t] || 0) + 1;
   return Object.entries(count).sort((a, b) => b[1] - a[1]);
 }
 
@@ -65,11 +68,12 @@ export async function sharesHanja(char, excludeId = null, limit = 5) {
 }
 
 /** 選擇題干擾項池：一次抓好放記憶體，避免每題都打一次 API */
-export async function distractorPool(deckId = null, limit = 400) {
-  let q = sb.from('items').select('id, ko, zh, pos, tags, item_type, example_ko, example_zh, hanja')
-    .eq('is_active', true);
-  if (deckId) q = q.eq('deck_id', deckId);
-  const { data, error } = await q.limit(limit);
-  if (error) throw error;
-  return data ?? [];
+export async function distractorPool(deckId = null) {
+  return fetchAll(() => {
+    let q = sb.from('items')
+      .select('id, ko, zh, pos, tags, item_type, example_ko, example_zh, hanja')
+      .eq('is_active', true);
+    if (deckId) q = q.eq('deck_id', deckId);
+    return q;
+  });
 }

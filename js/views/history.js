@@ -1,5 +1,5 @@
 // 學習記錄：逐筆時間線 + 近 30 天曲線
-import { $, esc, msg, skeleton, emptyState, qs, qsa, debounce } from '../core/dom.js';
+import { $, esc, msg, skeleton, emptyState, qs, qsa, debounce, createPager } from '../core/dom.js';
 import { DIR_SHORT, DIR_LABEL, RATE_LABEL } from '../data/client.js';
 import * as progress from '../data/progress.js';
 import { summarize, funnel, byDirection } from '../core/stats.js';
@@ -195,6 +195,7 @@ export function renderChart(daily) {
 // =====================================================================
 let tab = 'sessions';
 let filter = 'all';
+let wordPager = null;
 let words = [];        // 已建卡的詞
 let notStarted = [];   // 完全沒碰過的詞
 let practiced = [];    // 練過但未進輪轉的詞
@@ -224,7 +225,7 @@ export function initWords(onDrill) {
   });
   $('w-search').addEventListener('input', debounce(renderWords, 250));
   $('w-drill').onclick = () => {
-    const ids = visible().map((w) => w.item_id).filter(Boolean);
+    const ids = visible().map((w) => w.item_id).filter(Boolean);   // 整份篩選結果，非目前這頁
     if (ids.length) onDrill(ids);
   };
 }
@@ -271,8 +272,11 @@ function visible() {
   return list.filter(match);
 }
 
+let currentList = [];
+
 function renderWords() {
   const list = visible();
+  currentList = list;
   const counts = {
     all: words.length + practiced.length,
     practiced: practiced.length,
@@ -293,10 +297,11 @@ function renderWords() {
 
   if (!list.length) {
     $('w-list').innerHTML = emptyState('🔍', '這個範圍裡沒有詞');
+    $('w-more').innerHTML = '';
     return;
   }
 
-  $('w-list').innerHTML = list.slice(0, 200).map((w) => {
+  const rowHtml = (w) => {
     const st = w.mastered ? STAGE.mastered : (STAGE[w.state] || STAGE.new);
     const acc = w.accuracy != null ? `${Math.round(w.accuracy * 100)}%` : '–';
     const sub = w.practicedOnly
@@ -318,16 +323,23 @@ function renderWords() {
       </button>
       <div class="w-body hidden"></div>
     </div>`;
-  }).join('') + (list.length > 200 ? `<p class="muted center">…另有 ${list.length - 200} 條</p>` : '');
+  };
 
-  bindWordToggles(list);
+  if (!wordPager) {
+    wordPager = createPager({
+      list: $('w-list'), footer: $('w-more'), pageSize: 60,
+      render: (slice) => slice.map(rowHtml).join(''),
+      afterRender: () => bindWordToggles(),
+    });
+  }
+  wordPager.set(list);
 }
 
 const fmtDate = (s) => new Date(s).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
 const fmtStamp = (s) => new Date(s).toLocaleString('zh-TW',
   { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-function bindWordToggles(list) {
+function bindWordToggles() {
   qsa('.w-head', $('w-list')).forEach((btn) => {
     btn.onclick = async () => {
       const row = btn.closest('.w-row');
@@ -337,7 +349,7 @@ function bindWordToggles(list) {
       body.classList.toggle('hidden', open);
       if (open || body.dataset.loaded) return;
 
-      const w = list.find((x) => String(x.item_id) === row.dataset.id);
+      const w = currentList.find((x) => String(x.item_id) === row.dataset.id);
       body.innerHTML = skeleton(3);
       try {
         const atts = w.total ? await progress.itemAttempts(deps.user().id, w.item_id, 20) : [];

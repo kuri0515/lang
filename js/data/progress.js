@@ -2,7 +2,7 @@
 // 學習狀態層（user_cards / reviews）—— 與內容層完全解耦
 // 換 SRS 演算法只改 srs.js，換詞表只動 content.js，兩者互不影響。
 // =====================================================================
-import { sb, ITEM_FIELDS, DIRECTIONS } from './client.js';
+import { sb, ITEM_FIELDS, DIRECTIONS, fetchAll } from './client.js';
 
 // ---------- 佇列 ----------
 /** 到期的複習卡 */
@@ -19,20 +19,21 @@ export async function fetchDue(userId, dirs = DIRECTIONS, limit = 200) {
 
 /** 尚未建卡的新條目（對指定方向而言是「新」的） */
 export async function fetchNewItems(userId, deckId, dirs, limit = 20, tag = '') {
-  const { data: seen, error: e1 } = await sb.from('user_cards')
-    .select('item_id, direction').eq('user_id', userId);
-  if (e1) throw e1;
-  const seenKey = new Set((seen ?? []).map((r) => `${r.item_id}|${r.direction}`));
+  const seen = await fetchAll(() => sb.from('user_cards')
+    .select('item_id, direction').eq('user_id', userId));
+  const seenKey = new Set(seen.map((r) => `${r.item_id}|${r.direction}`));
 
-  let q = sb.from('items').select(ITEM_FIELDS).eq('is_active', true)
-    .order('sort_order').order('slug');
-  if (deckId) q = q.eq('deck_id', deckId);
-  if (tag) q = q.contains('tags', [tag]);
-  const { data, error } = await q.limit(Math.max(limit * 5, 300));
-  if (error) throw error;
+  // 撈完整而非取前 N 筆 —— 已學過的都要跳過，截斷會讓後面的新詞永遠排不到
+  const pool = await fetchAll(() => {
+    let q = sb.from('items').select(ITEM_FIELDS).eq('is_active', true)
+      .order('sort_order').order('slug');
+    if (deckId) q = q.eq('deck_id', deckId);
+    if (tag) q = q.contains('tags', [tag]);
+    return q;
+  });
 
   const out = [];
-  for (const item of data ?? []) {
+  for (const item of pool) {
     for (const dir of dirs) {
       if (!seenKey.has(`${item.id}|${dir}`)) out.push({ item, direction: dir, card: null });
       if (out.length >= limit) return out;
@@ -276,13 +277,12 @@ export async function legacyDayDetail(userId, day) {
  * 而條目量在數百級，撈回來 group 一次比維護一個 pivot view 划算。
  */
 export async function wordProgress(userId) {
-  const { data, error } = await sb.from('v_learning_timeline')
+  const data = await fetchAll(() => sb.from('v_learning_timeline')
     .select('item_id, direction, ko, zh, hanja, item_type, state, first_learned_at, last_reviewed_at, mastered_at, due_at, interval_days, total_reviews, correct_reviews, accuracy, mastered')
-    .eq('user_id', userId).limit(2000);
-  if (error) throw error;
+    .eq('user_id', userId));
 
   const byItem = new Map();
-  for (const r of data ?? []) {
+  for (const r of data) {
     let w = byItem.get(r.item_id);
     if (!w) {
       w = { item_id: r.item_id, ko: r.ko, zh: r.zh, hanja: r.hanja,
@@ -315,13 +315,12 @@ export async function wordProgress(userId) {
  * 與「完全沒碰過」分開，才不會把練過的詞誤標成未開始。
  */
 export async function practicedOnly(userId) {
-  const { data, error } = await sb.from('v_practiced_only')
+  const data = await fetchAll(() => sb.from('v_practiced_only')
     .select('item_id, direction, ko, zh, hanja, item_type, attempts, correct, accuracy, first_at, last_at')
-    .eq('user_id', userId).limit(2000);
-  if (error) throw error;
+    .eq('user_id', userId));
 
   const byItem = new Map();
-  for (const r of data ?? []) {
+  for (const r of data) {
     let w = byItem.get(r.item_id);
     if (!w) {
       w = { item_id: r.item_id, ko: r.ko, zh: r.zh, hanja: r.hanja,
@@ -345,13 +344,13 @@ export async function practicedOnly(userId) {
 
 /** 完全沒碰過的條目 —— 既沒有卡片，也沒有任何作答記錄 */
 export async function notStartedItems(userId) {
-  const [{ data: cards }, { data: revs }, { data: items }] = await Promise.all([
-    sb.from('user_cards').select('item_id').eq('user_id', userId),
-    sb.from('reviews').select('item_id').eq('user_id', userId).limit(5000),
-    sb.from('items').select('id, ko, zh, hanja, item_type, tags').eq('is_active', true).limit(2000),
+  const [cards, revs, items] = await Promise.all([
+    fetchAll(() => sb.from('user_cards').select('item_id').eq('user_id', userId)),
+    fetchAll(() => sb.from('reviews').select('item_id').eq('user_id', userId)),
+    fetchAll(() => sb.from('items').select('id, ko, zh, hanja, item_type, tags').eq('is_active', true)),
   ]);
-  const touched = new Set([...(cards ?? []), ...(revs ?? [])].map((c) => c.item_id));
-  return (items ?? []).filter((i) => !touched.has(i.id));
+  const touched = new Set([...cards, ...revs].map((c) => c.item_id));
+  return items.filter((i) => !touched.has(i.id));
 }
 
 /** 某個詞的作答歷程（含題型），新到舊 */
