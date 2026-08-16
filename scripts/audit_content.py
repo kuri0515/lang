@@ -276,7 +276,11 @@ def check_examples(items):
     ex = [x for x in items if x.get("example_ko")]
 
     hon = re.compile(r"(세요|셨|시어|십니|으시|께서|시죠|시네)")
-    subj_hon = re.compile(r"(님|할아버지|할머니|어머니|아버지)\s*(은|는|이|가|께서)")
+    # 손님／아드님／따님 的 님 已詞彙化，不是敬稱後綴 ——
+    # 「손님이 와요」是完全自然的韓語，不該要求 -시-。
+    # 用否定環視排除，否則每碰到這些詞都會誤報。
+    subj_hon = re.compile(
+        r"(?<!손)(?<!아드)(?<!따)(님|할아버지|할머니|어머니|아버지)\s*(은|는|이|가|께서)")
     issue("warn", "例句敬語不一致（主語尊稱，謂語無敬語詞尾）",
           [f"{x['ko']}: {x['example_ko']}" for x in ex
            if subj_hon.search(x["example_ko"]) and not hon.search(x["example_ko"])],
