@@ -78,14 +78,30 @@ def issue(level, title, rows, hint=""):
 
 
 def check_duplicates(items):
-    """同一個韓文詞收進兩次 —— 會變成兩張卡，學起來重複、統計也被灌水"""
+    """
+    重複收錄分兩種，嚴重度不同：
+
+    同一詞庫內重複 → 一定是錯的。同一份清單裡出現兩次沒有任何理由。
+    跨詞庫重複     → 可能是刻意的（匯入時加 --allow-dup）。
+                    後果是那個詞會有兩張卡、「已掌握」統計各算一次，
+                    使用者知情選擇即可，不該由稽核擋下。
+    """
     by = defaultdict(list)
     for x in items:
         by[x["ko"]].append(x)
-    dup = {k: v for k, v in by.items() if len(v) > 1}
-    issue("error", "同一個韓文詞重複收錄",
-          [f"{k}  →  " + " ／ ".join(f"{r['deck']}:{r['zh']}" for r in v) for k, v in dup.items()],
-          "留一條即可。刪除前確認沒有學習記錄掛在上面。")
+
+    same_deck, cross_deck = [], []
+    for k, v in by.items():
+        if len(v) < 2:
+            continue
+        decks = [r["deck"] for r in v]
+        line = f"{k}  →  " + " ／ ".join(f"{r['deck']}:{r['zh']}" for r in v)
+        (same_deck if len(set(decks)) < len(decks) else cross_deck).append(line)
+
+    issue("error", "同一詞庫內重複收錄", same_deck,
+          "同一份清單裡不該有兩條相同的詞。刪除前確認沒有學習記錄掛在上面。")
+    issue("info", "跨詞庫重複（可能是刻意的）", cross_deck,
+          "該詞會有兩張卡、統計各算一次。若非本意，刪掉其中一條。")
 
 
 def check_same_meaning(items):
