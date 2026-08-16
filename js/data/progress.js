@@ -71,10 +71,16 @@ export async function saveReview({ userId, item, direction, prevCard, rating, ne
  * ★ 若也更新到期時間，臨時多背幾遍就會把下次複習日往後推，
  *   破壞間隔重複的節奏。歷史與正確率照記，排程留給正規複習決定。
  */
-export async function logPractice({ userId, item, direction, rating, elapsedMs, mode, sessionId }) {
-  const { error } = await sb.from('reviews').insert({
-    user_id: userId, item_id: item.id, direction, rating, elapsed_ms: elapsedMs ?? null,
-    mode: mode ?? null, session_id: sessionId ?? null, is_free: true,
+export async function logPractice({ item, direction, rating, elapsedMs, mode, sessionId }) {
+  // 走 RPC 而非兩次 insert：記錄與計數必須同進同退，
+  // 否則會出現「答題記錄有、卡片計數沒加」的半套狀態。
+  const { error } = await sb.rpc('log_practice', {
+    p_item_id: item.id,
+    p_direction: direction,
+    p_rating: rating,
+    p_elapsed_ms: elapsedMs ?? null,
+    p_mode: mode ?? null,
+    p_session_id: sessionId ?? null,
   });
   if (error) throw error;
 }
@@ -257,4 +263,67 @@ export async function legacyDayDetail(userId, day) {
     .order('reviewed_at');
   if (error) throw error;
   return (data ?? []).filter((r) => r.items);
+}
+
+// ---------- 單詞維度的學習進度 ----------
+/**
+ * 每個詞的學習狀態，兩個方向彙整成一列。
+ *
+ * 為什麼在前端彙整而不寫成 view：兩個方向的狀態要並排呈現
+ * （韓→中 已掌握、中→韓 還在學），SQL 要 pivot 才做得到，
+ * 而條目量在數百級，撈回來 group 一次比維護一個 pivot view 划算。
+ */
+export async function wordProgress(userId) {
+  const { data, error } = await sb.from('v_learning_timeline')
+    .select('item_id, direction, ko, zh, hanja, item_type, state, first_learned_at, last_reviewed_at, mastered_at, due_at, interval_days, total_reviews, correct_reviews, accuracy, mastered')
+    .eq('user_id', userId).limit(2000);
+  if (error) throw error;
+
+  const byItem = new Map();
+  for (const r of data ?? []) {
+    let w = byItem.get(r.item_id);
+    if (!w) {
+      w = { item_id: r.item_id, ko: r.ko, zh: r.zh, hanja: r.hanja,
+            item_type: r.item_type, dirs: {} };
+      byItem.set(r.item_id, w);
+    }
+    w.dirs[r.direction] = r;
+  }
+
+  // 詞層級的彙總指標
+  for (const w of byItem.values()) {
+    const ds = Object.values(w.dirs);
+    w.total = ds.reduce((s, d) => s + d.total_reviews, 0);
+    w.correct = ds.reduce((s, d) => s + d.correct_reviews, 0);
+    w.accuracy = w.total ? w.correct / w.total : null;
+    w.masteredCount = ds.filter((d) => d.mastered).length;
+    w.firstLearnedAt = ds.map((d) => d.first_learned_at).sort()[0];
+    w.lastReviewedAt = ds.map((d) => d.last_reviewed_at).filter(Boolean).sort().pop() || null;
+    w.nextDueAt = ds.map((d) => d.due_at).filter(Boolean).sort()[0] || null;
+    // 詞的整體階段取「最落後的那個方向」—— 一邊會了另一邊不會，就不算學完
+    const rank = { new: 0, learning: 1, review: 2, suspended: 3 };
+    w.state = ds.reduce((a, d) => (rank[d.state] < rank[a] ? d.state : a), 'review');
+    w.mastered = w.masteredCount === ds.length && ds.length > 0;
+  }
+  return [...byItem.values()];
+}
+
+/** 還沒建過卡的條目 —— 「未開始」清單 */
+export async function notStartedItems(userId) {
+  const [{ data: cards }, { data: items }] = await Promise.all([
+    sb.from('user_cards').select('item_id').eq('user_id', userId),
+    sb.from('items').select('id, ko, zh, hanja, item_type, tags').eq('is_active', true).limit(2000),
+  ]);
+  const seen = new Set((cards ?? []).map((c) => c.item_id));
+  return (items ?? []).filter((i) => !seen.has(i.id));
+}
+
+/** 某個詞的作答歷程（含題型），新到舊 */
+export async function itemAttempts(userId, itemId, limit = 30) {
+  const { data, error } = await sb.from('reviews')
+    .select('rating, is_correct, elapsed_ms, reviewed_at, direction, mode, is_free, source')
+    .eq('user_id', userId).eq('item_id', itemId)
+    .order('reviewed_at', { ascending: false }).limit(limit);
+  if (error) throw error;
+  return data ?? [];
 }

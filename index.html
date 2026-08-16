@@ -122,27 +122,56 @@
   <!-- ══════════════ ③ 學習記錄 ══════════════ -->
   <section id="view-history" class="hidden">
     <div class="card">
+      <h2>我的進度</h2>
+      <div class="prog-head">
+        <b id="ov-started">–</b><span class="muted"> / <span id="ov-total">–</span> 詞已開始學</span>
+        <span id="ov-pct" class="muted"></span>
+      </div>
+      <div class="funnel" id="funnel"></div>
+      <div class="funnel-legend" id="funnel-legend"></div>
+
+      <div class="dir-compare" id="dir-compare"></div>
+      <p class="hint center nomargin" id="ov-foot"></p>
+    </div>
+
+    <div class="card">
       <h2>近 30 天</h2>
       <div id="chart" class="chart"></div>
       <div id="chart-legend" class="hint center"></div>
     </div>
-    <div class="card">
-      <div class="seg" id="h-filter">
-        <label><input type="radio" name="hf" value="" checked><span>全部</span></label>
-        <label><input type="radio" name="hf" value="ko2zh"><span>韓 → 中</span></label>
-        <label><input type="radio" name="hf" value="zh2ko"><span>中 → 韓</span></label>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-head">
-        <h2>已掌握</h2>
-        <span id="m-count" class="muted"></span>
-      </div>
-      <div id="m-list"></div>
+
+    <div class="seg seg-2 subtabs" id="h-tabs">
+      <label><input type="radio" name="htab" value="sessions" checked><span>學習場次</span></label>
+      <label><input type="radio" name="htab" value="words"><span>單詞進度</span></label>
     </div>
 
-    <div id="h-list"></div>
-    <p class="center"><button id="h-more" class="link hidden">載入更早的記錄</button></p>
+    <!-- 場次視圖 -->
+    <div id="h-pane-sessions">
+      <div id="h-list"></div>
+      <p class="center"><button id="h-more" class="link hidden">載入更早的記錄</button></p>
+    </div>
+
+    <!-- 單詞視圖 -->
+    <div id="h-pane-words" class="hidden">
+      <div class="card">
+        <div class="tag-row" id="w-filter">
+          <button class="tag on" data-f="all">全部</button>
+          <button class="tag" data-f="mastered">已掌握</button>
+          <button class="tag" data-f="review">複習中</button>
+          <button class="tag" data-f="learning">學習中</button>
+          <button class="tag" data-f="weak">弱項</button>
+          <button class="tag" data-f="new">未開始</button>
+        </div>
+        <input id="w-search" type="search" placeholder="搜尋…" class="nomargin" style="margin-top:11px">
+      </div>
+      <div class="card">
+        <div class="browse-head">
+          <span id="w-count" class="muted"></span>
+          <button id="w-drill" class="small primary hidden">練這批</button>
+        </div>
+        <div id="w-list"></div>
+      </div>
+    </div>
   </section>
 
   <!-- ══════════════ ④ 我的 ══════════════ -->

@@ -37,3 +37,43 @@ export function summarize(daily) {
     ...computeStreak(daily),
   };
 }
+
+/**
+ * 學習階段漏斗：未開始 → 學習中 → 複習中 → 已掌握
+ *
+ * 從學習者視角，最想先知道的是「我到哪了」——
+ * 總共多少詞、走到哪一階段、離掌握還有多遠。
+ * 這比任何單項數字都更能回答那個問題。
+ */
+export function funnel(words, notStartedCount) {
+  const mastered = words.filter((w) => w.mastered).length;
+  const review = words.filter((w) => w.state === 'review' && !w.mastered).length;
+  const learning = words.filter((w) => ['learning', 'new'].includes(w.state)).length;
+  const started = words.length;
+  const total = started + notStartedCount;
+  return {
+    total, started, mastered, review, learning, notStarted: notStartedCount,
+    startedPct: total ? started / total : 0,
+    masteredPct: total ? mastered / total : 0,
+  };
+}
+
+/**
+ * 兩個方向分開統計。
+ * 「看韓文想中文」與「看中文想韓文」是兩種能力，難度差很多，
+ * 混在一起看會把真正的弱項藏起來。
+ */
+export function byDirection(rows) {
+  const out = {};
+  for (const dir of ['ko2zh', 'zh2ko']) {
+    const ds = rows.filter((r) => r.direction === dir);
+    const total = ds.reduce((s, d) => s + d.total_reviews, 0);
+    const correct = ds.reduce((s, d) => s + d.correct_reviews, 0);
+    out[dir] = {
+      cards: ds.length, total, correct,
+      accuracy: total ? correct / total : null,
+      mastered: ds.filter((d) => d.mastered).length,
+    };
+  }
+  return out;
+}

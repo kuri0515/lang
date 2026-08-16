@@ -131,6 +131,7 @@ home.initHome({
 study.initStudy({ session, getCtx: studyCtx, onQuit: () => show('view-done') });
 browse.initBrowse({ ...deps, onPractice: (ids) => startFree({ ids }), onStudyTag: (t) => startNew(null, t) });
 history.initHistory(deps);
+history.initWords((ids) => startFree({ ids }));
 importer.initImporter();
 
 onEnter('view-home', () => home.load());

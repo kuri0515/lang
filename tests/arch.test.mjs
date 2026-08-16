@@ -88,6 +88,32 @@ const fieldLists = files.filter((f) => /'id, ko, zh, romanization/.test(read(f))
 chk('條目欄位清單集中一處',
   fieldLists.length > 1 ? fieldLists.map(rel) : [], 'ITEM_FIELDS');
 
+console.log('\n【DOM 契約】');
+// JS 取用了 HTML 裡不存在的元素 —— 這類 bug 不會在語法檢查時暴露，
+// 只會在使用者點到那個功能時才炸。已經咬過兩次（listen-box、h-filter）。
+const html = fs.readFileSync(new URL('../index.html', import.meta.url).pathname, 'utf8');
+const htmlIds = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]));
+const DYNAMIC = new Set(['bulk-bar', 'peek-note', 'bulk-clear', 'bulk-del']);
+const missingIds = [];
+const badSelectors = [];
+for (const f of files) {
+  const src = read(f);
+  for (const m of src.matchAll(/\$\('([^']+)'\)/g)) {
+    const id = m[1];
+    if (htmlIds.has(id) || DYNAMIC.has(id) || /^p\d$/.test(id)) continue;
+    missingIds.push(`${rel(f)}: $('${id}')`);
+  }
+  for (const m of src.matchAll(/qsa?\('(#[^']+)'/g)) {
+    const root = m[1].split(/[\s\[>]/)[0].slice(1);
+    if (!htmlIds.has(root)) badSelectors.push(`${rel(f)}: ${m[1]}`);
+  }
+}
+chk('JS 取用的 DOM id 都存在於 index.html', missingIds);
+chk('querySelector 的 id 錨點都存在', badSelectors);
+
+const allIds = [...html.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]);
+chk('HTML 的 id 不重複', allIds.filter((x, i) => allIds.indexOf(x) !== i).map((x) => `重複: ${x}`));
+
 console.log('\n【安全】');
 // 只盯「使用者可編輯的欄位」。粗篩所有非 esc() 插值會連數字都算違規，
 // 雜訊淹沒真訊號 —— 上一版就是這樣，人只好每次手動複核一遍。

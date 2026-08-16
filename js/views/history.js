@@ -1,60 +1,30 @@
 // 學習記錄：逐筆時間線 + 近 30 天曲線
-import { $, esc, msg, skeleton, emptyState, qs, qsa } from '../core/dom.js';
-import { DIR_SHORT, RATE_LABEL } from '../data/client.js';
+import { $, esc, msg, skeleton, emptyState, qs, qsa, debounce } from '../core/dom.js';
+import { DIR_SHORT, DIR_LABEL, RATE_LABEL } from '../data/client.js';
 import * as progress from '../data/progress.js';
-import { summarize } from '../core/stats.js';
+import { summarize, funnel, byDirection } from '../core/stats.js';
 
 let deps = null;
 let cursor = null;
-let dirFilter = '';
 
 export function initHistory(d) {
   deps = d;
   $('h-more').onclick = () => load(false);
-  $('h-filter').addEventListener('change', () => {
-    dirFilter = qs('#h-filter input:checked').value;
-    load(true);
-  });
 }
 
 export async function open() {
   const user = deps.user();
   if (!user) return;
-  const [daily, mastered] = await Promise.all([
+  // 總覽與單詞進度共用同一份資料，一次載入不重複查
+  const [daily, w, ns] = await Promise.all([
     progress.dailyStats(user.id, 30).catch(() => []),
-    progress.masteredItems(user.id, 200).catch(() => []),
+    progress.wordProgress(user.id).catch(() => []),
+    progress.notStartedItems(user.id).catch(() => []),
   ]);
+  words = w; notStarted = ns;
   renderChart(daily);
-  renderMastered(mastered);
-  await load(true);
-}
-
-/**
- * 已掌握的詞 —— 附上「什麼時候記住的」與「什麼時候開始學的」。
- * 這是使用者最想看到的那條線：從第一次見到，到真的記住，隔了多久。
- */
-function renderMastered(rows) {
-  $('m-count').textContent = rows.length ? `${rows.length} 條` : '';
-  if (!rows.length) {
-    $('m-list').innerHTML = emptyState('🏆',
-      '還沒有掌握的詞<br>複習間隔拉到 21 天以上就算記住了');
-    return;
-  }
-  const fmt = (s) => new Date(s).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
-  const days = (a, b) => Math.max(0, Math.round((new Date(b) - new Date(a)) / 86400000));
-  $('m-list').innerHTML = rows.slice(0, 50).map((r) => `
-    <div class="m-row">
-      <div class="m-word">
-        <b>${esc(r.ko)}</b> <span class="muted">${esc(r.zh)}</span>
-        ${r.hanja ? `<span class="b-hanja"> · 漢 ${esc(r.hanja)}</span>` : ''}
-        <span class="muted"> · ${DIR_SHORT[r.direction]}</span>
-      </div>
-      <div class="m-when">
-        <span title="開始學 → 記住">${fmt(r.first_learned_at)} → ${fmt(r.mastered_at)}</span>
-        <small>${days(r.first_learned_at, r.mastered_at)} 天 · ${r.total_reviews} 次</small>
-      </div>
-    </div>`).join('')
-    + (rows.length > 50 ? `<p class="muted center">…另有 ${rows.length - 50} 條</p>` : '');
+  renderOverview(daily);
+  if (tab === 'words') renderWords(); else await load(true);
 }
 
 const MODE_LABEL = { flip: '翻卡自評', choice: '四選一', scramble: '詞序重組', listen: '聽音選義' };
@@ -210,4 +180,236 @@ export function renderChart(daily) {
   $('chart-legend').textContent =
     `30 天共 ${total} 題 · 學習 ${activeDays} 天 · 連續 ${days} 天`
     + (startedToday ? '' : '（今天還沒開始）');
+}
+
+
+// =====================================================================
+// 單詞進度：按掌握程度篩選，展開看該詞的完整軌跡
+// =====================================================================
+let tab = 'sessions';
+let filter = 'all';
+let words = [];        // 已建卡的詞
+let notStarted = [];   // 尚未開始的詞
+
+const STAGE = {
+  mastered: { cls: 'mastered', label: '已掌握' },
+  review:   { cls: 'review',   label: '複習中' },
+  learning: { cls: 'learning', label: '學習中' },
+  new:      { cls: 'new',      label: '未開始' },
+};
+const MODE_SHORT = { flip: '翻卡', choice: '四選一', scramble: '重組', listen: '聽音' };
+
+export function initWords(onDrill) {
+  $('h-tabs').addEventListener('change', (e) => {
+    tab = e.target.value;
+    $('h-pane-sessions').classList.toggle('hidden', tab !== 'sessions');
+    $('h-pane-words').classList.toggle('hidden', tab !== 'words');
+    if (tab === 'words' && !words.length) loadWords();
+  });
+  qsa('#w-filter .tag').forEach((b) => {
+    b.onclick = () => {
+      filter = b.dataset.f;
+      qsa('#w-filter .tag').forEach((x) => x.classList.toggle('on', x === b));
+      renderWords();
+    };
+  });
+  $('w-search').addEventListener('input', debounce(renderWords, 250));
+  $('w-drill').onclick = () => {
+    const ids = visible().map((w) => w.item_id).filter(Boolean);
+    if (ids.length) onDrill(ids);
+  };
+}
+
+export async function loadWords() {
+  const user = deps.user();
+  if (!user) return;
+  $('w-list').innerHTML = skeleton(6);
+  try {
+    [words, notStarted] = await Promise.all([
+      progress.wordProgress(user.id),
+      progress.notStartedItems(user.id).catch(() => []),
+    ]);
+    renderWords();
+  } catch (e) {
+    $('w-list').innerHTML = '';
+    msg('載入失敗：' + (e.message || e));
+  }
+}
+
+/** 目前篩選 + 搜尋下可見的詞 */
+function visible() {
+  const q = $('w-search').value.trim().toLowerCase();
+  const match = (w) => !q || [w.ko, w.zh, w.hanja].some((x) => (x || '').toLowerCase().includes(q));
+
+  let list;
+  if (filter === 'new') {
+    list = notStarted.map((i) => ({ ...i, item_id: i.id, state: 'new', dirs: {}, total: 0 }));
+  } else {
+    list = words.filter((w) => {
+      if (filter === 'all') return true;
+      if (filter === 'mastered') return w.mastered;
+      // 已掌握的不該再出現在「複習中」——否則兩個篩選互相重疊，數字對不上
+      if (filter === 'review') return w.state === 'review' && !w.mastered;
+      if (filter === 'learning') return w.state === 'learning' || w.state === 'new';
+      if (filter === 'weak') return w.total >= 3 && w.accuracy != null && w.accuracy < 0.7;
+      return true;
+    });
+  }
+  return list.filter(match);
+}
+
+function renderWords() {
+  const list = visible();
+  const counts = {
+    all: words.length, mastered: words.filter((w) => w.mastered).length,
+    review: words.filter((w) => w.state === 'review' && !w.mastered).length,
+    learning: words.filter((w) => ['learning', 'new'].includes(w.state)).length,
+    weak: words.filter((w) => w.total >= 3 && w.accuracy != null && w.accuracy < 0.7).length,
+    new: notStarted.length,
+  };
+  qsa('#w-filter .tag').forEach((b) => {
+    const n = counts[b.dataset.f];
+    b.textContent = b.textContent.replace(/\s*\d+$/, '') + (n != null ? ` ${n}` : '');
+  });
+
+  $('w-count').textContent = `${list.length} 條`;
+  $('w-drill').classList.toggle('hidden', !list.length || filter === 'all');
+  $('w-drill').textContent = `練這 ${list.length} 條`;
+
+  if (!list.length) {
+    $('w-list').innerHTML = emptyState('🔍', '這個範圍裡沒有詞');
+    return;
+  }
+
+  $('w-list').innerHTML = list.slice(0, 200).map((w) => {
+    const st = w.mastered ? STAGE.mastered : (STAGE[w.state] || STAGE.new);
+    const acc = w.accuracy != null ? `${Math.round(w.accuracy * 100)}%` : '–';
+    const sub = w.total
+      ? `答過 ${w.total} 次 · 正確率 ${acc}`
+        + (w.nextDueAt ? ` · 下次 ${fmtDate(w.nextDueAt)}` : '')
+      : '尚未開始學';
+    return `<div class="w-row" data-id="${esc(w.item_id)}">
+      <button class="w-head">
+        <span class="w-main">
+          <span class="w-ko">${esc(w.ko)}</span>
+          <span class="w-zh"> ${esc(w.zh)}</span>
+          ${w.hanja ? `<span class="b-hanja"> · 漢 ${esc(w.hanja)}</span>` : ''}
+          <span class="w-sub">${esc(sub)}</span>
+        </span>
+        <span class="w-badges"><span class="stage ${st.cls}">${st.label}</span></span>
+        <span class="w-arrow">⌄</span>
+      </button>
+      <div class="w-body hidden"></div>
+    </div>`;
+  }).join('') + (list.length > 200 ? `<p class="muted center">…另有 ${list.length - 200} 條</p>` : '');
+
+  bindWordToggles(list);
+}
+
+const fmtDate = (s) => new Date(s).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
+const fmtStamp = (s) => new Date(s).toLocaleString('zh-TW',
+  { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+function bindWordToggles(list) {
+  qsa('.w-head', $('w-list')).forEach((btn) => {
+    btn.onclick = async () => {
+      const row = btn.closest('.w-row');
+      const body = row.querySelector('.w-body');
+      const open = !body.classList.contains('hidden');
+      row.classList.toggle('open', !open);
+      body.classList.toggle('hidden', open);
+      if (open || body.dataset.loaded) return;
+
+      const w = list.find((x) => String(x.item_id) === row.dataset.id);
+      body.innerHTML = skeleton(3);
+      try {
+        const atts = w.total ? await progress.itemAttempts(deps.user().id, w.item_id, 20) : [];
+        body.innerHTML = renderWordDetail(w, atts);
+        body.dataset.loaded = '1';
+      } catch (e) {
+        body.innerHTML = `<p class="muted center">載入失敗：${esc(e.message || e)}</p>`;
+      }
+    };
+  });
+}
+
+/** 一個詞的完整軌跡：兩個方向各自的狀態 + 最近的作答歷程 */
+function renderWordDetail(w, atts) {
+  if (!w.total) {
+    return `<p class="muted center" style="padding:10px 0">這個詞還沒開始學。到「學習」頁選個題型就會排進來。</p>`;
+  }
+  const dirBlock = (dir) => {
+    const d = w.dirs[dir];
+    if (!d) return `<div class="dir-block"><h4>${DIR_SHORT[dir]}</h4>
+      <div class="dir-facts"><span>還沒練過這個方向</span></div></div>`;
+    const st = d.mastered ? STAGE.mastered : (STAGE[d.state] || STAGE.new);
+    return `<div class="dir-block">
+      <h4><span>${DIR_SHORT[dir]}</span><span class="stage ${st.cls}">${st.label}</span></h4>
+      <div class="dir-facts">
+        <span>首次學習 <b>${fmtStamp(d.first_learned_at)}</b></span>
+        <span>最近複習 <b>${d.last_reviewed_at ? fmtStamp(d.last_reviewed_at) : '–'}</b></span>
+        <span>正確率 <b>${d.accuracy != null ? Math.round(d.accuracy * 100) + '%' : '–'}</b>（${d.correct_reviews}/${d.total_reviews}）</span>
+        <span>目前間隔 <b>${Number(d.interval_days).toFixed(0)} 天</b></span>
+        <span>下次複習 <b>${d.due_at ? fmtStamp(d.due_at) : '–'}</b></span>
+        <span>記住於 <b>${d.mastered_at ? fmtStamp(d.mastered_at) : '尚未'}</b></span>
+      </div>
+    </div>`;
+  };
+
+  const rows = atts.map((a) => `
+    <div class="att">
+      <span class="t">${fmtStamp(a.reviewed_at)}</span>
+      <span>${a.is_correct ? '✅' : '❌'}</span>
+      <span class="m">${a.mode ? (MODE_SHORT[a.mode] || a.mode) : '—'}</span>
+      <span>${DIR_SHORT[a.direction]}</span>
+      <span>${RATE_LABEL[a.rating] || ''}</span>
+      ${a.elapsed_ms ? `<span>${(a.elapsed_ms / 1000).toFixed(1)}s</span>` : ''}
+      ${a.is_free ? '<span class="tag-free">自由</span>' : ''}
+      ${a.source && a.source !== 'live' ? '<span class="h-src">補</span>' : ''}
+    </div>`).join('');
+
+  return dirBlock('ko2zh') + dirBlock('zh2ko')
+    + (rows ? `<div class="attempts"><div class="hint" style="margin:0 0 4px">最近 ${atts.length} 次作答</div>${rows}</div>` : '');
+}
+
+
+// =====================================================================
+// 進度總覽 —— 從學習者視角，先回答「我到哪了」
+// =====================================================================
+function renderOverview(daily) {
+  const f = funnel(words, notStarted.length);
+  $('ov-started').textContent = f.started;
+  $('ov-total').textContent = f.total;
+  $('ov-pct').textContent = `${Math.round(f.startedPct * 100)}%`;
+
+  const seg = (cls, n) => n ? `<i class="${cls}" style="width:${(n / f.total) * 100}%"></i>` : '';
+  $('funnel').innerHTML =
+    seg('f-mastered', f.mastered) + seg('f-review', f.review) + seg('f-learning', f.learning);
+
+  const dot = (cls, label, n) =>
+    `<span><i class="${cls}"></i>${label} <b>${n}</b></span>`;
+  $('funnel-legend').innerHTML =
+    dot('f-mastered', '已掌握', f.mastered)
+    + dot('f-review', '複習中', f.review)
+    + dot('f-learning', '學習中', f.learning)
+    + `<span><i style="background:var(--border)"></i>未開始 <b>${f.notStarted}</b></span>`;
+
+  // 兩個方向分開看 —— 混在一起會把真正的弱項藏起來。
+  // 資料源是 user_cards 的計數，0008 之後它已包含自由練習，
+  // 與「我的弱項」同源，兩處數字不會打架。
+  const rows = words.flatMap((w) => Object.values(w.dirs));
+  const bd = byDirection(rows);
+  $('dir-compare').innerHTML = ['ko2zh', 'zh2ko'].map((dir) => {
+    const d = bd[dir];
+    const acc = d.accuracy;
+    return `<div class="dc-row" title="${DIR_LABEL[dir]}">
+      <span class="dc-name">${DIR_SHORT[dir]}</span>
+      <span class="dc-bar"><i style="width:${acc != null ? acc * 100 : 0}%"></i></span>
+      <span class="dc-val">${acc != null ? `<b>${Math.round(acc * 100)}%</b> ${d.correct}/${d.total}` : '尚未練過'}</span>
+    </div>`;
+  }).join('');
+
+  const su = summarize(daily);
+  $('ov-foot').textContent =
+    `30 天累計 ${su.total} 次作答 · 學習 ${su.activeDays} 天 · 連續 ${su.days} 天`;
 }
