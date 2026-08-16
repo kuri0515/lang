@@ -727,3 +727,33 @@ kbd {
 .tag-group-h span { font-size: 11px; opacity: .75; font-weight: 400; }
 /* 組標題已提供間距，這裡用既有的 .nomargin 取消 .tag-row 的上緣，不另立新類 */
 .tag-group .tag-row { margin-top: 5px !important; }
+
+/* ---------- 發音課程 ----------
+   自學者最怕「25 課攤在眼前不知從何下手」。
+   所以主視覺只給一課 —— 下一課；完整清單收在 details 裡按需展開。 */
+.pron-next {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px; border: 1px solid var(--accent);
+  background: var(--accent-soft); border-radius: var(--r-sm);
+}
+.pron-next .n-body { flex: 1; min-width: 0; }
+.pron-next .n-label { font-size: 11.5px; color: var(--accent); letter-spacing: .5px; }
+.pron-next .n-title { font-weight: 650; font-size: 15px; margin-top: 1px; }
+.pron-next .n-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.pron-all { margin-top: 12px; }
+.pron-all summary { font-size: 12.5px; color: var(--muted); cursor: pointer; }
+.pron-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0; border-bottom: 1px solid var(--border-soft); font-size: 13.5px;
+}
+.pron-row:last-child { border-bottom: none; }
+.pron-row .p-name { flex: 1; min-width: 0; }
+.pron-row.done .p-name { color: var(--muted); }
+.pron-row .p-bar {
+  width: 62px; height: 5px; border-radius: 3px;
+  background: var(--border); overflow: hidden; flex-shrink: 0;
+}
+.pron-row .p-bar i { display: block; height: 100%; background: var(--accent); }
+.pron-row.done .p-bar i { background: var(--good); }
+.pron-row .p-num { font-size: 11.5px; color: var(--faint); width: 42px; text-align: right; flex-shrink: 0; }
+.pron-row button { padding: 5px 11px; font-size: 12.5px; border-radius: 8px; }

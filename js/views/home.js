@@ -3,6 +3,7 @@ import { $, esc, pct, msg, emptyState, qs, qsa } from '../core/dom.js';
 import { on, EVENTS } from '../core/bus.js';
 import { DIR_SHORT } from '../data/client.js';
 import * as content from '../data/content.js';
+import { PRON_ORDER, nextLesson, LESSON_DONE } from '../core/taxonomy.js';
 import * as progress from '../data/progress.js';
 import { MODES, getMode, forcedDirection } from '../study/modes/index.js';
 import { computeStreak } from '../core/stats.js';
@@ -63,13 +64,15 @@ export async function load() {
   if (!user) return;
   try {
     const dirs = [effectiveDir()];
-    const [decks, due, today, overall, weak, daily] = await Promise.all([
+    const [decks, due, today, overall, weak, daily, pron] = await Promise.all([
       content.listDecks(),
       progress.fetchDue(user.id, dirs, 500),
       progress.todayStats(user.id),
       progress.overallStats(user.id),
       progress.weakItems(user.id, 8).catch(() => []),
       progress.dailyStats(user.id, 30).catch(() => []),
+      // 發音課程進度失敗不該拖垮整個首頁 —— 它是加值資訊，不是主線
+      content.pronProgress(user.id, PRON_ORDER).catch(() => []),
     ]);
 
     $('s-due').textContent = due.length;
@@ -84,6 +87,7 @@ export async function load() {
     renderSuggestion(due.length, today, decks);
 
     renderDecks(decks);
+    renderPron(pron);
     renderWeak(weak);
   } catch (e) {
     msg('載入失敗：' + (e.message || e));
@@ -159,6 +163,57 @@ async function renderDecks(decks) {
     </div>`).join('');
   qsa('[data-deck]', $('deck-list')).forEach((b) => {
     b.onclick = () => deps.onNewDeck(b.dataset.deck);
+  });
+}
+
+/**
+ * 發音課程。
+ *
+ * 【只指一件事：下一課】
+ *   25 課全攤在眼前，自學者的反應是不知從何下手，然後跳過。
+ *   所以主視覺只給一課，完整清單收在 details 裡按需展開。
+ *
+ * 【「下一課」怎麼定義】
+ *   不是「第一個沒碰過的」，而是「第一個沒掌握牢的」——
+ *   碰過兩條就跳下一課，等於一路夾生。掌握門檻取 80%：
+ *   要求 100% 會讓人卡在某一課出不去（有幾條特別難是常態），
+ *   低於 80% 又太鬆。全部達標就恭喜，不硬塞下一件事。
+ */
+function renderPron(rows) {
+  const { next, done: doneCount, total, ordered } = nextLesson(rows);
+  $('pron-count').textContent = total;
+  if (!total) {
+    $('pron-card').classList.add('hidden');
+    return;
+  }
+  const rate = (r) => r.mastered / r.total;
+
+  $('pron-next').innerHTML = next
+    ? `<div class="pron-next">
+         <div class="n-body">
+           <div class="n-label">下一課 ${doneCount + 1} / ${total}</div>
+           <div class="n-title">${esc(next.tag)}</div>
+           <div class="n-sub">${next.total} 條 · 已掌握 ${next.mastered}</div>
+         </div>
+         <button class="primary small" data-pron="${esc(next.tag)}">開始</button>
+       </div>`
+    : `<div class="pron-next"><div class="n-body">
+         <div class="n-title">🎉 發音課程全部達標</div>
+         <div class="n-sub">${total} 課都掌握了八成以上</div>
+       </div></div>`;
+
+  $('pron-list').innerHTML = ordered.map((r) => {
+    const p = Math.round(rate(r) * 100);
+    return `<div class="pron-row${rate(r) >= LESSON_DONE ? ' done' : ''}">
+      <span class="p-name">${esc(r.tag)}</span>
+      <span class="p-bar"><i style="width:${p}%"></i></span>
+      <span class="p-num">${r.mastered}/${r.total}</span>
+      <button data-pron="${esc(r.tag)}">學</button>
+    </div>`;
+  }).join('');
+
+  qsa('[data-pron]').forEach((b) => {
+    b.onclick = () => deps.onStudyTag(b.dataset.pron);
   });
 }
 

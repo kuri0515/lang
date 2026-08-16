@@ -95,3 +95,32 @@ export function groupTags(pairs) {
   out.pron.sort((a, b) => rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0]));
   return out;
 }
+
+/**
+ * 掌握門檻。要求 100% 會讓人卡在某一課出不去 —— 一課裡有幾條特別難是常態，
+ * 為了那兩條擋住整條路線，自學者只會放棄。低於 80% 又太鬆，一路夾生。
+ */
+export const LESSON_DONE = 0.8;
+
+/**
+ * 從課程進度算出「下一課」。
+ *
+ * ★ 判準是「還沒掌握牢」而不是「還沒碰過」——
+ *   碰過兩條就算過關、直接跳下一課，等於整條路線一路夾生，
+ *   而發音正是最不能夾生的部分：底子沒打穩，後面每個音變規則都聽不懂。
+ *
+ * rows = [{ tag, total, started, mastered }]，順序不拘，本函式自己照教學序排。
+ * 回傳 { next, done, total }；全部達標時 next 為 null。
+ */
+export function nextLesson(rows) {
+  const ordered = PRON_ORDER
+    .map((t) => rows.find((r) => r.tag === t))
+    .filter((r) => r && r.total > 0);
+  const rate = (r) => r.mastered / r.total;
+  return {
+    next: ordered.find((r) => rate(r) < LESSON_DONE) ?? null,
+    done: ordered.filter((r) => rate(r) >= LESSON_DONE).length,
+    total: ordered.length,
+    ordered,
+  };
+}

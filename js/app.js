@@ -95,7 +95,17 @@ async function startNew(deckId, tag = '') {
     if (!room) return msg(`今日新卡已達上限（${limit} 張）。先把複習做完，明天再來 👍`, 'ok');
 
     const rows = await progress.fetchNewItems(user.id, deckId, [home.effectiveDir()], room, tag);
-    if (!rows.length) return msg(tag ? `「${tag}」這組已經學完了 👍` : '這個詞庫的新內容已經學完了 👍', 'ok');
+    if (!rows.length) {
+      // 一組的詞全都學過、但還沒掌握牢時，這裡原本只丟一句「已經學完了」就沒下文。
+      // 發音課程的「下一課」定義是「還沒掌握牢」而非「沒碰過」，
+      // 所以這種情況是常態不是例外 —— 按了沒反應，學習者只會覺得壞掉了。
+      // 改成轉去練同一組的既有內容。
+      if (tag) {
+        msg(`「${tag}」的新詞都學過了，改成練習這一組 👍`, 'ok');
+        return startFree({ tag, kind: 'drill' });
+      }
+      return msg('這個詞庫的新內容已經學完了 👍', 'ok');
+    }
     await begin(rows, { kind: 'new' });
   } catch (e) { msg(e.message || e); }
 }
@@ -133,6 +143,9 @@ home.initHome({
   onFree: () => startFree({}),
   onNewDeck: (deckId) => startNew(deckId),
   onDrillWeak: (ids) => startFree({ ids, kind: 'drill' }),
+  // 發音課程的「開始」走與詞庫瀏覽的「學這組」同一條路 ——
+  // 同一件事只能有一個入口實作，兩份必然漂移
+  onStudyTag: (t) => startNew(null, t),
 });
 study.initStudy({ session, getCtx: studyCtx, onQuit: () => show('view-done') });
 browse.initBrowse({ ...deps, onPractice: (ids) => startFree({ ids }), onStudyTag: (t) => startNew(null, t) });

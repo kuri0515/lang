@@ -85,6 +85,38 @@ export async function sameMeaning(zh, excludeId = null, limit = 4) {
   return (data ?? []).filter((x) => x.id !== excludeId).slice(0, limit);
 }
 
+/**
+ * 發音課程的進度：每個發音標籤有多少條、學過幾條、掌握幾條。
+ *
+ * 一次撈完再在記憶體裡分組 —— 25 個標籤各打一次 API 要 25 趟往返，
+ * 首頁會卡住。條目與卡片各一次查詢就夠。
+ *
+ * 「學過」以有卡片為準、「掌握」以 mastered_at 為準：
+ * 學習者要看的是「這一課碰過沒有」與「這一課穩了沒有」兩件不同的事。
+ */
+export async function pronProgress(userId, tags) {
+  const want = new Set(tags);
+  const items = await fetchAll(() => sb.from('items')
+    .select('id, tags').eq('is_active', true).overlaps('tags', tags));
+  const cards = await fetchAll(() => sb.from('user_cards')
+    .select('item_id, mastered_at').eq('user_id', userId));
+
+  const started = new Set(cards.map((c) => c.item_id));
+  const mastered = new Set(cards.filter((c) => c.mastered_at).map((c) => c.item_id));
+
+  const by = new Map(tags.map((t) => [t, { tag: t, total: 0, started: 0, mastered: 0 }]));
+  for (const it of items) {
+    for (const t of it.tags || []) {
+      if (!want.has(t)) continue;
+      const g = by.get(t);
+      g.total += 1;
+      if (started.has(it.id)) g.started += 1;
+      if (mastered.has(it.id)) g.mastered += 1;
+    }
+  }
+  return [...by.values()].filter((g) => g.total > 0);
+}
+
 /** 選擇題干擾項池：一次抓好放記憶體，避免每題都打一次 API */
 export async function distractorPool(deckId = null) {
   return fetchAll(() => {

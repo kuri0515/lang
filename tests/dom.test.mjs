@@ -141,5 +141,42 @@ const { groupTags, PRON_ORDER } = await import(ROOT+'/js/core/taxonomy.js');
   chk('教學序列無重複', new Set(PRON_ORDER).size === PRON_ORDER.length);
 }
 
+// ---------------------------------------------------------------------
+// 發音課程：「下一課」的判準
+// ---------------------------------------------------------------------
+console.log('\n【發音課程進度】');
+{
+  const { nextLesson, LESSON_DONE } = await import(ROOT+'/js/core/taxonomy.js');
+  const r = (tag, total, mastered) => ({ tag, total, mastered, started: mastered });
+
+  // 第一課碰過但沒掌握 → 下一課仍是它，不能往前跳
+  let g = nextLesson([r('收音ㄱ',4,1), r('收音ㄴ',4,0)]);
+  chk('★ 碰過但沒掌握牢，下一課仍是同一課', g.next.tag==='收音ㄱ',
+      '判準是「還沒掌握牢」而非「還沒碰過」——發音夾生，後面的音變規則全聽不懂');
+
+  // 達標就前進
+  g = nextLesson([r('收音ㄱ',4,4), r('收音ㄴ',4,0)]);
+  chk('達標後前進到下一課', g.next.tag==='收音ㄴ' && g.done===1);
+
+  // 門檻 80%：4 條掌握 3 條（75%）不算過
+  g = nextLesson([r('收音ㄱ',4,3), r('收音ㄴ',4,0)]);
+  chk('75% 未達 80% 門檻，仍停在該課', g.next.tag==='收音ㄱ');
+  g = nextLesson([r('收音ㄱ',5,4), r('收音ㄴ',4,0)]);
+  chk('80% 剛好達標，可以前進', g.next.tag==='收音ㄴ',
+      '要求 100% 會讓人為了一兩條特別難的卡在原地出不去');
+
+  // 全部達標
+  g = nextLesson([r('收音ㄱ',4,4), r('收音ㄴ',4,4)]);
+  chk('全部達標時 next 為 null，不硬塞下一件事', g.next===null && g.done===2);
+
+  // 順序照教學序列，不照傳入順序
+  g = nextLesson([r('激音化',4,0), r('收音ㄱ',4,0)]);
+  chk('照教學序列判斷，不照傳入順序', g.next.tag==='收音ㄱ');
+
+  // 空資料不炸
+  chk('沒有資料時不炸', nextLesson([]).next===null && nextLesson([]).total===0);
+  chk('門檻是 0.8', LESSON_DONE===0.8);
+}
+
 console.log(f?`\n❌ 失敗 ${f} 項`:'\n✅ 全部通過');
 process.exit(f?1:0);
