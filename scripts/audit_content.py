@@ -14,10 +14,12 @@
 """
 
 import argparse
+import http.client
 import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 from collections import Counter, defaultdict
@@ -41,25 +43,38 @@ def load_env():
     return env["SUPABASE_URL"].rstrip("/"), env["SUPABASE_SERVICE_ROLE_KEY"]
 
 
-def rest(url, key, method, path, payload=None):
-    req = urllib.request.Request(
-        f"{url}/rest/v1/{path}", method=method,
-        data=json.dumps(payload, ensure_ascii=False).encode() if payload is not None else None)
-    req.add_header("apikey", key)
-    req.add_header("Authorization", f"Bearer {key}")
-    req.add_header("Content-Type", "application/json")
-    req.add_header("Prefer", "return=representation")
-    try:
-        with urllib.request.urlopen(req, timeout=60) as r:
-            b = r.read().decode()
-            return json.loads(b) if b else []
-    except urllib.error.HTTPError as e:
-        sys.exit(f"❌ {method} {path} -> {e.code}\n{e.read().decode()[:300]}")
+def rest(url, key, method, path, payload=None, tries=3):
+    """
+    帶重試。回應被截斷（IncompleteRead）在大量資料時會發生 ——
+    實際踩過：一次撈 1000 列全欄位時連線中斷，稽核直接崩掉。
+    """
+    last = None
+    for attempt in range(tries):
+        req = urllib.request.Request(
+            f"{url}/rest/v1/{path}", method=method,
+            data=json.dumps(payload, ensure_ascii=False).encode() if payload is not None else None)
+        req.add_header("apikey", key)
+        req.add_header("Authorization", f"Bearer {key}")
+        req.add_header("Content-Type", "application/json")
+        req.add_header("Prefer", "return=representation")
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                b = r.read().decode()
+                return json.loads(b) if b else []
+        except urllib.error.HTTPError as e:
+            sys.exit(f"❌ {method} {path} -> {e.code}\n{e.read().decode()[:300]}")
+        except (http.client.IncompleteRead, urllib.error.URLError, TimeoutError) as e:
+            last = e
+            time.sleep(1 + attempt)
+    sys.exit(f"❌ {method} {path} 連續 {tries} 次失敗：{last}")
 
 
-def fetch_all(url, key, table, select):
-    """分頁撈完 —— PostgREST 單次有上限，寫死 limit 會靜默截斷"""
-    out, page = [], 1000
+def fetch_all(url, key, table, select, page=300):
+    """
+    分頁撈完 —— PostgREST 單次有上限，寫死 limit 會靜默截斷。
+    頁大小取 300 而非 1000：全欄位的列很大，一次要太多容易在傳輸中斷。
+    """
+    out = []
     while True:
         rows = rest(url, key, "GET", f"{table}?select={select}&offset={len(out)}&limit={page}")
         out += rows
@@ -131,7 +146,12 @@ def check_simplified(items):
         issue("info", "簡繁檢查已略過", ["未安裝 opencc-python-reimplemented"])
         return
     cc = OpenCC("s2tw")
-    OK_BOTH = {("台", "臺"), ("祕", "秘"), ("秘", "祕")}
+    # 兩種寫法在台灣都通行，或轉換器本身判錯的字對。
+    #   里→裡  OpenCC 的已知誤判：萬里的「里」是距離單位，不是「裡面」
+    #   注→註  注文（訂購，日韓漢字）與註文都有人用
+    #   泄→洩  排泄在台灣是標準寫法
+    OK_BOTH = {("台", "臺"), ("祕", "秘"), ("秘", "祕"),
+               ("里", "裡"), ("注", "註"), ("泄", "洩"), ("布", "佈"), ("才", "纔")}
     found = []
     for x in items:
         for f in ("zh", "example_zh", "note"):
@@ -208,6 +228,32 @@ def check_tags(items):
           [f"{a}({tags[a]}) ／ {b}({tags[b]})" for a, b in near])
 
 
+def check_counter_sync(url, key):
+    """
+    user_cards 的計數應與 reviews 彙總相符。
+
+    會不符的情況：直接 insert reviews 而沒走 log_practice RPC（例如測試腳本
+    或手動修資料），或刪了 reviews 卻沒回退計數。reviews 是只追加的權威日誌，
+    對不上時一律以它為準重算。
+    """
+    cards = fetch_all(url, key, "user_cards", "user_id,item_id,direction,total_reviews,correct_reviews")
+    revs = fetch_all(url, key, "reviews", "user_id,item_id,direction,is_correct")
+    agg = defaultdict(lambda: [0, 0])
+    for r in revs:
+        k = (r["user_id"], r["item_id"], r["direction"])
+        agg[k][0] += 1
+        if r["is_correct"]:
+            agg[k][1] += 1
+    bad = []
+    for c in cards:
+        k = (c["user_id"], c["item_id"], c["direction"])
+        n, ok = agg.get(k, [0, 0])
+        if (c["total_reviews"], c["correct_reviews"]) != (n, ok):
+            bad.append(f"{c['item_id'][:8]} {c['direction']}: 卡片 {c['correct_reviews']}/{c['total_reviews']} vs 日誌 {ok}/{n}")
+    issue("error", "user_cards 計數與 reviews 日誌不符", bad,
+          "以 reviews 為準重算。日誌是只追加的權威來源。")
+
+
 def check_completeness(items, decks):
     by_deck = defaultdict(list)
     for x in items:
@@ -243,6 +289,7 @@ def main():
     check_simplified(items)
     check_same_meaning(items)
     check_tags(items)
+    check_counter_sync(url, key)
     check_completeness(items, decks)
 
     icon = {"error": "❌", "warn": "⚠️ ", "info": "ℹ️ "}
