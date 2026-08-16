@@ -671,3 +671,29 @@ kbd {
 .mini-details[open] summary::after { transform: rotate(180deg); }
 .mini-details summary .muted { font-size: 11.5px; font-weight: 400; text-align: right; }
 .mini-details .chart { margin-top: 12px; }
+
+/* ---------- 活動類型徽章 ---------- */
+.act {
+  font-size: 10px; padding: 1px 7px; border-radius: 999px; margin-right: 5px;
+  border: 1px solid var(--border); color: var(--muted); white-space: nowrap;
+}
+.act-review { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.act-new    { background: var(--ok-bg); border-color: var(--ok-bd); color: var(--ok-fg); }
+.act-drill  { background: var(--warn-bg); border-color: var(--warn-bd); color: var(--warn-fg); }
+.act-free   { background: var(--surface-2); }
+
+/* ---------- 內容修改記錄 ---------- */
+.edit-row { padding: 9px 0; border-bottom: 1px solid var(--border-soft); font-size: 12.5px; }
+.edit-row:last-child { border-bottom: none; }
+.edit-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.edit-head b { font-size: 13.5px; }
+.edit-when { font-size: 10.5px; color: var(--faint); flex-shrink: 0;
+             font-variant-numeric: tabular-nums; }
+.edit-diff { margin-top: 4px; font-size: 11.5px; color: var(--faint); }
+.edit-diff div { padding: 1px 0; }
+.edit-diff .old { color: var(--again); text-decoration: line-through; opacity: .8; }
+.edit-diff .new { color: var(--good); }
+.edit-act {
+  font-size: 10px; padding: 1px 7px; border-radius: 999px; margin-right: 5px;
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--muted);
+}

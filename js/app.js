@@ -18,6 +18,7 @@ import { initTheme } from './views/theme.js';
 import { initVoiceUI } from './views/voice.js';
 import { initAuth } from './views/auth.js';
 import { initEditor, openEditor, loadDecksInto } from './views/editor.js';
+import { initEdits } from './views/edits.js';
 import * as home from './views/home.js';
 import * as study from './views/study.js';
 import * as browse from './views/browse.js';
@@ -53,11 +54,11 @@ async function ensurePool() {
 }
 
 /** 開始一輪：依題型過濾佇列，過濾後沒東西就別進去 */
-async function begin(entries, { freeMode = false, note = '' } = {}) {
+async function begin(entries, { freeMode = false, kind = 'review', note = '' } = {}) {
   const modeId = home.studyMode();
   if (needsPool(modeId)) await ensurePool();
 
-  session.start(entries, { freeMode, mode: modeId });
+  session.start(entries, { freeMode, mode: modeId, kind });
   const mode = getMode(modeId);
   const { kept, dropped } = session.filter((e) => mode.canUse(e.item, studyCtx()));
 
@@ -80,7 +81,8 @@ async function startReview() {
   try {
     const rows = await progress.fetchDue(user.id, [home.effectiveDir()], 200);
     if (!rows.length) return msg('沒有待複習的卡片', 'ok');
-    await begin(shuffle(rows.map((c) => ({ item: c.items, direction: c.direction, card: c }))));
+    await begin(shuffle(rows.map((c) => ({ item: c.items, direction: c.direction, card: c }))),
+                { kind: 'review' });
   } catch (e) { msg(e.message || e); }
 }
 
@@ -94,18 +96,21 @@ async function startNew(deckId, tag = '') {
 
     const rows = await progress.fetchNewItems(user.id, deckId, [home.effectiveDir()], room, tag);
     if (!rows.length) return msg(tag ? `「${tag}」這組已經學完了 👍` : '這個詞庫的新內容已經學完了 👍', 'ok');
-    await begin(rows);
+    await begin(rows, { kind: 'new' });
   } catch (e) { msg(e.message || e); }
 }
 
 /** 自由練習：不看到期時間、不受上限，只記成績不動排程 */
-async function startFree({ ids = null, tag = '' } = {}) {
+async function startFree({ ids = null, tag = '', kind = 'free' } = {}) {
   try {
     const items = await content.pickItems({ ids, tag, limit: 60 });
     if (!items.length) return msg('沒有符合的內容');
     const dir = home.effectiveDir();
     await begin(shuffle(items.map((item) => ({ item, direction: dir, card: null }))),
-                { freeMode: true, note: '自由練習 · 只記錄成績，不影響複習排程' });
+                { freeMode: true, kind,
+                  note: kind === 'drill'
+                    ? '弱項修復 · 只記錄成績，不影響複習排程'
+                    : '自由練習 · 只記錄成績，不影響複習排程' });
   } catch (e) { msg(e.message || e); }
 }
 
@@ -118,6 +123,7 @@ initTheme();
 initTabs();
 initAuth();
 initEditor();
+initEdits();
 initVoiceUI();
 initImporterAndAdmin();
 
@@ -126,12 +132,12 @@ home.initHome({
   onReview: startReview,
   onFree: () => startFree({}),
   onNewDeck: (deckId) => startNew(deckId),
-  onDrillWeak: (ids) => startFree({ ids }),
+  onDrillWeak: (ids) => startFree({ ids, kind: 'drill' }),
 });
 study.initStudy({ session, getCtx: studyCtx, onQuit: () => show('view-done') });
 browse.initBrowse({ ...deps, onPractice: (ids) => startFree({ ids }), onStudyTag: (t) => startNew(null, t) });
 history.initHistory(deps);
-history.initWords((ids) => startFree({ ids }));
+history.initWords((ids) => startFree({ ids, kind: 'drill' }));
 importer.initImporter();
 
 onEnter('view-home', () => home.load());

@@ -26,9 +26,10 @@ export function createSession({ save, onChange, onFinish, onError }) {
   let shownAt = 0;
   let sessionId = null;          // 同一輪共用，讓「一次學習」成為可查詢的單位
   let modeId = 'flip';
+  let activity = 'review';   // new | review | free | drill
 
   const state = () => ({
-    sessionId, mode: modeId,
+    sessionId, mode: modeId, activity,
     entry: queue[idx] ?? null,
     idx, total: queue.length, free, stats,
     isGraded: graded.has(idx),
@@ -52,12 +53,13 @@ export function createSession({ save, onChange, onFinish, onError }) {
     get queue() { return queue; },
 
     /** 開始一輪。entries: [{item, direction, card}] */
-    start(entries, { freeMode = false, mode = 'flip' } = {}) {
+    start(entries, { freeMode = false, mode = 'flip', kind = 'review' } = {}) {
       flush();
       queue = entries;
       idx = 0;
       free = freeMode;
       modeId = mode;
+      activity = kind;
       sessionId = (globalThis.crypto?.randomUUID?.()) || null;
       stats = { n: 0, correct: 0 };
       graded.clear();
@@ -94,7 +96,7 @@ export function createSession({ save, onChange, onFinish, onError }) {
         payload: {
           item: entry.item, direction: entry.direction, prevCard: entry.card,
           rating, next, elapsedMs: Date.now() - shownAt, free,
-          mode: modeId, sessionId,
+          mode: modeId, sessionId, activity,
         },
         snapshot,
         timer: setTimeout(() => flush(true), UNDO_MS),

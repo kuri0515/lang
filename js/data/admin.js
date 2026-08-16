@@ -60,3 +60,15 @@ export async function insertItems(deckId, deckSlug, rows) {
   if (error) throw error;
   return data ?? [];
 }
+
+/**
+ * 內容修改記錄。由資料庫 trigger 寫入，涵蓋所有寫入路徑
+ * （編輯器、批次匯入、腳本），前端沒有漏記的可能。
+ */
+export async function listEdits(limit = 50) {
+  const { data, error } = await sb.from('v_item_edits')
+    .select('id, item_id, ko, zh, action, changed, before, after, edited_at, editor')
+    .order('edited_at', { ascending: false }).limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}

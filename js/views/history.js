@@ -30,6 +30,13 @@ export async function open() {
 
 const MODE_LABEL = { flip: '翻卡自評', choice: '四選一', scramble: '詞序重組', listen: '聽音選義' };
 const MODE_ICON  = { flip: '🃏', choice: '📝', scramble: '🧩', listen: '🎧' };
+// 活動類型：同樣是答 8 題，「修復弱項」與「隨手練練」意義完全不同
+const ACT = {
+  new:    { label: '學新詞', cls: 'act-new' },
+  review: { label: '複習',   cls: 'act-review' },
+  drill:  { label: '弱項修復', cls: 'act-drill' },
+  free:   { label: '自由練習', cls: 'act-free' },
+};
 
 const fmtTime = (t) => new Date(t).toTimeString().slice(0, 5);
 const fmtDay = (d) => new Date(d).toLocaleDateString('zh-TW',
@@ -95,9 +102,9 @@ function renderSession(se) {
     <button class="sess-head">
       <span class="sess-icon">${MODE_ICON[se.mode] || '📘'}</span>
       <span class="sess-main">
+        ${se.activity ? `<span class="act ${ACT[se.activity]?.cls || ''}">${ACT[se.activity]?.label || se.activity}</span>` : ''}
         <b>${esc(MODE_LABEL[se.mode] || '學習')}</b>
         <span class="muted"> · ${DIR_SHORT[se.direction] || ''}</span>
-        ${se.is_free ? '<span class="tag-free">自由練習</span>' : ''}
         <small>${fmtTime(se.started_at)}–${fmtTime(se.ended_at)} · ${fmtDur(se.duration_sec)}</small>
       </span>
       <span class="sess-stat">
@@ -387,7 +394,7 @@ function renderWordDetail(w, atts) {
       <span>${DIR_SHORT[a.direction]}</span>
       <span>${RATE_LABEL[a.rating] || ''}</span>
       ${a.elapsed_ms ? `<span>${(a.elapsed_ms / 1000).toFixed(1)}s</span>` : ''}
-      ${a.is_free ? '<span class="tag-free">自由</span>' : ''}
+      ${a.activity ? `<span class="act ${ACT[a.activity]?.cls || ''}">${ACT[a.activity]?.label || ''}</span>` : ''}
       ${a.source && a.source !== 'live' ? '<span class="h-src">補</span>' : ''}
     </div>`).join('');
 

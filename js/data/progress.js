@@ -44,7 +44,7 @@ export async function fetchNewItems(userId, deckId, dirs, limit = 20, tag = '') 
 // ---------- 寫入 ----------
 /** 正規複習：更新排程 + 記錄答題 */
 export async function saveReview({ userId, item, direction, prevCard, rating, next,
-                                  elapsedMs, mode, sessionId }) {
+                                  elapsedMs, mode, sessionId, activity }) {
   const prev = prevCard || {};
   const isCorrect = rating >= 3;
   const cardRow = {
@@ -58,6 +58,7 @@ export async function saveReview({ userId, item, direction, prevCard, rating, ne
       user_id: userId, item_id: item.id, direction, rating,
       elapsed_ms: elapsedMs ?? null,
       mode: mode ?? null, session_id: sessionId ?? null, is_free: false,
+      activity: activity ?? 'review',
       prev_interval_days: prev.interval_days ?? 0,
       prev_ease_factor: prev.ease_factor ?? 2.5,
     }),
@@ -71,7 +72,7 @@ export async function saveReview({ userId, item, direction, prevCard, rating, ne
  * ★ 若也更新到期時間，臨時多背幾遍就會把下次複習日往後推，
  *   破壞間隔重複的節奏。歷史與正確率照記，排程留給正規複習決定。
  */
-export async function logPractice({ item, direction, rating, elapsedMs, mode, sessionId }) {
+export async function logPractice({ item, direction, rating, elapsedMs, mode, sessionId, activity }) {
   // 走 RPC 而非兩次 insert：記錄與計數必須同進同退，
   // 否則會出現「答題記錄有、卡片計數沒加」的半套狀態。
   const { error } = await sb.rpc('log_practice', {
@@ -81,6 +82,7 @@ export async function logPractice({ item, direction, rating, elapsedMs, mode, se
     p_elapsed_ms: elapsedMs ?? null,
     p_mode: mode ?? null,
     p_session_id: sessionId ?? null,
+    p_activity: activity ?? 'free',
   });
   if (error) throw error;
 }
@@ -217,7 +219,7 @@ export async function itemTimeline(userId, itemId) {
  */
 export async function listSessions(userId, { limit = 30, before = null } = {}) {
   let q = sb.from('v_sessions')
-    .select('session_id, mode, direction, is_free, answered, correct, accuracy, started_at, ended_at, duration_sec')
+    .select('session_id, mode, activity, direction, is_free, answered, correct, accuracy, started_at, ended_at, duration_sec')
     .eq('user_id', userId).order('started_at', { ascending: false }).limit(limit);
   if (before) q = q.lt('started_at', before);
   const { data, error } = await q;
@@ -355,7 +357,7 @@ export async function notStartedItems(userId) {
 /** 某個詞的作答歷程（含題型），新到舊 */
 export async function itemAttempts(userId, itemId, limit = 30) {
   const { data, error } = await sb.from('reviews')
-    .select('rating, is_correct, elapsed_ms, reviewed_at, direction, mode, is_free, source')
+    .select('rating, is_correct, elapsed_ms, reviewed_at, direction, mode, activity, is_free, source')
     .eq('user_id', userId).eq('item_id', itemId)
     .order('reviewed_at', { ascending: false }).limit(limit);
   if (error) throw error;
