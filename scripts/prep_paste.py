@@ -158,6 +158,7 @@ def parse(raw):
       * 可有可無的表頭（韓文/中文）
       * 條目跨兩行：第二行是括號說明（縮語的完整形）
       * 對話行帶「A：」「B：」說話人標記
+      * 可有可無的第三欄說明（時態、語體、用法）→ 併入 note
     """
     lines = [l.rstrip() for l in raw.splitlines()]
     rows, pending = [], None
@@ -184,7 +185,9 @@ def parse(raw):
                 pending = line.strip()
             continue
 
+        # 有些來源附第三欄說明（時態、語體、用法）—— 收進 note，別丟掉
         ko, zh = parts[0], parts[1]
+        src_note = parts[2].strip() if len(parts) > 2 else ""
         if pending:
             ko, pending = pending + " " + ko, None
 
@@ -206,7 +209,9 @@ def parse(raw):
 
         zh_t, ok = to_traditional(zh)
         conv_ok &= ok
-        rows.append({"ko": ko.strip(), "zh": zh_t, "_speaker": speaker, "_expand": expand})
+        note_t, _ = to_traditional(src_note)
+        rows.append({"ko": ko.strip(), "zh": zh_t, "_speaker": speaker,
+                     "_expand": expand, "_note": note_t})
 
     return rows, conv_ok
 
@@ -231,13 +236,17 @@ def main():
             dups.append(r["ko"])
             continue
         seen.add(r["ko"])
-        note = ""
+        parts_note = []
         if r["_speaker"]:
-            note = f"對話 {r['_speaker']}｜"
+            parts_note.append(f"對話 {r['_speaker']}")
+        note = ""
         if r["_expand"]:
             # 韓文的是縮語展開；拉丁文的是外來語原文
-            note += (f"完整形為 {r['_expand']}" if HANGUL_RE.search(r["_expand"])
-                     else f"外來語 {r['_expand']}")
+            parts_note.append(f"完整形為 {r['_expand']}" if HANGUL_RE.search(r["_expand"])
+                              else f"外來語 {r['_expand']}")
+        if r.get("_note"):
+            parts_note.append(r["_note"])
+        note = "｜".join(parts_note)
         out.append({
             "ko": r["ko"], "zh": r["zh"],
             "romanization": romanize(r["ko"]),
