@@ -76,6 +76,12 @@ NASAL_ONSETS = {2, 6}                          # 後接 ㄴ / ㅁ
 # 流音的鼻音化：ㅁ/ㅇ 之後的 ㄹ 讀作 ㄴ。음료수 → eumnyosu
 LIQUID_TO_N = {16, 21}                         # 前面是 ㅁ / ㅇ
 
+# 顎化（구개음화，標準發音法第17項）：ㄷ／ㅌ 收音後接 이 或 히 時，
+# 與該母音結合讀成 ㅈ／ㅊ。해돋이[해도지]、같이[가치]、굳히다[구치다]。
+# 羅馬字表記法規定要反映（haedoji、gachi、guchida）。
+# (終聲索引, 下一音節初聲) → 顎化後的初聲
+PALATAL = {(7, 11): "j", (25, 11): "ch", (7, 18): "ch", (25, 18): "ch"}
+
 # 流音化（標準發音法第20項）：ㄴ 與 ㄹ 相鄰時一律同化為 ㄹㄹ。
 #   ㄴ + ㄹ → 난로[날로] nallo、신라[실라] silla
 #   ㄹ + ㄴ → 설날[설랄] seollal、일년[일련] illyeon
@@ -122,7 +128,9 @@ def romanize(text):
         onset = CHO[cho]
         if idx > 0 and isinstance(jamo[idx - 1], list):
             pj = jamo[idx - 1][2]
-            if cho == 11 and pj in LIAISON:      # 本音節無初聲（ㅇ）且前面有終聲
+            if (pj, cho) in PALATAL and jung == 20:   # 顎化：ㄷ/ㅌ + 이/히
+                onset = PALATAL[(pj, cho)]
+            elif cho == 11 and pj in LIAISON:    # 本音節無初聲（ㅇ）且前面有終聲
                 onset = LIAISON[pj]
             elif cho == 11 and pj in CLUSTER_LIAISON:
                 onset = CLUSTER_LIAISON[pj][1]
@@ -139,7 +147,9 @@ def romanize(text):
 
         coda = ""
         if jong:
-            if isinstance(nxt, list) and nxt[0] == 11 and jong in LIAISON:
+            if isinstance(nxt, list) and (jong, nxt[0]) in PALATAL and nxt[1] == 20:
+                coda = ""                        # 顎化：終聲併入下一音節
+            elif isinstance(nxt, list) and nxt[0] == 11 and jong in LIAISON:
                 coda = ""                        # 終聲移到下一音節，這裡不寫
             elif isinstance(nxt, list) and nxt[0] == 11 and jong in CLUSTER_LIAISON:
                 coda = CLUSTER_LIAISON[jong][0]  # 複合終聲拆開，前半留下
@@ -202,8 +212,8 @@ def parse(raw):
     for line in lines:
         if not line.strip():
             continue
-        # 表頭
-        if re.match(r"^\s*(韓文|韩文|ko|Korean)\b", line, re.I):
+        # 表頭（兩種欄序都要認）
+        if re.match(r"^\s*(韓文|韩文|中文|ko|zh|Korean|Chinese)\b", line, re.I):
             continue
 
         # 純括號行 → 併入上一條當作展開式
@@ -220,8 +230,11 @@ def parse(raw):
                 pending = line.strip()
             continue
 
-        # 有些來源附第三欄說明（時態、語體、用法）—— 收進 note，別丟掉
+        # ★ 欄位順序可能相反（有些來源是「中文 韓文」）。
+        #   靠「哪一欄含諺文」判斷，而不是靠位置 —— 位置會變，諺文不會。
         ko, zh = parts[0], parts[1]
+        if not HANGUL_RE.search(ko) and HANGUL_RE.search(zh):
+            ko, zh = zh, ko
         src_note = parts[2].strip() if len(parts) > 2 else ""
         if pending:
             ko, pending = pending + " " + ko, None
