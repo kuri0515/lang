@@ -87,7 +87,20 @@ node tests/session.test.mjs && node tests/modes.test.mjs pool.json
 
 ### 1. 建資料表
 
-Supabase Dashboard → SQL Editor → 貼上 `supabase/migrations/0001_init.sql` → Run。
+```bash
+brew install libpq                    # 提供 psql
+scripts/migrate.sh status             # 看已套用／待套用
+scripts/migrate.sh check              # 只驗語法（交易中跑完即 rollback）
+scripts/migrate.sh up                 # 套用待套用的
+```
+
+migration 與登記在同一個交易裡，要嘛都成功要嘛都回滾，不會出現
+「跑了但沒登記」或「登記了但沒跑」的半套狀態。
+
+<details><summary>手動方式（沒有資料庫密碼時）</summary>
+
+Supabase Dashboard → SQL Editor → 依序貼上 `supabase/migrations/*.sql` → Run。
+</details>
 
 ### 2. 設定密鑰
 
