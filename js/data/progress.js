@@ -1,0 +1,159 @@
+// =====================================================================
+// 學習狀態層（user_cards / reviews）—— 與內容層完全解耦
+// 換 SRS 演算法只改 srs.js，換詞表只動 content.js，兩者互不影響。
+// =====================================================================
+import { sb, ITEM_FIELDS, DIRECTIONS } from './client.js';
+
+// ---------- 佇列 ----------
+/** 到期的複習卡 */
+export async function fetchDue(userId, dirs = DIRECTIONS, limit = 200) {
+  const { data, error } = await sb.from('user_cards')
+    .select(`*, items(${ITEM_FIELDS})`)
+    .eq('user_id', userId).in('direction', dirs)
+    .neq('state', 'suspended')
+    .lte('due_at', new Date().toISOString())
+    .order('due_at').limit(limit);
+  if (error) throw error;
+  return (data ?? []).filter((c) => c.items);
+}
+
+/** 尚未建卡的新條目（對指定方向而言是「新」的） */
+export async function fetchNewItems(userId, deckId, dirs, limit = 20, tag = '') {
+  const { data: seen, error: e1 } = await sb.from('user_cards')
+    .select('item_id, direction').eq('user_id', userId);
+  if (e1) throw e1;
+  const seenKey = new Set((seen ?? []).map((r) => `${r.item_id}|${r.direction}`));
+
+  let q = sb.from('items').select(ITEM_FIELDS).eq('is_active', true)
+    .order('sort_order').order('slug');
+  if (deckId) q = q.eq('deck_id', deckId);
+  if (tag) q = q.contains('tags', [tag]);
+  const { data, error } = await q.limit(Math.max(limit * 5, 300));
+  if (error) throw error;
+
+  const out = [];
+  for (const item of data ?? []) {
+    for (const dir of dirs) {
+      if (!seenKey.has(`${item.id}|${dir}`)) out.push({ item, direction: dir, card: null });
+      if (out.length >= limit) return out;
+    }
+  }
+  return out;
+}
+
+// ---------- 寫入 ----------
+/** 正規複習：更新排程 + 記錄答題 */
+export async function saveReview({ userId, item, direction, prevCard, rating, next, elapsedMs }) {
+  const prev = prevCard || {};
+  const isCorrect = rating >= 3;
+  const cardRow = {
+    user_id: userId, item_id: item.id, direction, ...next,
+    total_reviews: (prev.total_reviews ?? 0) + 1,
+    correct_reviews: (prev.correct_reviews ?? 0) + (isCorrect ? 1 : 0),
+  };
+  const [{ error: e1 }, { error: e2 }] = await Promise.all([
+    sb.from('user_cards').upsert(cardRow, { onConflict: 'user_id,item_id,direction' }),
+    sb.from('reviews').insert({
+      user_id: userId, item_id: item.id, direction, rating,
+      elapsed_ms: elapsedMs ?? null,
+      prev_interval_days: prev.interval_days ?? 0,
+      prev_ease_factor: prev.ease_factor ?? 2.5,
+    }),
+  ]);
+  if (e1) throw e1;
+  if (e2) throw e2;
+}
+
+/**
+ * 自由練習：只記錄答題，不動排程。
+ * ★ 若也更新到期時間，臨時多背幾遍就會把下次複習日往後推，
+ *   破壞間隔重複的節奏。歷史與正確率照記，排程留給正規複習決定。
+ */
+export async function logPractice({ userId, item, direction, rating, elapsedMs }) {
+  const { error } = await sb.from('reviews').insert({
+    user_id: userId, item_id: item.id, direction, rating, elapsed_ms: elapsedMs ?? null,
+  });
+  if (error) throw error;
+}
+
+// ---------- 統計 ----------
+export async function todayStats(userId) {
+  const start = new Date(); start.setHours(0, 0, 0, 0);
+  const { data, error } = await sb.from('reviews').select('is_correct')
+    .eq('user_id', userId).gte('reviewed_at', start.toISOString());
+  if (error) throw error;
+  const rows = data ?? [];
+  const correct = rows.filter((r) => r.is_correct).length;
+  return { reviewed: rows.length, correct, accuracy: rows.length ? correct / rows.length : null };
+}
+
+export async function overallStats(userId) {
+  const { data, error } = await sb.from('user_cards')
+    .select('total_reviews, correct_reviews, state, interval_days').eq('user_id', userId);
+  if (error) throw error;
+  const rows = data ?? [];
+  const total = rows.reduce((s, r) => s + r.total_reviews, 0);
+  const correct = rows.reduce((s, r) => s + r.correct_reviews, 0);
+  return {
+    cards: rows.length,
+    // 「已掌握」= 進入複習期且間隔已拉到 21 天以上
+    mastered: rows.filter((r) => r.state === 'review' && Number(r.interval_days) >= 21).length,
+    accuracy: total ? correct / total : null,
+  };
+}
+
+/** 今日已建的新卡數（套用每日新卡上限用） */
+export async function newCardsToday(userId) {
+  const start = new Date(); start.setHours(0, 0, 0, 0);
+  const { count, error } = await sb.from('user_cards')
+    .select('item_id', { count: 'exact', head: true })
+    .eq('user_id', userId).gte('created_at', start.toISOString());
+  if (error) throw error;
+  return count ?? 0;
+}
+
+/** 弱項：正確率低 / 遺忘次數多 */
+export async function weakItems(userId, limit = 20) {
+  const { data, error } = await sb.from('v_item_accuracy').select('*')
+    .eq('user_id', userId).gte('total_reviews', 3)
+    .order('accuracy', { ascending: true }).order('lapses', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** 逐筆答題記錄，新到舊。before 為分頁游標。 */
+export async function listHistory(userId, { limit = 100, before = null, dir = null } = {}) {
+  let q = sb.from('reviews')
+    .select('id, direction, rating, is_correct, elapsed_ms, reviewed_at, source, items(id, ko, zh, romanization, item_type)')
+    .eq('user_id', userId).order('reviewed_at', { ascending: false }).limit(limit);
+  if (before) q = q.lt('reviewed_at', before);
+  if (dir) q = q.eq('direction', dir);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []).filter((r) => r.items);
+}
+
+/** 近 N 天的每日答題量與正確率 */
+export async function dailyStats(userId, days = 30) {
+  const from = new Date();
+  from.setDate(from.getDate() - days + 1);
+  from.setHours(0, 0, 0, 0);
+  const { data, error } = await sb.from('reviews').select('is_correct, reviewed_at')
+    .eq('user_id', userId).gte('reviewed_at', from.toISOString());
+  if (error) throw error;
+
+  const key = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const byDay = {};
+  for (const r of data ?? []) {
+    const k = key(new Date(r.reviewed_at));
+    (byDay[k] ||= { n: 0, correct: 0 });
+    byDay[k].n += 1;
+    if (r.is_correct) byDay[k].correct += 1;
+  }
+  return Array.from({ length: days }, (_, i) => {
+    const d = new Date(from); d.setDate(from.getDate() + i);
+    const v = byDay[key(d)] || { n: 0, correct: 0 };
+    return { date: key(d), ...v, accuracy: v.n ? v.correct / v.n : null };
+  });
+}

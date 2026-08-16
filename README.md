@@ -12,32 +12,74 @@
 ## 架構
 
 ```
-index.html          單一頁面，四個視圖（登入 / 首頁 / 學習 / 完成）
+index.html          單一頁面，底部 Tab 分四區
 config.js           Supabase URL + anon key（公開，安全靠 RLS）
-css/style.css       設計 token + 元件樣式，自動深淺色
+css/style.css       design token + 元件樣式，深淺色三態
+
 js/
-  srs.js            ★ 純函式排程引擎，不碰 DOM 不碰網路
-  db.js             ★ 所有 Supabase 呼叫，UI 不直接碰 client
-  app.js            視圖切換與事件編排
-supabase/migrations/
-  0001_init.sql     schema + RLS + 統計 view
-scripts/
-  import_words.py   CSV → Supabase，零依賴、冪等、預設 dry-run
-  create_user.py    建立帳號（Admin API），支援帳號名與管理員角色
-data/
-  daily_korean.csv  169 條日常用語詞表
-  sample_words.csv  25 條精簡範例
-raw/                你的原始素材（不進 git）
+  core/             ★ 葉子層：無任何向上依賴，可獨立測試
+    dom.js            $ / esc / 骨架屏 / 訊息條 等共用工具
+    bus.js            事件匯流排 —— 跨模組通知，取代互相直呼
+    srs.js            SM-2 排程演算法（純函式）
+    speech.js         韓語朗讀（語音優選 + 語速）
+    parse-table.js    CSV/TSV 解析（與 import_words.py 共用欄位別名）
+    auth-map.js       帳號名 ↔ email 映射
+  data/             ★ 資料層：不碰 DOM
+    client.js         supabase client + 欄位清單等共用常量
+    auth.js           登入註冊、profile
+    content.js        decks / items 讀取、搜尋、漢字詞
+    progress.js       user_cards / reviews、統計、歷史
+    admin.js          管理員寫入（RLS 把關）
+  study/
+    session.js        ★ 會話引擎：佇列、評分、撤銷、導覽、延遲寫入
+                        完全不碰 DOM，故可純 node 測試
+    modes/            ★ 題型註冊表 —— 可插拔的殼
+      flip.js choice.js scramble.js listen.js index.js
+  views/            畫面：只負責畫與轉發操作
+    router.js theme.js voice.js auth.js home.js
+    study.js browse.js history.js editor.js importer.js
+  app.js            ★ 只做啟動與裝配，不含業務邏輯
+
+supabase/migrations/  0001 schema+RLS · 0002 防提權 · 0003 帳號名登入
+                      0004 記錄來源 · 0005 漢字詞
+scripts/              匯入、建帳號、漢字標註（零依賴、預設 dry-run）
+data/                 版控的詞表
+tests/                見 tests/README.md
 ```
 
-**三層解耦**：內容層（`decks`/`items`）· 學習狀態層（`user_cards`）· 記錄層（`reviews`）。
-換演算法只改 `srs.js`；換詞表只重跑匯入腳本；兩者互不影響。
+### 依賴方向
+
+```
+core  ←  data  ←  study  ←  views  ←  app
+```
+
+只往一個方向走，有自動檢查（見下方「架構約束」）。
+
+### 三個關鍵解耦
+
+**內容 / 學習狀態 / 記錄** 三層分離：`items` 是內容真理源，`user_cards` 是排程，
+`reviews` 是只追加日誌。換 SRS 演算法只改 `core/srs.js`，換詞表只重跑匯入腳本。
+
+**題型是可插拔的殼**：每種題型宣告自己的 id、方向約束、適用條件、掛載邏輯，
+註冊進 `modes/index.js` 就能用。加題型 = 新增一個檔案 + 加一行，
+不動 `render()`、不動鍵盤處理、不動方向鎖定、不動佇列過濾。
+
+**事件匯流排取代互相直呼**：編輯器存檔後只廣播 `ITEM_UPDATED`，
+誰關心誰自己訂閱。它不需要知道站上有哪些畫面會顯示條目，
+新畫面也不必回頭去改編輯器。
 
 ### 為什麼 `user_cards` 的主鍵含 `direction`
 
 「看韓文想中文」和「看中文想韓文」是兩種不同能力。
 認得 `사람 → 人` 不代表看到 `人` 就寫得出 `사람`。
 所以每個條目在兩個方向上各有**獨立的到期時間、熟練度、正確率**，絕不互相污染。
+
+### 架構約束
+
+```bash
+# 檢查依賴方向、core 無向上依賴、data 與 session 不碰 DOM
+node tests/session.test.mjs && node tests/modes.test.mjs pool.json
+```
 
 ---
 
