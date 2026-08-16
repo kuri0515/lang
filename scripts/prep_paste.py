@@ -45,11 +45,31 @@ PAREN_RE = re.compile(r"^\s*[（(](.+)[）)]\s*$")
 LIAISON = {1: "g", 2: "kk", 4: "n", 7: "d", 8: "r", 16: "m", 17: "b",
            19: "s", 20: "ss", 22: "j", 23: "ch", 24: "k", 25: "t", 26: "p"}
 
+# 複合終聲後接母音時會「拆開」：前一個子音留下，後一個移到下個音節。
+#   넓어요 → 널버요（neolbeoyo），不是 neoleoyo
+#   읽어요 → 일거요（ilgeoyo）
+# (終聲索引) → (留下的音, 移過去的音)
+CLUSTER_LIAISON = {
+    3: ("k", "s"), 5: ("n", "j"), 6: ("n", ""), 9: ("l", "g"), 10: ("l", "m"),
+    11: ("l", "b"), 12: ("l", "s"), 13: ("l", "t"), 14: ("l", "p"),
+    15: ("l", ""), 18: ("p", "s"),
+}
+
 # 激音化：終聲帶 ㅎ（ㅎ/ㄶ/ㅀ）後接 ㄱ/ㄷ/ㅈ 時，下一個初聲送氣。
 # 좋다→jota、많다→manta、싫다→silta、어떻게→eotteoke 都是這條。
 # 規則明確、不需詞彙知識，是少數能安全自動化的音變。
 H_FINALS = {6: "n", 15: "l", 27: ""}          # ㄶ→n殘留、ㅀ→l殘留、ㅎ→無
 ASPIRATE = {0: "k", 3: "t", 12: "ch"}          # 初聲 ㄱ/ㄷ/ㅈ 的索引 → 送氣音
+
+# ★ 刻意不做「逆向激音化」（終聲 ㄱ/ㄷ/ㅂ + 初聲 ㅎ → 送氣）。
+#
+#   羅馬字法規定：體言（名詞）中 ㄱ/ㄷ/ㅂ 後接 ㅎ 要保留 ㅎ ——
+#   백화점 baekhwajeom、묵호 Mukho；只有動詞語幹接語尾時才合併 ——
+#   좋고 joko。兩者機械上分不出來，需要詞性知識。
+#
+#   實測代價：加上這條規則後，백화점／행복하다／예습하다 三條反而錯了，
+#   對既有資料的一致率從 96% 掉到 95%。少做比做錯好。
+#   특히（teuki）這類仍需人工修正。
 
 
 def romanize(text):
@@ -83,6 +103,8 @@ def romanize(text):
             pj = jamo[idx - 1][2]
             if cho == 11 and pj in LIAISON:      # 本音節無初聲（ㅇ）且前面有終聲
                 onset = LIAISON[pj]
+            elif cho == 11 and pj in CLUSTER_LIAISON:
+                onset = CLUSTER_LIAISON[pj][1]
             elif pj in H_FINALS and cho in ASPIRATE:
                 onset = ASPIRATE[cho]            # 激音化
             elif pj == 8 and cho == 5:           # ㄹ + ㄹ → ll
@@ -92,6 +114,8 @@ def romanize(text):
         if jong:
             if isinstance(nxt, list) and nxt[0] == 11 and jong in LIAISON:
                 coda = ""                        # 終聲移到下一音節，這裡不寫
+            elif isinstance(nxt, list) and nxt[0] == 11 and jong in CLUSTER_LIAISON:
+                coda = CLUSTER_LIAISON[jong][0]  # 複合終聲拆開，前半留下
             elif jong in H_FINALS and isinstance(nxt, list) and nxt[0] in ASPIRATE:
                 coda = H_FINALS[jong]            # 激音化：ㅎ 併入下一個初聲
             elif jong == 27:
