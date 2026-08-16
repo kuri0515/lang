@@ -333,6 +333,47 @@ def check_examples(items):
           "譯文寫了「他／她」但韓語句裡沒有對應的詞，學生會找不到。")
 
 
+def check_hanja_consistency(items):
+    """
+    同一標籤內 hanja 標註不一致 —— 這是漏標的訊號。
+
+    「hanja 覆蓋率只有 26%」本身不是缺陷：詞庫裡大多數是固有語
+    （꽃、돈、물、밥、옷、집）與外來語，本來就沒有漢字詞源，硬標是編造。
+    分母錯了，那個百分比永遠看起來像有一大筆待辦。
+
+    真正抓得到問題的是「同類詞不一致」：日期 31 條裡只有 6 條標了漢字，
+    其餘 25 條空著 —— 同一類詞不可能有的有詞源有的沒有，那就是漏標。
+    只在該標籤過半已標時才報，否則整組沒標（例如「固有語」標籤）會被誤判。
+    """
+    # note 已寫明不是漢字詞的先排除 —— 固有語、外來語、專名、網路縮語
+    # 本來就沒有詞源，把它們算成「漏標」會讓這條檢查整片誤報，
+    # 而誤報整片就等於沒有檢查。
+    non_sino = re.compile(r"固有語|外來語|외래어|源自日語|國名|人名|縮語|"
+                          r"沒有漢字|不標漢字|純韓語|詞源有爭議")
+
+    by_tag = defaultdict(list)
+    for x in items:
+        if x["item_type"] == "sentence" or non_sino.search(x.get("note") or ""):
+            continue
+        for t in x.get("tags") or []:
+            by_tag[t].append(x)
+
+    bad = []
+    for tag, rows in sorted(by_tag.items()):
+        if len(rows) < 4:
+            continue
+        have = [r for r in rows if r.get("hanja")]
+        if not (len(rows) * 0.6 <= len(have) < len(rows)):
+            continue          # 沒過半＝這組本來就多半不是漢字詞，不報
+        missing = [r["ko"] for r in rows if not r.get("hanja")]
+        bad.append(f"{tag}：{len(have)}/{len(rows)} 已標，缺 " + "、".join(missing[:8])
+                   + (f" …另 {len(missing)-8} 條" if len(missing) > 8 else ""))
+    issue("warn", "同標籤內 hanja 標註不一致（漏標的訊號）", bad,
+          "同一類詞不會有的有詞源有的沒有。"
+          "★ 這條只抓得到「幾乎標完、漏了零星幾個」——"
+          "日期原本 6/31 已標（19%），低於門檻，是人工翻出來的，不是它抓到的。")
+
+
 def check_note_hanja(items):
     """
     note 裡寫的漢字要與 hanja 欄一致。
@@ -374,7 +415,11 @@ def check_completeness(items, decks):
     # 欄位 → 哪些條目該有它。None = 全部都該有。
     APPLIES = {
         "romanization": None,
-        "hanja":        None,                                  # 漢字詞才有，本就非全有
+        # hanja 不列入完整度：分母無法定義。
+        # 詞庫大多數是固有語與外來語，本來就沒有漢字詞源，硬標是編造。
+        # 用全部條目當分母算出的 26%，看起來像有一大筆待辦，其實沒有 ——
+        # 那個數字唯一的作用是誤導。改由 check_hanja_consistency 從
+        # 「同類詞不一致」的角度找漏標，並在下面單獨報三分法。
         "pos":          lambda x: x["item_type"] != "sentence",
         "example_ko":   lambda x: x["item_type"] != "sentence",
         "note":         None,
@@ -395,6 +440,19 @@ def check_completeness(items, decks):
         lines.append(f"{deck}（{len(rows)} 條）  " + " · ".join(parts))
     issue("info", "欄位完整度", lines,
           "pos 與 example_ko 的分母已排除句子 —— 句子沒有詞性，本身就是例句。")
+
+    # hanja 單獨用三分法報，不算百分比
+    non_sino = re.compile(r"固有語|外來語|외래어|源自日語|國名|人名|縮語|"
+                          r"沒有漢字|不標漢字|純韓語|詞源有爭議")
+    words = [x for x in items if x["item_type"] != "sentence"]
+    marked = sum(1 for x in words if x.get("hanja"))
+    known_native = sum(1 for x in words if not x.get("hanja")
+                       and non_sino.search(x.get("note") or ""))
+    unknown = len(words) - marked - known_native
+    issue("info", "漢字詞源標註（不算百分比，因為分母無法定義）",
+          [f"已標漢字 {marked} 條 · 已註明非漢字詞 {known_native} 條 · 未判定 {unknown} 條"],
+          "未判定的多半也是固有語，只是 note 沒寫明；要讓這個數字有意義，"
+          "得逐條標記詞源，而不是把百分比衝高。")
 
 
 # =====================================================================
@@ -419,6 +477,7 @@ def main():
     check_same_meaning(items)
     check_examples(items)
     check_note_hanja(items)
+    check_hanja_consistency(items)
     check_tags(items)
     check_counter_sync(url, key)
     check_completeness(items, decks)
