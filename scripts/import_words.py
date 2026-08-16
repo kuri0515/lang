@@ -27,6 +27,7 @@ CSV 欄位（大小寫不敏感，中文欄名也認）：
 
 import argparse
 import csv
+import hashlib
 import json
 import os
 import re
@@ -141,6 +142,8 @@ def main():
     ap.add_argument("--deck", required=True, help="詞庫 slug，如 basic-01")
     ap.add_argument("--title", help="詞庫顯示名（首次建立時用）")
     ap.add_argument("--level", default=None, help="如 topik1")
+    ap.add_argument("--append", action="store_true",
+                    help="累積模式：slug 由詞條內容產生，同一詞庫可分多次匯入不互相覆蓋")
     ap.add_argument("--deactivate-missing", action="store_true",
                     help="把 CSV 裡已消失的條目標為停用（不刪資料）")
     ap.add_argument("--apply", action="store_true", help="真正寫庫（預設為 dry-run）")
@@ -173,11 +176,32 @@ def main():
         print(f"     [{guess_type(r.get('type'), r['ko']):8s}] {r['ko']}  →  {r['zh']}"
               f"   {r.get('romanization') or ''}")
 
+    # 跨詞庫查重 —— 同一個詞收進兩個詞庫會變成兩張卡，
+    # 學起來重複、統計也會被灌水。dry-run 階段就要看得到。
+    url, key = load_env()
+    existing = {x["ko"]: x for x in
+                rest(url, key, "GET", "items", None, "?select=ko,deck_id,is_active&limit=5000")}
+    decks_by_id = {d["id"]: d["slug"] for d in
+                   rest(url, key, "GET", "decks", None, "?select=id,slug")}
+    clash = [(r["ko"], decks_by_id.get(existing[r["ko"]]["deck_id"], "?"))
+             for r in rows if r["ko"] in existing]
+    if clash:
+        print(f"\n   ⚠️  {len(clash)} 條已存在於其他詞庫，將被略過：")
+        for ko, dk in clash[:10]:
+            print(f"        {ko}  （已在 {dk}）")
+        if len(clash) > 10:
+            print(f"        …另有 {len(clash)-10} 條")
+        skip = {ko for ko, _ in clash}
+        rows = [r for r in rows if r["ko"] not in skip]
+        groups = {}
+        for r in rows:
+            groups.setdefault(r.get("deck") or args.deck, []).append(r)
+        print(f"   實際將寫入 {len(rows)} 條")
+
     if not args.apply:
         print("\n🔎 dry-run：什麼都沒寫。確認無誤後加 --apply 重跑。")
         return
 
-    url, key = load_env()
     total = 0
 
     for deck_slug, group in groups.items():
@@ -193,7 +217,12 @@ def main():
             tags = [t.strip() for t in re.split(r"[,，;；]", r.get("tags", "")) if t.strip()]
             payload.append({
                 "deck_id": deck_id,
-                "slug": f"{deck_slug}-{i:04d}",
+                # 預設用序號（一個 CSV 對一個詞庫，重跑冪等）；
+                # --append 用內容雜湊 —— 否則多批匯入同一詞庫時，
+                # 每批都從 0001 編起，後一批會直接覆蓋前一批。
+                # 這個坑實際踩過：六批 46 條最後只剩 10 條。
+                "slug": (f"{deck_slug}-{hashlib.sha1(r['ko'].encode()).hexdigest()[:10]}"
+                         if args.append else f"{deck_slug}-{i:04d}"),
                 "item_type": guess_type(r.get("type"), r["ko"]),
                 "ko": r["ko"],
                 "zh": r["zh"],
@@ -212,7 +241,9 @@ def main():
             rest(url, key, "POST", "items", payload[start:start + 500], "?on_conflict=slug")
             total += len(payload[start:start + 500])
 
-        if args.deactivate_missing:
+        if args.deactivate_missing and args.append:
+            print("   ⚠️  --deactivate-missing 在 --append 模式下只會比對本批，已略過")
+        elif args.deactivate_missing:
             live = {p["slug"] for p in payload}
             existing = rest(url, key, "GET", "items", None,
                             f"?select=id,slug&deck_id=eq.{deck_id}")
