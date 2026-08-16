@@ -157,3 +157,22 @@ export async function dailyStats(userId, days = 30) {
     return { date: key(d), ...v, accuracy: v.n ? v.correct / v.n : null };
   });
 }
+
+/**
+ * 取得多個條目的雙向學習狀態，供瀏覽頁標示「我學到哪了」。
+ *
+ * 分批查詢：PostgREST 的 in.() 會把 id 全塞進 URL，
+ * 300 個 UUID 約 11KB，超過常見代理的 8KB 上限就會被截斷或拒絕。
+ */
+export async function cardsByItem(userId, itemIds, batch = 80) {
+  if (!userId || !itemIds?.length) return {};
+  const out = {};
+  for (let i = 0; i < itemIds.length; i += batch) {
+    const { data, error } = await sb.from('user_cards')
+      .select('item_id, direction, state, total_reviews, correct_reviews')
+      .eq('user_id', userId).in('item_id', itemIds.slice(i, i + batch));
+    if (error) throw error;
+    for (const c of data ?? []) (out[c.item_id] ||= {})[c.direction] = c;
+  }
+  return out;
+}

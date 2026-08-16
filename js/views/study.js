@@ -91,6 +91,7 @@ export function render(state) {
 
   active?.teardown?.();
   active = null;
+  hanjaToken++;      // 讓上一張卡還在飛的漢字查詢作廢
 
   // ---- 靜態內容 ----
   els.prog.style.width = `${(idx / total) * 100}%`;
@@ -186,23 +187,36 @@ export function reveal() {
 /**
  * 漢字詞與同源詞群：揭曉後才顯示。
  * 提前顯示等於送分 —— 看到「學校」誰都猜得出是 학교。
+ *
+ * 兩個要點：
+ *   1. 多個漢字並行查詢。原本 for-await 是串列的，
+ *      4 個漢字就是 4 趟往返，慢到來不及在使用者翻頁前顯示。
+ *   2. 用 token 擋競態。查詢還沒回來時使用者可能已經翻到下一張，
+ *      舊回應若照樣寫入，會把上一個詞的同源詞畫到新卡上。
  */
+let hanjaToken = 0;
+
 async function showHanja(item) {
+  const token = ++hanjaToken;
   if (!item.hanja) return;
+
   els.hanja.innerHTML = `漢字 <b>${esc(item.hanja)}</b>`;
   els.hanja.classList.remove('hidden');
 
   const chars = [...item.hanja].filter((ch) => ch >= '一' && ch <= '鿿');
   if (!chars.length) return;
 
+  const results = await Promise.all(
+    chars.map((ch) => content.sharesHanja(ch, item.id, 5).catch(() => [])));
+  if (token !== hanjaToken) return;      // 已經翻頁了，丟棄這批結果
+
   const seen = new Set();
   const groups = [];
-  for (const ch of chars) {
-    const rel = await content.sharesHanja(ch, item.id, 5).catch(() => []);
-    const fresh = rel.filter((r) => !seen.has(r.id));
+  chars.forEach((ch, i) => {
+    const fresh = results[i].filter((r) => !seen.has(r.id));
     fresh.forEach((r) => seen.add(r.id));
     if (fresh.length) groups.push({ ch, rel: fresh });
-  }
+  });
   if (!groups.length) return;
 
   els.hanjaRel.innerHTML = groups.map((g) =>

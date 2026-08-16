@@ -5,6 +5,7 @@ import { DIR_SHORT } from '../data/client.js';
 import * as content from '../data/content.js';
 import * as progress from '../data/progress.js';
 import { MODES, getMode, forcedDirection } from '../study/modes/index.js';
+import { computeStreak } from '../core/stats.js';
 
 let deps = null;      // { user, profile, onReview, onFree, onNewDeck, onDrillWeak }
 let weakIds = [];
@@ -33,11 +34,25 @@ export function initHome(d) {
     if (!weakIds.length) return msg('還沒有足夠的資料判斷弱項');
     deps.onDrillWeak(weakIds);
   };
-  $('mode-pick').addEventListener('change', () => { syncModeUI(); load(); });
-  $('dir-pick').addEventListener('change', () => load());
-  on(EVENTS.ITEMS_CHANGED, () => load());
+  // 改題型／方向只影響「待複習」數 —— 統計、詞庫、弱項與方向無關，
+  // 全量重載會打 6+N 個查詢，切個選項就卡一下。
+  $('mode-pick').addEventListener('change', () => { syncModeUI(); refreshDue(); });
+  $('dir-pick').addEventListener('change', () => { syncModeUI(); refreshDue(); });
+  on(EVENTS.ITEMS_CHANGED, () => { deckCounts = null; load(); });
   on(EVENTS.PROGRESS_WRITTEN, () => load());
   syncModeUI();
+}
+
+/** 只更新「待複習」——方向改變時走這裡 */
+export async function refreshDue() {
+  const user = deps?.user();
+  if (!user) return;
+  try {
+    const due = await progress.fetchDue(user.id, [effectiveDir()], 500);
+    $('s-due').textContent = due.length;
+    $('btn-review').disabled = due.length === 0;
+    $('btn-review').textContent = due.length ? `開始複習（${due.length}）` : '今日複習已清空 ✓';
+  } catch (e) { msg('載入失敗：' + (e.message || e)); }
 }
 
 export async function load() {
@@ -58,7 +73,7 @@ export async function load() {
     $('s-done').textContent = today.reviewed;
     $('s-acc').textContent = pct(today.accuracy);
     $('s-all-acc').textContent = pct(overall.accuracy);
-    renderStreak(daily, today);
+    renderStreak(daily);
 
     $('btn-review').disabled = due.length === 0;
     $('btn-review').textContent = due.length ? `開始複習（${due.length}）` : '今日複習已清空 ✓';
@@ -70,30 +85,26 @@ export async function load() {
   }
 }
 
-/**
- * 連續天數：從最近一天往回數，遇到沒學的那天為止。
- * 今天還沒開始不算斷 —— 一早看到「連續 0 天」會讓人洩氣，
- * 但實際上只是還沒開始。
- */
-function renderStreak(daily, today) {
-  if (!daily?.length) { $('streak').textContent = ''; return; }
-  let n = 0;
-  for (let i = daily.length - 1; i >= 0; i--) {
-    if (daily[i].n > 0) n++;
-    else if (i === daily.length - 1 && today.reviewed === 0) continue;
-    else break;
-  }
-  $('streak').innerHTML = n
-    ? `🔥 連續 <b>${n}</b> 天${today.reviewed ? '' : ' · 今天還沒開始'}`
+function renderStreak(daily) {
+  const { days, startedToday } = computeStreak(daily);
+  $('streak').innerHTML = days
+    ? `🔥 連續 <b>${days}</b> 天${startedToday ? '' : ' · 今天還沒開始'}`
     : '今天是新的開始 👋';
 }
+
+let deckCounts = null;
 
 async function renderDecks(decks) {
   if (!decks.length) {
     $('deck-list').innerHTML = emptyState('📦', '還沒有詞庫<br>到「我的 → 批次匯入」貼上你的詞表');
     return;
   }
-  const counts = await Promise.all(decks.map((d) => content.countItems(d.id).catch(() => 0)));
+  // 條目數只在內容變動時才會變，沒必要每次進首頁都打 N 個查詢
+  if (!deckCounts) {
+    deckCounts = Object.fromEntries(await Promise.all(
+      decks.map(async (d) => [d.id, await content.countItems(d.id).catch(() => 0)])));
+  }
+  const counts = decks.map((d) => deckCounts[d.id] ?? 0);
   $('deck-list').innerHTML = decks.map((d, i) => `
     <div class="deck-row">
       <div>

@@ -2,6 +2,7 @@
 import { $, esc, msg, skeleton, emptyState, qs } from '../core/dom.js';
 import { DIR_SHORT, RATE_LABEL } from '../data/client.js';
 import * as progress from '../data/progress.js';
+import { summarize } from '../core/stats.js';
 
 let deps = null;
 let cursor = null;
@@ -88,11 +89,9 @@ export function renderChart(daily) {
       style="height:${h}%" title="${d.date}｜${d.n} 題${acc}"><i class="fill" style="height:${fill}%"></i></div>`;
   }).join('');
 
-  const total = daily.reduce((s, d) => s + d.n, 0);
-  const active = daily.filter((d) => d.n > 0).length;
-  let streak = 0;
-  for (let i = daily.length - 1; i >= 0; i--) { if (daily[i].n > 0) streak++; else break; }
+  // 與首頁共用同一份實作 —— 兩處數字必須一致
+  const { total, activeDays, days, startedToday } = summarize(daily);
   $('chart-legend').textContent =
-    `30 天共 ${total} 題 · 學習 ${active} 天 · 連續 ${streak} 天`
-    + (daily[daily.length - 1].n ? '' : '（今天還沒開始）');
+    `30 天共 ${total} 題 · 學習 ${activeDays} 天 · 連續 ${days} 天`
+    + (startedToday ? '' : '（今天還沒開始）');
 }

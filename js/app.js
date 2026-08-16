@@ -6,7 +6,7 @@
 //   資料存取 → data/*      題型 → study/modes/*
 //   會話邏輯 → study/session.js   畫面 → views/*
 // =====================================================================
-import { $, msg, shuffle } from './core/dom.js';
+import { $, esc, msg, shuffle } from './core/dom.js';
 import { on, emit, EVENTS } from './core/bus.js';
 import * as auth from './data/auth.js';
 import * as content from './data/content.js';
@@ -171,9 +171,11 @@ async function onUser(u) {
   profile = await auth.myProfile(u.id).catch(() => null);
   $('admin-tag').classList.toggle('hidden', !isAdmin());
   $('admin-card').classList.toggle('hidden', !isAdmin());
+  // username 與 email 是使用者自己填的，必須轉義 ——
+  // 註冊時取的是登入欄位原樣，塞得進 <img onerror=...>
   $('me-account').innerHTML =
-    `帳號 <b>${profile?.username || ''}</b>　角色 ${isAdmin() ? '管理員' : '一般使用者'}<br>`
-    + `<span class="hint">${u.email || ''}</span>`;
+    `帳號 <b>${esc(profile?.username)}</b>　角色 ${isAdmin() ? '管理員' : '一般使用者'}<br>`
+    + `<span class="hint">${esc(u.email)}</span>`;
   await show('view-home');
 }
 

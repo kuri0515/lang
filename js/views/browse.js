@@ -1,9 +1,10 @@
 // 詞庫瀏覽：搜尋、標籤、雙向學習狀態、批次下架（管理員）
 import { $, esc, msg, qsa, debounce, skeleton, emptyState } from '../core/dom.js';
 import { on, emit, EVENTS } from '../core/bus.js';
-import { sb, STATE_LABEL, TYPE_LABEL, DIR_SHORT } from '../data/client.js';
+import { STATE_LABEL, TYPE_LABEL, DIR_SHORT } from '../data/client.js';
 import * as content from '../data/content.js';
 import * as admin from '../data/admin.js';
+import * as progress from '../data/progress.js';
 import { openEditor } from './editor.js';
 import * as speech from '../core/speech.js';
 
@@ -44,23 +45,13 @@ export async function open() {
   await render();
 }
 
-/** 讀取條目的雙向學習狀態 —— 只在瀏覽頁需要，故不放進 content.js */
-async function withCards(userId, items) {
-  if (!items.length || !userId) return items.map((i) => ({ ...i, cards: {} }));
-  const { data } = await sb.from('user_cards')
-    .select('item_id, direction, state, total_reviews, correct_reviews')
-    .eq('user_id', userId).in('item_id', items.map((i) => i.id));
-  const byItem = {};
-  for (const c of data ?? []) (byItem[c.item_id] ||= {})[c.direction] = c;
-  return items.map((i) => ({ ...i, cards: byItem[i.id] || {} }));
-}
-
 export async function render() {
   if (!$('b-list').querySelector('.b-row')) $('b-list').innerHTML = skeleton(6);
   try {
     const user = deps.user();
     const raw = await content.pickItems({ tag, search: $('b-search').value });
-    const rows = await withCards(user?.id, raw);
+    const byItem = await progress.cardsByItem(user?.id, raw.map((i) => i.id));
+    const rows = raw.map((i) => ({ ...i, cards: byItem[i.id] || {} }));
 
     $('b-count').textContent = `${rows.length} 條${tag ? ` · ${tag}` : ''}`;
     $('btn-study-tag').classList.toggle('hidden', !tag);

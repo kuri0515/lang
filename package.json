@@ -1,0 +1,17 @@
+{
+  "name": "korean",
+  "private": true,
+  "type": "module",
+  "description": "韓語單字卡 —— 前端為純靜態，npm 僅用於跑測試",
+  "scripts": {
+    "test": "npm run test:arch && npm run test:session && npm run test:modes && npm run test:dom",
+    "test:arch": "node tests/arch.test.mjs",
+    "test:session": "node tests/session.test.mjs",
+    "test:modes": "node tests/modes.test.mjs tests/fixtures/pool.json",
+    "test:dom": "node tests/dom.test.mjs tests/fixtures/pool.json",
+    "serve": "python3 -m http.server 8000"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.0"
+  }
+}

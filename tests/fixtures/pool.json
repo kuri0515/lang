@@ -1,0 +1,2537 @@
+[
+{
+"id": "b81349e5-aad9-402e-85c7-69f92777cfc9",
+"ko": "고맙습니다",
+"zh": "謝謝",
+"romanization": "gomapseumnida",
+"hanja": null,
+"pos": "인사말",
+"item_type": "phrase",
+"example_ko": null,
+"example_zh": null,
+"note": "語感比 감사합니다 親切一點",
+"tags": [
+"問候"
+]
+},
+{
+"id": "b030b645-10e0-46e5-97eb-ea01a39fc641",
+"ko": "미안해요",
+"zh": "對不起",
+"romanization": "mianhaeyo",
+"hanja": null,
+"pos": "인사말",
+"item_type": "phrase",
+"example_ko": null,
+"example_zh": null,
+"note": "朋友之間用",
+"tags": [
+"問候"
+]
+},
+{
+"id": "4529d73d-0b00-43b2-b51b-e6263edb3e79",
+"ko": "괜찮아요",
+"zh": "沒關係",
+"romanization": "gwaenchanayo",
+"hanja": null,
+"pos": null,
+"item_type": "phrase",
+"example_ko": null,
+"example_zh": null,
+"note": "也可表示「我沒事」",
+"tags": [
+"問候"
+]
+},
+{
+"id": "b4781cea-c41d-4d40-ba66-1cce481e9824",
+"ko": "잠시만요",
+"zh": "請稍等",
+"romanization": "jamsimanyo",
+"hanja": null,
+"pos": null,
+"item_type": "phrase",
+"example_ko": null,
+"example_zh": null,
+"note": "擠過人群時也用這句",
+"tags": [
+"問候"
+]
+},
+{
+"id": "d64898e0-31a2-4b1a-881d-5b0df53c3dbf",
+"ko": "어서 오세요",
+"zh": "歡迎光臨",
+"romanization": "eoseo oseyo",
+"hanja": null,
+"pos": null,
+"item_type": "phrase",
+"example_ko": null,
+"example_zh": null,
+"note": "店家對客人說",
+"tags": [
+"問候"
+]
+},
+{
+"id": "f5786a36-996d-4475-8a11-e5af703fdb65",
+"ko": "처음 뵙겠습니다",
+"zh": "初次見面",
+"romanization": "cheoeum boepgetseumnida",
+"hanja": null,
+"pos": null,
+"item_type": "phrase",
+"example_ko": null,
+"example_zh": null,
+"note": "初次見面的固定開場",
+"tags": [
+"問候"
+]
+},
+{
+"id": "13fd80bf-f59c-4978-b381-7d1a37279bd7",
+"ko": "만나서 반갑습니다",
+"zh": "很高興認識你",
+"romanization": "mannaseo bangapseumnida",
+"hanja": null,
+"pos": null,
+"item_type": "phrase",
+"example_ko": null,
+"example_zh": null,
+"note": "接在自我介紹後",
+"tags": [
+"問候"
+]
+},
+{
+"id": "a070306f-d3c3-4303-a2e4-c78c9f7a0c89",
+"ko": "잘 먹겠습니다",
+"zh": "我要開動了",
+"romanization": "jal meokgetseumnida",
+"hanja": null,
+"pos": null,
+"item_type": "phrase",
+"example_ko": null,
+"example_zh": null,
+"note": "吃飯前說",
+"tags": [
+"用餐"
+]
+},
+{
+"id": "93c7e952-7e78-4854-b2a1-dfae3d67b092",
+"ko": "잘 먹었습니다",
+"zh": "我吃飽了",
+"romanization": "jal meogeotseumnida",
+"hanja": null,
+"pos": null,
+"item_type": "phrase",
+"example_ko": null,
+"example_zh": null,
+"note": "吃完後對請客的人說",
+"tags": [
+"用餐"
+]
+},
+{
+"id": "296ddf62-aad3-4b8b-8a15-7ac29292f5ff",
+"ko": "저",
+"zh": "我",
+"romanization": "jeo",
+"hanja": null,
+"pos": "대명사",
+"item_type": "word",
+"example_ko": "저는 대만 사람이에요.",
+"example_zh": "我是台灣人。",
+"note": "謙稱；對長輩或不熟的人用",
+"tags": [
+"自我介紹"
+]
+},
+{
+"id": "9c049ac5-c869-4797-952f-ff4e007168d9",
+"ko": "나",
+"zh": "我",
+"romanization": "na",
+"hanja": null,
+"pos": "대명사",
+"item_type": "word",
+"example_ko": "나는 학생이야.",
+"example_zh": "我是學生。",
+"note": "半語；只對熟人或晚輩用",
+"tags": [
+"自我介紹"
+]
+},
+{
+"id": "ac5b8c4e-f4f1-4af6-904e-809b1a5b26ff",
+"ko": "이름",
+"zh": "名字",
+"romanization": "ireum",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": "이름이 뭐예요?",
+"example_zh": "你叫什麼名字？",
+"note": null,
+"tags": [
+"自我介紹"
+]
+},
+{
+"id": "00b4eab7-e6de-46a0-8d6a-13b846b18c90",
+"ko": "나이",
+"zh": "年齡",
+"romanization": "nai",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": "나이가 어떻게 되세요?",
+"example_zh": "請問你幾歲？",
+"note": "直接問 몇 살 對長輩失禮",
+"tags": [
+"自我介紹"
+]
+},
+{
+"id": "404adef4-6e02-4193-b1df-b64c03e7049d",
+"ko": "사람",
+"zh": "人",
+"romanization": "saram",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": "저 사람은 누구예요?",
+"example_zh": "那個人是誰？",
+"note": null,
+"tags": [
+"基礎"
+]
+},
+{
+"id": "5f8d14dd-9a61-441e-8f39-a7a42dc1ab40",
+"ko": "누구",
+"zh": "誰",
+"romanization": "nugu",
+"hanja": null,
+"pos": "대명사",
+"item_type": "word",
+"example_ko": "이건 누구 거예요?",
+"example_zh": "這是誰的？",
+"note": null,
+"tags": [
+"疑問詞"
+]
+},
+{
+"id": "5c8607ef-b217-4fcf-9d2a-21358c7ad4c1",
+"ko": "뭐",
+"zh": "什麼",
+"romanization": "mwo",
+"hanja": null,
+"pos": "대명사",
+"item_type": "word",
+"example_ko": "이게 뭐예요?",
+"example_zh": "這是什麼？",
+"note": "무엇 的口語形",
+"tags": [
+"疑問詞"
+]
+},
+{
+"id": "f6e5d366-47d0-430f-ba26-8132f94e9a6f",
+"ko": "어디",
+"zh": "哪裡",
+"romanization": "eodi",
+"hanja": null,
+"pos": "대명사",
+"item_type": "word",
+"example_ko": "어디에 가요?",
+"example_zh": "你要去哪裡？",
+"note": null,
+"tags": [
+"疑問詞"
+]
+},
+{
+"id": "059716ea-e7ee-452b-88ea-92642d534d08",
+"ko": "언제",
+"zh": "什麼時候",
+"romanization": "eonje",
+"hanja": null,
+"pos": "부사",
+"item_type": "word",
+"example_ko": "언제 만날까요?",
+"example_zh": "我們什麼時候見面？",
+"note": null,
+"tags": [
+"疑問詞"
+]
+},
+{
+"id": "e2fb961d-38e0-4155-9ada-f8d7a1833723",
+"ko": "왜",
+"zh": "為什麼",
+"romanization": "wae",
+"hanja": null,
+"pos": "부사",
+"item_type": "word",
+"example_ko": "왜 안 왔어요?",
+"example_zh": "你為什麼沒來？",
+"note": null,
+"tags": [
+"疑問詞"
+]
+},
+{
+"id": "3fa44f7e-3bb2-4f02-8bf7-92bb3f4bc0b4",
+"ko": "안녕하세요",
+"zh": "你好",
+"romanization": "annyeonghaseyo",
+"hanja": "安寧하세요",
+"pos": "인사말",
+"item_type": "phrase",
+"example_ko": null,
+"example_zh": null,
+"note": "一天中任何時候都能用",
+"tags": [
+"問候"
+]
+},
+{
+"id": "7bac4c40-9c00-467d-b32b-01d65fef8ca2",
+"ko": "안녕히 계세요",
+"zh": "再見",
+"romanization": "annyeonghi gyeseyo",
+"hanja": "安寧히 계세요",
+"pos": "인사말",
+"item_type": "phrase",
+"example_ko": null,
+"example_zh": null,
+"note": "自己離開時對「留下的人」說",
+"tags": [
+"問候"
+]
+},
+{
+"id": "bd2b313f-2666-472a-b33e-8818ac2e5a07",
+"ko": "안녕히 주무세요",
+"zh": "晚安",
+"romanization": "annyeonghi jumuseyo",
+"hanja": "安寧히 주무세요",
+"pos": "인사말",
+"item_type": "phrase",
+"example_ko": null,
+"example_zh": null,
+"note": "對長輩用的敬語",
+"tags": [
+"問候"
+]
+},
+{
+"id": "5c7b75f9-e67f-41d0-b382-c8429308bfd9",
+"ko": "죄송합니다",
+"zh": "對不起",
+"romanization": "joesonghamnida",
+"hanja": "罪悚합니다",
+"pos": "인사말",
+"item_type": "phrase",
+"example_ko": null,
+"example_zh": null,
+"note": "正式場合道歉",
+"tags": [
+"問候"
+]
+},
+{
+"id": "e7bac2b0-7c2b-4568-80f0-e68eb0a551d2",
+"ko": "실례합니다",
+"zh": "不好意思",
+"romanization": "sillyehamnida",
+"hanja": "失禮합니다",
+"pos": null,
+"item_type": "phrase",
+"example_ko": null,
+"example_zh": null,
+"note": "打擾別人前先說",
+"tags": [
+"問候"
+]
+},
+{
+"id": "3259aba1-1509-40bb-9e0b-0d4a18de6486",
+"ko": "잘 부탁드립니다",
+"zh": "請多指教",
+"romanization": "jal butakdeurimnida",
+"hanja": "잘 付託드립니다",
+"pos": null,
+"item_type": "phrase",
+"example_ko": null,
+"example_zh": null,
+"note": "自我介紹的收尾句",
+"tags": [
+"問候"
+]
+},
+{
+"id": "12c2d72c-3787-4ed5-b797-ef3fce332b88",
+"ko": "수고하셨습니다",
+"zh": "辛苦了",
+"romanization": "sugohasyeotseumnida",
+"hanja": "受苦하셨습니다",
+"pos": null,
+"item_type": "phrase",
+"example_ko": null,
+"example_zh": null,
+"note": "對平輩或晚輩；對長輩宜用 고생 많으셨습니다",
+"tags": [
+"問候"
+]
+},
+{
+"id": "5887b6c2-90c4-4a05-a95e-2c4e5fde26ae",
+"ko": "한국",
+"zh": "韓國",
+"romanization": "hanguk",
+"hanja": "韓國",
+"pos": "명사",
+"item_type": "word",
+"example_ko": "한국에 가고 싶어요.",
+"example_zh": "我想去韓國。",
+"note": null,
+"tags": [
+"國家"
+]
+},
+{
+"id": "cf61d2a7-6031-4a9a-ab95-2194d40b095d",
+"ko": "대만",
+"zh": "台灣",
+"romanization": "daeman",
+"hanja": "臺灣",
+"pos": "명사",
+"item_type": "word",
+"example_ko": "저는 대만에서 왔어요.",
+"example_zh": "我從台灣來。",
+"note": null,
+"tags": [
+"國家"
+]
+},
+{
+"id": "0d8d01ae-a161-47bf-bf0e-97d19e8a83c7",
+"ko": "중국",
+"zh": "中國",
+"romanization": "jungguk",
+"hanja": "中國",
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"國家"
+]
+},
+{
+"id": "4f978e2f-86e7-494d-95c7-44ca6c10c246",
+"ko": "일본",
+"zh": "日本",
+"romanization": "ilbon",
+"hanja": "日本",
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"國家"
+]
+},
+{
+"id": "7a1ccd4a-3962-47e7-9d30-dc50872ff517",
+"ko": "학생",
+"zh": "學生",
+"romanization": "haksaeng",
+"hanja": "學生",
+"pos": "명사",
+"item_type": "word",
+"example_ko": "저는 학생이에요.",
+"example_zh": "我是學生。",
+"note": null,
+"tags": [
+"身分"
+]
+},
+{
+"id": "8cd25c99-9ccb-4453-8811-fa927dc3c86a",
+"ko": "회사원",
+"zh": "上班族",
+"romanization": "hoesawon",
+"hanja": "會社員",
+"pos": "명사",
+"item_type": "word",
+"example_ko": "저는 회사원이에요.",
+"example_zh": "我是上班族。",
+"note": null,
+"tags": [
+"身分"
+]
+},
+{
+"id": "e2f20ccd-a8a7-4023-b27c-4bf989c52fc3",
+"ko": "친구",
+"zh": "朋友",
+"romanization": "chingu",
+"hanja": "親舊",
+"pos": "명사",
+"item_type": "word",
+"example_ko": "친구를 만나요.",
+"example_zh": "和朋友見面。",
+"note": null,
+"tags": [
+"身分"
+]
+},
+{
+"id": "344b802e-a50e-4a4c-bc3b-e9415cddf88b",
+"ko": "얼마",
+"zh": "多少",
+"romanization": "eolma",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": "이거 얼마예요?",
+"example_zh": "這個多少錢？",
+"note": null,
+"tags": [
+"疑問詞"
+]
+},
+{
+"id": "114eded5-48e5-4062-afc5-ca12c08f00b1",
+"ko": "오늘",
+"zh": "今天",
+"romanization": "oneul",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": "오늘 날씨가 좋아요.",
+"example_zh": "今天天氣很好。",
+"note": null,
+"tags": [
+"時間"
+]
+},
+{
+"id": "c3ed898b-0843-4bcf-bfd6-399235c8b0d2",
+"ko": "어제",
+"zh": "昨天",
+"romanization": "eoje",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": "어제 뭐 했어요?",
+"example_zh": "你昨天做了什麼？",
+"note": null,
+"tags": [
+"時間"
+]
+},
+{
+"id": "4bb578a3-79f2-474b-b064-587760280494",
+"ko": "아침",
+"zh": "早上",
+"romanization": "achim",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": "아침에 커피를 마셔요.",
+"example_zh": "早上喝咖啡。",
+"note": "也指「早餐」",
+"tags": [
+"時間"
+]
+},
+{
+"id": "1b59b494-6883-48dd-a1a4-1a8d36807040",
+"ko": "저녁",
+"zh": "晚上",
+"romanization": "jeonyeok",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": "저녁에 만나요.",
+"example_zh": "晚上見。",
+"note": "也指「晚餐」",
+"tags": [
+"時間"
+]
+},
+{
+"id": "b334f5de-0c8d-4947-986a-830389799ecf",
+"ko": "밤",
+"zh": "夜晚",
+"romanization": "bam",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": "밤에 잠이 안 와요.",
+"example_zh": "晚上睡不著。",
+"note": null,
+"tags": [
+"時間"
+]
+},
+{
+"id": "4228ecc3-8fa7-4da3-bc09-ba4747197937",
+"ko": "아버지",
+"zh": "爸爸",
+"romanization": "abeoji",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": "口語常說 아빠",
+"tags": [
+"家人"
+]
+},
+{
+"id": "e02aa6b1-a5b5-47b6-8680-571922a11644",
+"ko": "어머니",
+"zh": "媽媽",
+"romanization": "eomeoni",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": "口語常說 엄마",
+"tags": [
+"家人"
+]
+},
+{
+"id": "80ae13ce-dc2b-4404-9eac-fcd60785160c",
+"ko": "오빠",
+"zh": "哥哥",
+"romanization": "oppa",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": "女生稱呼哥哥；男生用 형",
+"tags": [
+"家人"
+]
+},
+{
+"id": "1eb1a302-d588-4fb6-ae66-ad0f3453fc09",
+"ko": "언니",
+"zh": "姐姐",
+"romanization": "eonni",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": "女生稱呼姐姐；男生用 누나",
+"tags": [
+"家人"
+]
+},
+{
+"id": "e843bc63-d294-4690-bccf-fadff2204294",
+"ko": "밥",
+"zh": "飯",
+"romanization": "bap",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": "밥 먹었어요?",
+"example_zh": "吃飯了嗎？",
+"note": "也泛指「一餐」",
+"tags": [
+"食物"
+]
+},
+{
+"id": "96260756-193c-4aa0-a6dd-770d9fc5662f",
+"ko": "물",
+"zh": "水",
+"romanization": "mul",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": "물 좀 주세요.",
+"example_zh": "請給我一點水。",
+"note": null,
+"tags": [
+"食物"
+]
+},
+{
+"id": "240e9126-3d8f-4a63-85fc-5854260b984d",
+"ko": "커피",
+"zh": "咖啡",
+"romanization": "keopi",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": "커피 한 잔 주세요.",
+"example_zh": "請給我一杯咖啡。",
+"note": "外來語",
+"tags": [
+"食物"
+]
+},
+{
+"id": "01d7023b-5d56-4b24-a880-daf0806f2d40",
+"ko": "빵",
+"zh": "麵包",
+"romanization": "ppang",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"食物"
+]
+},
+{
+"id": "7f8191cc-062d-4306-aa08-aca2f9afafac",
+"ko": "고기",
+"zh": "肉",
+"romanization": "gogi",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"食物"
+]
+},
+{
+"id": "79233e8a-62f1-40c3-9601-a1cc447c3dca",
+"ko": "김치",
+"zh": "泡菜",
+"romanization": "gimchi",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": "김치가 매워요.",
+"example_zh": "泡菜很辣。",
+"note": null,
+"tags": [
+"食物"
+]
+},
+{
+"id": "1dd68f6b-a577-4d97-8afa-4c8f5b7f9508",
+"ko": "라면",
+"zh": "泡麵",
+"romanization": "ramyeon",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"食物"
+]
+},
+{
+"id": "7b9b3d2e-5058-470c-ae2d-f4628ae1dc58",
+"ko": "비빔밥",
+"zh": "拌飯",
+"romanization": "bibimbap",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"食物"
+]
+},
+{
+"id": "2a6cc463-32dc-448e-bd91-369c3d2fa6f2",
+"ko": "불고기",
+"zh": "烤肉",
+"romanization": "bulgogi",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": "直譯是「火肉」",
+"tags": [
+"食物"
+]
+},
+{
+"id": "0f32909b-406d-4c99-af64-f5b3d20ebad3",
+"ko": "메뉴",
+"zh": "菜單",
+"romanization": "menyu",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": "메뉴 좀 주세요.",
+"example_zh": "請給我菜單。",
+"note": null,
+"tags": [
+"用餐"
+]
+},
+{
+"id": "425c5cbf-db8c-4feb-93a8-22d0b6a58473",
+"ko": "맛있다",
+"zh": "好吃",
+"romanization": "masitda",
+"hanja": null,
+"pos": "형용사",
+"item_type": "word",
+"example_ko": "정말 맛있어요.",
+"example_zh": "真好吃。",
+"note": "活用為 맛있어요",
+"tags": [
+"用餐"
+]
+},
+{
+"id": "1054906c-49d7-42ed-b8ea-2696adb44f14",
+"ko": "맛없다",
+"zh": "不好吃",
+"romanization": "madeopda",
+"hanja": null,
+"pos": "형용사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"用餐"
+]
+},
+{
+"id": "7fd3da8e-2a6a-40be-86e0-12840432d2fb",
+"ko": "맵다",
+"zh": "辣",
+"romanization": "maepda",
+"hanja": null,
+"pos": "형용사",
+"item_type": "word",
+"example_ko": "너무 매워요.",
+"example_zh": "太辣了。",
+"note": "ㅂ 不規則活用",
+"tags": [
+"用餐"
+]
+},
+{
+"id": "2e36db54-9888-4c2c-a782-ab3deaf96d84",
+"ko": "배고프다",
+"zh": "肚子餓",
+"romanization": "baegopeuda",
+"hanja": null,
+"pos": "형용사",
+"item_type": "word",
+"example_ko": "배고파요.",
+"example_zh": "我餓了。",
+"note": null,
+"tags": [
+"用餐"
+]
+},
+{
+"id": "d2b9d42a-e74a-4204-aa43-9c775a0eb078",
+"ko": "배부르다",
+"zh": "吃飽",
+"romanization": "baebureuda",
+"hanja": null,
+"pos": "형용사",
+"item_type": "word",
+"example_ko": "배불러요.",
+"example_zh": "我吃飽了。",
+"note": null,
+"tags": [
+"用餐"
+]
+},
+{
+"id": "52c92964-1f4c-45ba-87e1-9285a07eb4f2",
+"ko": "돈",
+"zh": "錢",
+"romanization": "don",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": "돈이 없어요.",
+"example_zh": "沒有錢。",
+"note": null,
+"tags": [
+"購物"
+]
+},
+{
+"id": "05c6aaaa-3824-47e3-ba0c-425e1e325de0",
+"ko": "지금",
+"zh": "現在",
+"romanization": "jigeum",
+"hanja": "只今",
+"pos": "부사",
+"item_type": "word",
+"example_ko": "지금 뭐 해요?",
+"example_zh": "你現在在做什麼？",
+"note": null,
+"tags": [
+"時間"
+]
+},
+{
+"id": "dde60530-ba54-460e-9d0f-fc50f5e8adaf",
+"ko": "점심",
+"zh": "中午",
+"romanization": "jeomsim",
+"hanja": "點心",
+"pos": "명사",
+"item_type": "word",
+"example_ko": "점심 먹었어요?",
+"example_zh": "吃午餐了嗎？",
+"note": "也指「午餐」",
+"tags": [
+"時間"
+]
+},
+{
+"id": "2895c5cc-1629-4c8b-b577-3b336a235b2f",
+"ko": "주말",
+"zh": "週末",
+"romanization": "jumal",
+"hanja": "週末",
+"pos": "명사",
+"item_type": "word",
+"example_ko": "주말에 뭐 해요?",
+"example_zh": "週末要做什麼？",
+"note": null,
+"tags": [
+"時間"
+]
+},
+{
+"id": "98f3dbba-40ec-45aa-ac10-6eadfb9ac836",
+"ko": "시간",
+"zh": "時間",
+"romanization": "sigan",
+"hanja": "時間",
+"pos": "명사",
+"item_type": "word",
+"example_ko": "시간이 없어요.",
+"example_zh": "沒有時間。",
+"note": null,
+"tags": [
+"時間"
+]
+},
+{
+"id": "2efeca23-2211-43b7-85eb-543bfc5410fd",
+"ko": "가족",
+"zh": "家人",
+"romanization": "gajok",
+"hanja": "家族",
+"pos": "명사",
+"item_type": "word",
+"example_ko": "가족이 몇 명이에요?",
+"example_zh": "你家有幾個人？",
+"note": null,
+"tags": [
+"家人"
+]
+},
+{
+"id": "08195a4a-fea2-4eec-84d0-ab55b4e384e9",
+"ko": "동생",
+"zh": "弟弟／妹妹",
+"romanization": "dongsaeng",
+"hanja": "同生",
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": "不分性別；加 남/여 可區分",
+"tags": [
+"家人"
+]
+},
+{
+"id": "2a909682-8640-4cd5-9dd0-ba798719e7dc",
+"ko": "차",
+"zh": "茶",
+"romanization": "cha",
+"hanja": "茶",
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": "同音也是「車」",
+"tags": [
+"食物"
+]
+},
+{
+"id": "381672d1-e924-4f75-847a-a7e3908a36c7",
+"ko": "맥주",
+"zh": "啤酒",
+"romanization": "maekju",
+"hanja": "麥酒",
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"食物"
+]
+},
+{
+"id": "28103a59-d1f2-4f12-8fa6-1f863383d594",
+"ko": "식당",
+"zh": "餐廳",
+"romanization": "sikdang",
+"hanja": "食堂",
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"場所"
+]
+},
+{
+"id": "f2d72d50-d5d6-4647-8c07-9eab6dbaf87a",
+"ko": "어떻게",
+"zh": "怎麼辦",
+"romanization": "eotteoke",
+"hanja": null,
+"pos": "부사",
+"item_type": "word",
+"example_ko": "어떻게 가요?",
+"example_zh": "要怎麼去？",
+"note": null,
+"tags": [
+"疑問詞"
+]
+},
+{
+"id": "93ddb9cf-8bde-4d78-9c48-c6dfa1ac1e61",
+"ko": "가게",
+"zh": "商店",
+"romanization": "gage",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"購物"
+]
+},
+{
+"id": "bf1753f9-252b-4189-98c4-30f998fa4c56",
+"ko": "카드",
+"zh": "信用卡",
+"romanization": "kadeu",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": "카드로 계산할게요.",
+"example_zh": "我要刷卡。",
+"note": null,
+"tags": [
+"購物"
+]
+},
+{
+"id": "f2baa2ac-e361-4061-a5cf-08e6f65e5e1f",
+"ko": "얼마예요?",
+"zh": "多少錢？",
+"romanization": "eolmayeyo",
+"hanja": null,
+"pos": null,
+"item_type": "phrase",
+"example_ko": null,
+"example_zh": null,
+"note": "購物必備",
+"tags": [
+"購物"
+]
+},
+{
+"id": "364299d0-8afd-40f1-af27-83ab9fb38e68",
+"ko": "이거 주세요",
+"zh": "請給我這個",
+"romanization": "igeo juseyo",
+"hanja": null,
+"pos": null,
+"item_type": "phrase",
+"example_ko": null,
+"example_zh": null,
+"note": "指著東西說最有效",
+"tags": [
+"購物"
+]
+},
+{
+"id": "2c25bd3d-48c2-48dd-97e0-576c29a708c8",
+"ko": "너무 비싸요",
+"zh": "太貴了",
+"romanization": "neomu bissayo",
+"hanja": null,
+"pos": null,
+"item_type": "phrase",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"購物"
+]
+},
+{
+"id": "15b78ede-e418-4105-aead-744ffbff0880",
+"ko": "깎아 주세요",
+"zh": "請算便宜一點",
+"romanization": "kkakka juseyo",
+"hanja": null,
+"pos": null,
+"item_type": "phrase",
+"example_ko": null,
+"example_zh": null,
+"note": "傳統市場才適用；百貨不還價",
+"tags": [
+"購物"
+]
+},
+{
+"id": "8c8ae206-fdae-4476-96df-fedeed9a29b5",
+"ko": "집",
+"zh": "家",
+"romanization": "jip",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": "집에 가요.",
+"example_zh": "回家。",
+"note": null,
+"tags": [
+"場所"
+]
+},
+{
+"id": "b60ae285-a36d-4b64-9e82-c38c72754863",
+"ko": "버스",
+"zh": "公車",
+"romanization": "beoseu",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"交通"
+]
+},
+{
+"id": "dd37ca46-e782-487f-81ba-2d99f4ccb1ef",
+"ko": "택시",
+"zh": "計程車",
+"romanization": "taeksi",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"交通"
+]
+},
+{
+"id": "a71a77da-8309-4246-ae96-288264dda824",
+"ko": "여기",
+"zh": "這裡",
+"romanization": "yeogi",
+"hanja": null,
+"pos": "대명사",
+"item_type": "word",
+"example_ko": "여기에 앉으세요.",
+"example_zh": "請坐這裡。",
+"note": null,
+"tags": [
+"方位"
+]
+},
+{
+"id": "e596f180-fb67-4b5a-ae25-d710f32a8b96",
+"ko": "거기",
+"zh": "那裡",
+"romanization": "geogi",
+"hanja": null,
+"pos": "대명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": "離聽者近",
+"tags": [
+"方位"
+]
+},
+{
+"id": "f46381ba-250e-456d-9c94-bcd07c80c603",
+"ko": "저기",
+"zh": "那裡",
+"romanization": "jeogi",
+"hanja": null,
+"pos": "대명사",
+"item_type": "word",
+"example_ko": "저기요!",
+"example_zh": "不好意思！",
+"note": "叫住陌生人也用這個",
+"tags": [
+"方位"
+]
+},
+{
+"id": "4dee82a9-b9f1-4869-ad7d-3b8f40d9f48e",
+"ko": "앞",
+"zh": "前面",
+"romanization": "ap",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"方位"
+]
+},
+{
+"id": "651379fa-0ba9-4c13-ba8e-0bc5c3162288",
+"ko": "뒤",
+"zh": "後面",
+"romanization": "dwi",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"方位"
+]
+},
+{
+"id": "568311b4-33a5-4143-8936-ce7faf3a81af",
+"ko": "옆",
+"zh": "旁邊",
+"romanization": "yeop",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"方位"
+]
+},
+{
+"id": "b421359c-edf4-405b-9c96-867feb440085",
+"ko": "안",
+"zh": "裡面",
+"romanization": "an",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"方位"
+]
+},
+{
+"id": "2e58e8a3-2769-4087-be01-4713d85a6be4",
+"ko": "밖",
+"zh": "外面",
+"romanization": "bak",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"方位"
+]
+},
+{
+"id": "077d1c9f-4536-424d-a8dd-2145491260c3",
+"ko": "위",
+"zh": "上面",
+"romanization": "wi",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"方位"
+]
+},
+{
+"id": "0661efcf-ab60-47c5-a344-13a88ae2400c",
+"ko": "아래",
+"zh": "下面",
+"romanization": "arae",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": "밑 也是同義",
+"tags": [
+"方位"
+]
+},
+{
+"id": "c6649ad0-5823-420a-bc0e-cc6dfab42b4a",
+"ko": "날씨",
+"zh": "天氣",
+"romanization": "nalssi",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": "오늘 날씨가 어때요?",
+"example_zh": "今天天氣如何？",
+"note": null,
+"tags": [
+"天氣"
+]
+},
+{
+"id": "a2b62cd4-7b8d-40dc-b5b8-f9879b6c1897",
+"ko": "비",
+"zh": "雨",
+"romanization": "bi",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": "비가 와요.",
+"example_zh": "下雨了。",
+"note": null,
+"tags": [
+"天氣"
+]
+},
+{
+"id": "e38e685f-3aa3-4fa4-b888-62ea874609e5",
+"ko": "눈",
+"zh": "雪",
+"romanization": "nun",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": "눈이 와요.",
+"example_zh": "下雪了。",
+"note": "同形也是「眼睛」",
+"tags": [
+"天氣"
+]
+},
+{
+"id": "6002de0d-ce4c-4844-8334-83c0981d45ea",
+"ko": "바람",
+"zh": "風",
+"romanization": "baram",
+"hanja": null,
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"天氣"
+]
+},
+{
+"id": "9c160710-ae05-4a9a-88d4-1bccac74ca4e",
+"ko": "덥다",
+"zh": "熱",
+"romanization": "deopda",
+"hanja": null,
+"pos": "형용사",
+"item_type": "word",
+"example_ko": "너무 더워요.",
+"example_zh": "太熱了。",
+"note": "ㅂ 不規則",
+"tags": [
+"天氣"
+]
+},
+{
+"id": "7baa0761-f6cd-4835-89c3-5fe6af44387c",
+"ko": "춥다",
+"zh": "冷",
+"romanization": "chupda",
+"hanja": null,
+"pos": "형용사",
+"item_type": "word",
+"example_ko": "오늘은 추워요.",
+"example_zh": "今天很冷。",
+"note": "ㅂ 不規則",
+"tags": [
+"天氣"
+]
+},
+{
+"id": "e1bc3b57-3fb0-44c9-b911-27d9df6f0dbb",
+"ko": "따뜻하다",
+"zh": "溫暖",
+"romanization": "ttatteuthada",
+"hanja": null,
+"pos": "형용사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"天氣"
+]
+},
+{
+"id": "d27e3509-7bd9-4ad1-8962-87bd9550f041",
+"ko": "시원하다",
+"zh": "涼爽",
+"romanization": "siwonhada",
+"hanja": null,
+"pos": "형용사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": "喝湯時也說「시원하다」表示暢快",
+"tags": [
+"天氣"
+]
+},
+{
+"id": "f31762bc-9710-41ea-be59-e4bf8cc3f701",
+"ko": "좋다",
+"zh": "好",
+"romanization": "jota",
+"hanja": null,
+"pos": "형용사",
+"item_type": "word",
+"example_ko": "날씨가 좋아요.",
+"example_zh": "天氣很好。",
+"note": null,
+"tags": [
+"形容"
+]
+},
+{
+"id": "e5672d8b-279e-4540-8baf-a5c2d97fcc0a",
+"ko": "백화점",
+"zh": "百貨公司",
+"romanization": "baekhwajeom",
+"hanja": "百貨店",
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"購物"
+]
+},
+{
+"id": "9d3cbcf6-4f6a-4664-93ca-0a40d070cd9f",
+"ko": "편의점",
+"zh": "便利商店",
+"romanization": "pyeonuijeom",
+"hanja": "便宜店",
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"購物"
+]
+},
+{
+"id": "19b31863-cdf2-4f71-89c9-e790722d12ad",
+"ko": "현금",
+"zh": "現金",
+"romanization": "hyeongeum",
+"hanja": "現金",
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"購物"
+]
+},
+{
+"id": "f7f98f76-5656-46a2-a47c-2d0273bc74dc",
+"ko": "학교",
+"zh": "學校",
+"romanization": "hakgyo",
+"hanja": "學校",
+"pos": "명사",
+"item_type": "word",
+"example_ko": "학교에 가요.",
+"example_zh": "去學校。",
+"note": null,
+"tags": [
+"場所"
+]
+},
+{
+"id": "55e150b8-2b75-4fe8-9979-256e4fcffbd9",
+"ko": "회사",
+"zh": "公司",
+"romanization": "hoesa",
+"hanja": "會社",
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"場所"
+]
+},
+{
+"id": "5779cf39-ea04-4808-ae5f-3aa861c03bc6",
+"ko": "병원",
+"zh": "醫院",
+"romanization": "byeongwon",
+"hanja": "病院",
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"場所"
+]
+},
+{
+"id": "d201b291-b532-45d4-a5f5-63c1e96a3709",
+"ko": "은행",
+"zh": "銀行",
+"romanization": "eunhaeng",
+"hanja": "銀行",
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"場所"
+]
+},
+{
+"id": "71e1d226-56a3-4530-8a67-167fddec92b4",
+"ko": "역",
+"zh": "車站",
+"romanization": "yeok",
+"hanja": "驛",
+"pos": "명사",
+"item_type": "word",
+"example_ko": "서울역에서 만나요.",
+"example_zh": "在首爾站見。",
+"note": null,
+"tags": [
+"交通"
+]
+},
+{
+"id": "f2f92822-e429-4d36-acee-5d96d4f564a9",
+"ko": "공항",
+"zh": "機場",
+"romanization": "gonghang",
+"hanja": "空港",
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"交通"
+]
+},
+{
+"id": "61be00b4-908f-4d04-b5b6-79047a5b4238",
+"ko": "화장실",
+"zh": "洗手間",
+"romanization": "hwajangsil",
+"hanja": "化粧室",
+"pos": "명사",
+"item_type": "word",
+"example_ko": "화장실이 어디예요?",
+"example_zh": "洗手間在哪裡？",
+"note": null,
+"tags": [
+"場所"
+]
+},
+{
+"id": "2fb528a5-fd0b-406d-be82-ca58f233e0d8",
+"ko": "지하철",
+"zh": "地鐵",
+"romanization": "jihacheol",
+"hanja": "地下鐵",
+"pos": "명사",
+"item_type": "word",
+"example_ko": "지하철로 가요.",
+"example_zh": "搭地鐵去。",
+"note": null,
+"tags": [
+"交通"
+]
+},
+{
+"id": "6d87c032-e7a8-48c8-b2dd-11100c4a069b",
+"ko": "싫다",
+"zh": "討厭",
+"romanization": "silta",
+"hanja": null,
+"pos": "형용사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"形容"
+]
+},
+{
+"id": "1d647d03-a548-41c6-8d8b-3fba39bcc93b",
+"ko": "슬프다",
+"zh": "傷心",
+"romanization": "seulpeuda",
+"hanja": null,
+"pos": "형용사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"情緒"
+]
+},
+{
+"id": "7259893a-64d2-4587-855f-97e7bb347531",
+"ko": "바쁘다",
+"zh": "忙",
+"romanization": "bappeuda",
+"hanja": null,
+"pos": "형용사",
+"item_type": "word",
+"example_ko": "요즘 바빠요.",
+"example_zh": "最近很忙。",
+"note": null,
+"tags": [
+"情緒"
+]
+},
+{
+"id": "770a011d-d253-4c1a-98f2-3f79b1a50fec",
+"ko": "재미있다",
+"zh": "有趣",
+"romanization": "jaemiitda",
+"hanja": null,
+"pos": "형용사",
+"item_type": "word",
+"example_ko": "한국어가 재미있어요.",
+"example_zh": "韓語很有趣。",
+"note": null,
+"tags": [
+"形容"
+]
+},
+{
+"id": "dfb4e847-2dc4-40e7-9d86-8cea6423babe",
+"ko": "재미없다",
+"zh": "無聊",
+"romanization": "jaemieopda",
+"hanja": null,
+"pos": "형용사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"形容"
+]
+},
+{
+"id": "20fb4993-439f-4490-9930-81b2e441847b",
+"ko": "쉽다",
+"zh": "容易",
+"romanization": "swipda",
+"hanja": null,
+"pos": "형용사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": "ㅂ 不規則",
+"tags": [
+"形容"
+]
+},
+{
+"id": "b8aa1d79-51e8-4405-8cb3-e6a1ffd0a8b4",
+"ko": "어렵다",
+"zh": "難",
+"romanization": "eoryeopda",
+"hanja": null,
+"pos": "형용사",
+"item_type": "word",
+"example_ko": "한국어가 어려워요.",
+"example_zh": "韓語很難。",
+"note": "ㅂ 不規則",
+"tags": [
+"形容"
+]
+},
+{
+"id": "683db72a-da45-45a0-9abb-3312f46ea21a",
+"ko": "크다",
+"zh": "大",
+"romanization": "keuda",
+"hanja": null,
+"pos": "형용사",
+"item_type": "word",
+"example_ko": "집이 커요.",
+"example_zh": "房子很大。",
+"note": null,
+"tags": [
+"形容"
+]
+},
+{
+"id": "9c87b70d-477b-4b6e-a4e7-fe2caa0d7d9a",
+"ko": "작다",
+"zh": "小",
+"romanization": "jakda",
+"hanja": null,
+"pos": "형용사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"形容"
+]
+},
+{
+"id": "f8938f0a-eef9-458e-89b4-ac43bb11db93",
+"ko": "많다",
+"zh": "多",
+"romanization": "manta",
+"hanja": null,
+"pos": "형용사",
+"item_type": "word",
+"example_ko": "사람이 많아요.",
+"example_zh": "人很多。",
+"note": null,
+"tags": [
+"形容"
+]
+},
+{
+"id": "7db97b6c-322f-43c5-9ed1-698aa0d8b435",
+"ko": "적다",
+"zh": "少",
+"romanization": "jeokda",
+"hanja": null,
+"pos": "형용사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"形容"
+]
+},
+{
+"id": "c42a1431-4b7c-4a76-975d-fa299ca9ff04",
+"ko": "예쁘다",
+"zh": "漂亮",
+"romanization": "yeppeuda",
+"hanja": null,
+"pos": "형용사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": "多用於女性或物品",
+"tags": [
+"形容"
+]
+},
+{
+"id": "668bc9e2-7411-41cb-b5f9-0dea5a299a81",
+"ko": "멋있다",
+"zh": "帥",
+"romanization": "meositda",
+"hanja": null,
+"pos": "형용사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"形容"
+]
+},
+{
+"id": "ff82ec85-cc0b-4551-9d4f-1c226383e54b",
+"ko": "가다",
+"zh": "去",
+"romanization": "gada",
+"hanja": null,
+"pos": "동사",
+"item_type": "word",
+"example_ko": "어디에 가요?",
+"example_zh": "你要去哪裡？",
+"note": "原形；活用為 가요",
+"tags": [
+"動詞"
+]
+},
+{
+"id": "14c38d62-4654-48fb-8090-e72ec92405a3",
+"ko": "오다",
+"zh": "來",
+"romanization": "oda",
+"hanja": null,
+"pos": "동사",
+"item_type": "word",
+"example_ko": "친구가 와요.",
+"example_zh": "朋友來了。",
+"note": null,
+"tags": [
+"動詞"
+]
+},
+{
+"id": "cbd38300-b813-4a95-9a62-ff1bba46801a",
+"ko": "먹다",
+"zh": "吃",
+"romanization": "meokda",
+"hanja": null,
+"pos": "동사",
+"item_type": "word",
+"example_ko": "뭘 먹고 싶어요?",
+"example_zh": "你想吃什麼？",
+"note": null,
+"tags": [
+"動詞"
+]
+},
+{
+"id": "10bcd5f1-5d42-49d9-a80a-4ae83b513df0",
+"ko": "마시다",
+"zh": "喝",
+"romanization": "masida",
+"hanja": null,
+"pos": "동사",
+"item_type": "word",
+"example_ko": "물을 마셔요.",
+"example_zh": "喝水。",
+"note": null,
+"tags": [
+"動詞"
+]
+},
+{
+"id": "6c4f84ec-6e5b-4ce0-b8b6-a5f1753158b8",
+"ko": "보다",
+"zh": "看",
+"romanization": "boda",
+"hanja": null,
+"pos": "동사",
+"item_type": "word",
+"example_ko": "영화를 봐요.",
+"example_zh": "看電影。",
+"note": null,
+"tags": [
+"動詞"
+]
+},
+{
+"id": "12d52a74-773b-48c1-ac20-84081286520c",
+"ko": "듣다",
+"zh": "聽",
+"romanization": "deutda",
+"hanja": null,
+"pos": "동사",
+"item_type": "word",
+"example_ko": "음악을 들어요.",
+"example_zh": "聽音樂。",
+"note": "ㄷ 不規則",
+"tags": [
+"動詞"
+]
+},
+{
+"id": "24372a00-9a06-4e7a-ba27-439230d9907f",
+"ko": "말하다",
+"zh": "說",
+"romanization": "malhada",
+"hanja": null,
+"pos": "동사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"動詞"
+]
+},
+{
+"id": "9c403169-0e8b-40b2-8d40-330e9785de71",
+"ko": "읽다",
+"zh": "讀",
+"romanization": "ikda",
+"hanja": null,
+"pos": "동사",
+"item_type": "word",
+"example_ko": "책을 읽어요.",
+"example_zh": "看書。",
+"note": null,
+"tags": [
+"動詞"
+]
+},
+{
+"id": "2204aa9c-5855-43b5-acbd-473bf8596a85",
+"ko": "쓰다",
+"zh": "寫",
+"romanization": "sseuda",
+"hanja": null,
+"pos": "동사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": "也有「使用」和「戴」的意思",
+"tags": [
+"動詞"
+]
+},
+{
+"id": "7dded07e-251e-4fcb-805d-ac6108b96af1",
+"ko": "자다",
+"zh": "睡",
+"romanization": "jada",
+"hanja": null,
+"pos": "동사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"動詞"
+]
+},
+{
+"id": "27dd8f3e-a0d8-45f4-b1c8-907ef77dbcc9",
+"ko": "일어나다",
+"zh": "起床",
+"romanization": "ireonada",
+"hanja": null,
+"pos": "동사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"動詞"
+]
+},
+{
+"id": "6075129d-d339-40dd-80ee-352cd3e63c83",
+"ko": "일하다",
+"zh": "工作",
+"romanization": "ilhada",
+"hanja": null,
+"pos": "동사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"動詞"
+]
+},
+{
+"id": "ecbe295b-65e9-4d4e-a8d7-4dc07d08cc36",
+"ko": "사다",
+"zh": "買",
+"romanization": "sada",
+"hanja": null,
+"pos": "동사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"動詞"
+]
+},
+{
+"id": "83d66bbf-86d9-408d-add4-6eb0d947cc92",
+"ko": "만나다",
+"zh": "見面",
+"romanization": "mannada",
+"hanja": null,
+"pos": "동사",
+"item_type": "word",
+"example_ko": "친구를 만나요.",
+"example_zh": "和朋友見面。",
+"note": null,
+"tags": [
+"動詞"
+]
+},
+{
+"id": "5ff6a0ca-fb01-4a93-a5fa-5c1dc2b3372f",
+"ko": "좋아하다",
+"zh": "喜歡",
+"romanization": "joahada",
+"hanja": null,
+"pos": "동사",
+"item_type": "word",
+"example_ko": "한국 음식을 좋아해요.",
+"example_zh": "我喜歡韓國菜。",
+"note": null,
+"tags": [
+"動詞"
+]
+},
+{
+"id": "1cd5b683-7a7c-472f-b328-981679f20cd1",
+"ko": "알다",
+"zh": "知道",
+"romanization": "alda",
+"hanja": null,
+"pos": "동사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"動詞"
+]
+},
+{
+"id": "502c37b3-367f-4d4f-8c90-56f0c2527364",
+"ko": "모르다",
+"zh": "不知道",
+"romanization": "moreuda",
+"hanja": null,
+"pos": "동사",
+"item_type": "word",
+"example_ko": "잘 모르겠어요.",
+"example_zh": "我不太清楚。",
+"note": "르 不規則",
+"tags": [
+"動詞"
+]
+},
+{
+"id": "7ce5436b-0fac-47df-bd9e-814d37572770",
+"ko": "있다",
+"zh": "有／在",
+"romanization": "itda",
+"hanja": null,
+"pos": "동사",
+"item_type": "word",
+"example_ko": "시간이 있어요?",
+"example_zh": "你有時間嗎？",
+"note": null,
+"tags": [
+"動詞"
+]
+},
+{
+"id": "4bd3ce55-903a-49ba-8111-8ca564378dfc",
+"ko": "없다",
+"zh": "沒有／不在",
+"romanization": "eopda",
+"hanja": null,
+"pos": "동사",
+"item_type": "word",
+"example_ko": "돈이 없어요.",
+"example_zh": "沒有錢。",
+"note": null,
+"tags": [
+"動詞"
+]
+},
+{
+"id": "8db6d32c-4bba-4d70-a0aa-27d1ab1027fd",
+"ko": "하다",
+"zh": "做",
+"romanization": "hada",
+"hanja": null,
+"pos": "동사",
+"item_type": "word",
+"example_ko": "뭐 해요?",
+"example_zh": "你在做什麼？",
+"note": "最常用的動詞",
+"tags": [
+"動詞"
+]
+},
+{
+"id": "3c74f43f-cf8f-4bff-ab07-99af425ca2b0",
+"ko": "저는 대만 사람이에요.",
+"zh": "我是台灣人。",
+"romanization": "jeoneun daeman saramieyo",
+"hanja": null,
+"pos": null,
+"item_type": "sentence",
+"example_ko": null,
+"example_zh": null,
+"note": "自我介紹必備",
+"tags": [
+"自我介紹"
+]
+},
+{
+"id": "b8d7be9e-da2b-4945-93b4-6bb27c4c9db9",
+"ko": "이름이 뭐예요?",
+"zh": "你叫什麼名字？",
+"romanization": "ireumi mwoyeyo",
+"hanja": null,
+"pos": null,
+"item_type": "sentence",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"自我介紹"
+]
+},
+{
+"id": "bc01a0a8-6d7c-4648-bfd4-3f6985a7d027",
+"ko": "어디에서 왔어요?",
+"zh": "你從哪裡來？",
+"romanization": "eodieseo wasseoyo",
+"hanja": null,
+"pos": null,
+"item_type": "sentence",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"自我介紹"
+]
+},
+{
+"id": "c2b86280-461b-41c8-ab1f-d07f7c1eec0a",
+"ko": "피곤하다",
+"zh": "疲倦",
+"romanization": "pigonhada",
+"hanja": "疲困하다",
+"pos": "형용사",
+"item_type": "word",
+"example_ko": "피곤해요.",
+"example_zh": "我累了。",
+"note": null,
+"tags": [
+"情緒"
+]
+},
+{
+"id": "e3c4bd27-4a9c-4c47-9ea3-52884b6a2de6",
+"ko": "공부하다",
+"zh": "學習",
+"romanization": "gongbuhada",
+"hanja": "工夫하다",
+"pos": "동사",
+"item_type": "word",
+"example_ko": "한국어를 공부해요.",
+"example_zh": "學韓語。",
+"note": null,
+"tags": [
+"動詞"
+]
+},
+{
+"id": "6aee34bc-1cc8-435a-80e7-8eacd31702fa",
+"ko": "한국어를 배우고 있어요.",
+"zh": "我正在學韓語。",
+"romanization": "hangugeoreul baeugo isseoyo",
+"hanja": null,
+"pos": null,
+"item_type": "sentence",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"自我介紹"
+]
+},
+{
+"id": "1389e2ff-e9c6-4073-abc1-171e8b701a66",
+"ko": "한국어를 조금 할 수 있어요.",
+"zh": "我會說一點韓語。",
+"romanization": "hangugeoreul jogeum hal su isseoyo",
+"hanja": null,
+"pos": null,
+"item_type": "sentence",
+"example_ko": null,
+"example_zh": null,
+"note": "對方就會放慢語速",
+"tags": [
+"實用"
+]
+},
+{
+"id": "78fa55e6-c97c-44db-9e36-31cd62adc7bf",
+"ko": "다시 한 번 말해 주세요.",
+"zh": "請再說一次。",
+"romanization": "dasi han beon malhae juseyo",
+"hanja": null,
+"pos": null,
+"item_type": "sentence",
+"example_ko": null,
+"example_zh": null,
+"note": "聽不懂時的救命句",
+"tags": [
+"實用"
+]
+},
+{
+"id": "6454f52e-4336-4dad-bb6f-019325a4c255",
+"ko": "천천히 말해 주세요.",
+"zh": "請說慢一點。",
+"romanization": "cheoncheonhi malhae juseyo",
+"hanja": null,
+"pos": null,
+"item_type": "sentence",
+"example_ko": null,
+"example_zh": null,
+"note": "比上一句更有效",
+"tags": [
+"實用"
+]
+},
+{
+"id": "9613f76f-f136-482a-9bce-6d98bfa9d244",
+"ko": "무슨 뜻이에요?",
+"zh": "是什麼意思？",
+"romanization": "museun tteusieyo",
+"hanja": null,
+"pos": null,
+"item_type": "sentence",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"實用"
+]
+},
+{
+"id": "4357fd60-5a0b-4a80-9554-1940d713188b",
+"ko": "알겠습니다.",
+"zh": "我知道了。",
+"romanization": "algetseumnida",
+"hanja": null,
+"pos": null,
+"item_type": "sentence",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"實用"
+]
+},
+{
+"id": "f433d610-876e-4f0f-a2df-fb26fa12ff2e",
+"ko": "잘 모르겠어요.",
+"zh": "我不太清楚。",
+"romanization": "jal moreugesseoyo",
+"hanja": null,
+"pos": null,
+"item_type": "sentence",
+"example_ko": null,
+"example_zh": null,
+"note": "比 몰라요 委婉",
+"tags": [
+"實用"
+]
+},
+{
+"id": "7bd42065-52a8-4153-b9fa-2b7d29395009",
+"ko": "영어 할 수 있어요?",
+"zh": "你會說英文嗎？",
+"romanization": "yeongeo hal su isseoyo",
+"hanja": null,
+"pos": null,
+"item_type": "sentence",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"實用"
+]
+},
+{
+"id": "e55bbf26-24ad-482a-ad24-c84a954d0fe3",
+"ko": "화장실이 어디예요?",
+"zh": "洗手間在哪裡？",
+"romanization": "hwajangsiri eodiyeyo",
+"hanja": null,
+"pos": null,
+"item_type": "sentence",
+"example_ko": null,
+"example_zh": null,
+"note": "旅行第一句",
+"tags": [
+"實用"
+]
+},
+{
+"id": "74cde40d-ce49-474d-882f-0f9e733ad6f5",
+"ko": "도와주세요.",
+"zh": "請幫幫我。",
+"romanization": "dowajuseyo",
+"hanja": null,
+"pos": null,
+"item_type": "sentence",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"實用"
+]
+},
+{
+"id": "c7e9be08-54c0-4912-8cd1-817d440fc334",
+"ko": "배고파요.",
+"zh": "我餓了。",
+"romanization": "baegopayo",
+"hanja": null,
+"pos": null,
+"item_type": "sentence",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"日常"
+]
+},
+{
+"id": "656c6c2c-e9a1-4348-9719-ea7851e55d80",
+"ko": "피곤해요.",
+"zh": "我累了。",
+"romanization": "pigonhaeyo",
+"hanja": null,
+"pos": null,
+"item_type": "sentence",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"日常"
+]
+},
+{
+"id": "eac7ba55-d68c-44ee-ae0c-9ce08d9ab57b",
+"ko": "정말 맛있어요.",
+"zh": "真好吃。",
+"romanization": "jeongmal masisseoyo",
+"hanja": null,
+"pos": null,
+"item_type": "sentence",
+"example_ko": null,
+"example_zh": null,
+"note": "韓國人聽了會很開心",
+"tags": [
+"用餐"
+]
+},
+{
+"id": "d60a8ba6-fd54-4c5b-a689-5e192382267b",
+"ko": "시간이 없어요.",
+"zh": "沒有時間。",
+"romanization": "sigani eopseoyo",
+"hanja": null,
+"pos": null,
+"item_type": "sentence",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"日常"
+]
+},
+{
+"id": "4923d0e0-7c09-4e1e-9649-dc424aa24f33",
+"ko": "괜찮으세요?",
+"zh": "你還好嗎？",
+"romanization": "gwaenchaneuseyo",
+"hanja": null,
+"pos": null,
+"item_type": "sentence",
+"example_ko": null,
+"example_zh": null,
+"note": "關心對方時用",
+"tags": [
+"日常"
+]
+},
+{
+"id": "057d63ec-c924-4b25-96f0-d62289d1541c",
+"ko": "안녕히 가세요",
+"zh": "再見",
+"romanization": "annyeonghi gaseyo",
+"hanja": "安寧히 가세요",
+"pos": "인사말",
+"item_type": "phrase",
+"example_ko": null,
+"example_zh": null,
+"note": "對「要離開的人」說",
+"tags": [
+"問候"
+]
+},
+{
+"id": "062c5f02-5b99-4285-98ca-4e55ad5e60a6",
+"ko": "선생님",
+"zh": "老師",
+"romanization": "seonsaengnim",
+"hanja": "先生님",
+"pos": "명사",
+"item_type": "word",
+"example_ko": "선생님께 질문이 있어요.",
+"example_zh": "我有問題想請教老師。",
+"note": "님 是敬稱後綴",
+"tags": [
+"身分"
+]
+},
+{
+"id": "06618db3-4f59-4b49-8707-99327a7e172a",
+"ko": "내일",
+"zh": "明天",
+"romanization": "naeil",
+"hanja": "來日",
+"pos": "명사",
+"item_type": "word",
+"example_ko": "내일 만나요.",
+"example_zh": "明天見。",
+"note": null,
+"tags": [
+"時間"
+]
+},
+{
+"id": "954b1ad3-2c97-453c-a667-ff791122f519",
+"ko": "음식",
+"zh": "食物",
+"romanization": "eumsik",
+"hanja": "飮食",
+"pos": "명사",
+"item_type": "word",
+"example_ko": "한국 음식을 좋아해요.",
+"example_zh": "我喜歡韓國料理。",
+"note": null,
+"tags": [
+"食物"
+]
+},
+{
+"id": "8986a987-ac38-4229-96b6-f5628033f192",
+"ko": "시장",
+"zh": "市場",
+"romanization": "sijang",
+"hanja": "市場",
+"pos": "명사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"購物"
+]
+},
+{
+"id": "1131bd88-9564-4ee0-856b-09907b817127",
+"ko": "계산해 주세요",
+"zh": "請結帳",
+"romanization": "gyesanhae juseyo",
+"hanja": "計算해 주세요",
+"pos": null,
+"item_type": "phrase",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"購物"
+]
+},
+{
+"id": "6cc19886-5242-41b3-9697-76283b6b40b6",
+"ko": "행복하다",
+"zh": "幸福",
+"romanization": "haengbokhada",
+"hanja": "幸福하다",
+"pos": "형용사",
+"item_type": "word",
+"example_ko": null,
+"example_zh": null,
+"note": null,
+"tags": [
+"情緒"
+]
+},
+{
+"id": "db7139c9-5622-4b9b-9ef2-d1d6a59065fb",
+"ko": "감사합니다",
+"zh": "謝謝",
+"romanization": "gamsahamnida",
+"hanja": "感謝합니다",
+"pos": "인사말",
+"item_type": "phrase",
+"example_ko": null,
+"example_zh": null,
+"note": "比 고마워요 更正式",
+"tags": [
+"問候"
+]
+}
+]
