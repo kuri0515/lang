@@ -69,14 +69,25 @@ def rest(url, key, method, path, payload=None, tries=3):
     sys.exit(f"❌ {method} {path} 連續 {tries} 次失敗：{last}")
 
 
-def fetch_all(url, key, table, select, page=300):
+def fetch_all(url, key, table, select, page=300, order="id"):
     """
     分頁撈完 —— PostgREST 單次有上限，寫死 limit 會靜默截斷。
     頁大小取 300 而非 1000：全欄位的列很大，一次要太多容易在傳輸中斷。
+
+    ★ 必須 order=id：offset/limit 分頁在沒有確定排序時，
+      資料庫可以任意決定行序。若此時有別的程序正在寫入，
+      同一行會落進兩頁（看起來像重複收錄）、另一行被跳過（計數短少）。
+      實際踩過：補 note 的腳本還在跑時跑稽核，
+      憑空報出兩筆「同一詞庫內重複」與詞庫計數偏移，查下去資料其實完好。
+      分頁不排序不是效能問題，是會給出錯誤答案的問題。
+
+      order 可指定：user_cards 是複合主鍵、沒有 id 欄，
+      要傳 "user_id,item_id,direction"。
     """
     out = []
     while True:
-        rows = rest(url, key, "GET", f"{table}?select={select}&offset={len(out)}&limit={page}")
+        rows = rest(url, key, "GET",
+                    f"{table}?select={select}&order={order}&offset={len(out)}&limit={page}")
         out += rows
         if len(rows) < page:
             return out
@@ -249,7 +260,8 @@ def check_counter_sync(url, key):
     或手動修資料），或刪了 reviews 卻沒回退計數。reviews 是只追加的權威日誌，
     對不上時一律以它為準重算。
     """
-    cards = fetch_all(url, key, "user_cards", "user_id,item_id,direction,total_reviews,correct_reviews")
+    cards = fetch_all(url, key, "user_cards", "user_id,item_id,direction,total_reviews,correct_reviews",
+                      order="user_id,item_id,direction")   # 複合主鍵，沒有 id 欄
     revs = fetch_all(url, key, "reviews", "user_id,item_id,direction,is_correct")
     agg = defaultdict(lambda: [0, 0])
     for r in revs:
@@ -321,6 +333,34 @@ def check_examples(items):
           "譯文寫了「他／她」但韓語句裡沒有對應的詞，學生會找不到。")
 
 
+def check_note_hanja(items):
+    """
+    note 裡寫的漢字要與 hanja 欄一致。
+
+    note 常寫「漢字是「便宜店」而非便利店」，而 hanja 欄另存一份同樣的資訊。
+    同一件事存在兩個地方就會漂移 —— 改了一邊忘了另一邊，
+    學生看到兩種說法不知道信哪個。這個檢查把兩邊釘在一起。
+
+    只比對 note 裡第一組「漢字」引號內的字串，且僅在 hanja 欄有值時比。
+    hanja 欄允許混合形態（工夫하다、熱情pay），比對前先去掉韓文與拉丁字母。
+    """
+    bad = []
+    for x in items:
+        note, hanja = x.get("note") or "", x.get("hanja") or ""
+        if not hanja:
+            continue
+        m = re.search(r"漢字[^「]*「([^」]+)」", note)
+        if not m:
+            continue
+        said = m.group(1)
+        # 兩邊都只留漢字再比
+        norm = lambda t: "".join(c for c in t if "一" <= c <= "鿿")
+        if norm(said) != norm(hanja):
+            bad.append(f"{x['ko']}: note 說「{said}」，hanja 欄是「{hanja}」")
+    issue("error", "note 與 hanja 欄說法不一致", bad,
+          "同一件事存在兩處必然漂移，學生會不知道信哪個。")
+
+
 def check_completeness(items, decks):
     """
     完整度只對「該有這個欄位的條目」計算。
@@ -378,6 +418,7 @@ def main():
     check_simplified(items)
     check_same_meaning(items)
     check_examples(items)
+    check_note_hanja(items)
     check_tags(items)
     check_counter_sync(url, key)
     check_completeness(items, decks)

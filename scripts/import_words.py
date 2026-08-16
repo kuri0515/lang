@@ -186,7 +186,7 @@ def main():
     existing = {}
     while True:
         page = rest(url, key, "GET", "items", None,
-                    f"?select=ko,deck_id,is_active&offset={len(existing)}&limit=1000")
+                    f"?select=ko,deck_id,is_active&order=id&offset={len(existing)}&limit=1000")
         existing.update({x["ko"]: x for x in page})
         if len(page) < 1000:
             break

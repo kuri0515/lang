@@ -708,7 +708,7 @@ def fetch_items(url, key):
     while True:
         page = req(url, key, "GET",
                    "items?select=id,ko,zh,pos,item_type,example_ko,example_zh"
-                   f"&is_active=eq.true&offset={len(rows)}&limit=1000")
+                   f"&is_active=eq.true&order=id&offset={len(rows)}&limit=1000")
         rows += page
         if len(page) < 1000:
             return rows

@@ -87,7 +87,7 @@ def rest(url, key, path, tries=3):
 def fetch_all(url, key, table, page=300):
     out = []
     while True:
-        rows = rest(url, key, f"{table}?select=*&offset={len(out)}&limit={page}")
+        rows = rest(url, key, f"{table}?select=*&order=id&offset={len(out)}&limit={page}")
         if rows is None:
             return None
         out += rows
