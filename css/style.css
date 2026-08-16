@@ -188,3 +188,106 @@ label { font-size: 13px; color: var(--muted); }
   .dot.review   { background: #16301f; border-color: #24502f; color: #8ce99a; }
 }
 .b-speak { border: none; background: none; cursor: pointer; padding: 2px 6px; font-size: 14px; }
+
+/* ---------- 答題模式 ---------- */
+.mode-pick { display: flex; gap: 8px; margin-top: 8px; }
+
+/* ---------- 選擇題 ---------- */
+.choices { display: grid; gap: 8px; }
+.choices button {
+  width: 100%; text-align: left; padding: 14px 16px; font-size: 16px;
+  line-height: 1.4; position: relative;
+}
+.choices button .idx {
+  display: inline-block; width: 22px; color: var(--muted); font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.choices button.right {
+  background: #ebfbee; border-color: var(--good); color: #2b8a3e; font-weight: 600;
+}
+.choices button.wrong {
+  background: #fff0f0; border-color: var(--again); color: #c92a2a;
+}
+.choices button.dim { opacity: .45; }
+@media (prefers-color-scheme: dark) {
+  .choices button.right { background: #16301f; color: #8ce99a; }
+  .choices button.wrong { background: #3a1f22; color: #ffa8a8; }
+}
+
+/* ---------- 學習曲線 ---------- */
+.chart {
+  display: flex; align-items: flex-end; gap: 2px; height: 88px;
+  padding-top: 4px;
+}
+.chart .bar {
+  flex: 1; min-width: 0; border-radius: 3px 3px 0 0;
+  background: var(--border); position: relative; transition: .2s;
+}
+.chart .bar .fill {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: var(--accent); border-radius: 3px 3px 0 0;
+}
+.chart .bar.today { outline: 1.5px solid var(--accent); outline-offset: 1px; }
+.chart .bar.empty { background: color-mix(in srgb, var(--border) 45%, transparent); }
+
+/* ---------- 編輯面板 ---------- */
+.overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(10, 10, 20, .45); backdrop-filter: blur(3px);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+@media (min-width: 600px) { .overlay { align-items: center; } }
+.editor-card {
+  background: var(--surface); width: 100%; max-width: 560px; max-height: 92vh;
+  border-radius: var(--radius) var(--radius) 0 0; display: flex; flex-direction: column;
+  box-shadow: 0 -8px 40px rgba(0,0,0,.25);
+}
+@media (min-width: 600px) { .editor-card { border-radius: var(--radius); } }
+.editor-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px; border-bottom: 1px solid var(--border);
+}
+.editor-head h2 { margin: 0; }
+.editor-body { padding: 16px 20px; overflow-y: auto; }
+.editor-body input, .editor-body select { margin-bottom: 12px; }
+.editor-body .row2 { gap: 12px; }
+.editor-foot {
+  display: flex; gap: 8px; padding: 14px 20px;
+  border-top: 1px solid var(--border);
+}
+.editor-foot button { flex: 1; }
+.editor-msg { padding: 0 20px; font-size: 13px; min-height: 20px; color: var(--muted); }
+.editor-msg.ok  { color: var(--good); }
+.editor-msg.err { color: var(--again); }
+select {
+  font: inherit; width: 100%; padding: 11px 13px; margin: 6px 0 14px;
+  border: 1px solid var(--border); border-radius: 12px;
+  background: var(--bg); color: var(--text);
+}
+
+/* ---------- 多選刪除 ---------- */
+.b-row.sel { background: var(--accent-soft); border-radius: 8px;
+             margin: 0 -8px; padding-left: 8px; padding-right: 8px; }
+.b-check { margin-right: 8px; accent-color: var(--accent);
+           width: 17px; height: 17px; vertical-align: -3px; }
+.bulk-bar {
+  position: sticky; bottom: 0; display: flex; gap: 8px; align-items: center;
+  padding: 12px; margin-top: 12px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--accent);
+  box-shadow: var(--shadow);
+}
+.bulk-bar span { flex: 1; font-size: 13px; }
+
+/* ---------- 語音設定 ---------- */
+.voice-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+.voice-row select { margin: 0; flex: 1; font-size: 13px; padding: 8px 10px; }
+.voice-row input[type=range] { flex: 1; accent-color: var(--accent); }
+
+/* ---------- 學習頁前後切換 ---------- */
+.nav-row { display: flex; justify-content: space-between; align-items: center;
+           margin-top: 10px; font-size: 13px; }
+.nav-row button { padding: 6px 12px; }
+.peek-note {
+  font-size: 12px; color: var(--muted); text-align: center;
+  padding: 10px; border: 1px dashed var(--border); border-radius: 12px; margin-top: 14px;
+}

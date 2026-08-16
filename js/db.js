@@ -106,8 +106,8 @@ export async function fetchDue(userId, dirs = DIRECTIONS, limit = 200) {
   return (data ?? []).filter((c) => c.items);
 }
 
-/** 尚未建卡的新條目（對指定方向而言是「新」的）。 */
-export async function fetchNewItems(userId, deckId, dirs, limit = 20) {
+/** 尚未建卡的新條目（對指定方向而言是「新」的）。tag 可限定主題。 */
+export async function fetchNewItems(userId, deckId, dirs, limit = 20, tag = '') {
   const { data: seen, error: e1 } = await sb
     .from('user_cards').select('item_id, direction').eq('user_id', userId);
   if (e1) throw e1;
@@ -116,6 +116,7 @@ export async function fetchNewItems(userId, deckId, dirs, limit = 20) {
   let q = sb.from('items').select('*').eq('is_active', true)
     .order('sort_order').order('slug');
   if (deckId) q = q.eq('deck_id', deckId);
+  if (tag) q = q.contains('tags', [tag]);
   const { data, error } = await q.limit(Math.max(limit * 5, 300));
   if (error) throw error;
 
@@ -251,4 +252,75 @@ export async function newCardsToday(userId) {
     .eq('user_id', userId).gte('created_at', start.toISOString());
   if (error) throw error;
   return count ?? 0;
+}
+
+/** 選擇題的干擾項來源：同詞庫的條目池，一次抓好放記憶體 */
+export async function distractorPool(deckId = null, limit = 400) {
+  let q = sb.from('items').select('id, ko, zh, pos, tags, item_type').eq('is_active', true);
+  if (deckId) q = q.eq('deck_id', deckId);
+  const { data, error } = await q.limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** 近 N 天的每日答題量與正確率（學習曲線用） */
+export async function dailyStats(userId, days = 30) {
+  const from = new Date();
+  from.setDate(from.getDate() - days + 1);
+  from.setHours(0, 0, 0, 0);
+  const { data, error } = await sb.from('reviews')
+    .select('is_correct, reviewed_at')
+    .eq('user_id', userId).gte('reviewed_at', from.toISOString());
+  if (error) throw error;
+
+  const byDay = {};
+  for (const r of data ?? []) {
+    const d = new Date(r.reviewed_at);
+    const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    (byDay[k] ||= { n: 0, correct: 0 });
+    byDay[k].n += 1;
+    if (r.is_correct) byDay[k].correct += 1;
+  }
+
+  const out = [];
+  for (let i = 0; i < days; i++) {
+    const d = new Date(from);
+    d.setDate(from.getDate() + i);
+    const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const v = byDay[k] || { n: 0, correct: 0 };
+    out.push({ date: k, n: v.n, correct: v.correct,
+               accuracy: v.n ? v.correct / v.n : null });
+  }
+  return out;
+}
+
+// ---------- 管理員：編輯內容 ----------
+/**
+ * 更新條目。回傳資料庫回讀的那一行 —— 不靠斷言，
+ * 呼叫端拿到什麼就是雲端真正存了什麼。
+ * 權限由 RLS 的 items_admin_write 把關，非管理員會拿到錯誤。
+ */
+export async function updateItem(id, patch) {
+  const { data, error } = await sb
+    .from('items').update(patch).eq('id', id)
+    .select('id, ko, zh, romanization, pos, item_type, example_ko, example_zh, note, tags, audio_url')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * 批次下架／恢復條目。
+ *
+ * ★ 刻意做成軟刪除（is_active=false）而非真刪：
+ *   items 被真刪會連帶 cascade 掉 user_cards 與 reviews，
+ *   使用者辛苦累積的學習記錄與正確率會一起消失，且無法復原。
+ *   下架後條目不再出現在學習與瀏覽中，效果等同刪除，但可還原。
+ */
+export async function setItemsActive(ids, active) {
+  if (!ids?.length) return [];
+  const { data, error } = await sb
+    .from('items').update({ is_active: active }).in('id', ids).select('id');
+  if (error) throw error;
+  return data ?? [];
 }
