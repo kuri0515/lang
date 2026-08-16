@@ -227,8 +227,11 @@ drop policy if exists profiles_self_update on public.profiles;
 create policy profiles_self_update on public.profiles
   for update using (auth.uid() = id) with check (auth.uid() = id);
 
--- ⚠️ 沒有給一般使用者 update role 的路徑：role 欄位只能由 service_role 改，
---    否則任何人都能把自己升成 admin。
+-- ⚠️ 注意：RLS 是「列」級的，管不到「欄位」。
+--    本策略允許使用者更新自己那一行的任意欄位，包含 role ——
+--    也就是說單靠這裡會有提權漏洞。
+--    欄位級的鎖定在 0002_lock_role_column.sql（觸發器 + column grant），
+--    兩份 migration 必須一起套用。
 
 -- 內容：所有人唯讀（含未登入 anon）
 drop policy if exists decks_public_read on public.decks;
