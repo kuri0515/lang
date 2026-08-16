@@ -9,6 +9,7 @@ const ALIASES = {
   ko: ['ko', 'korean', 'hangul', '한국어', '한글', '韓文', '韓語', '韩文', '韩语', '單字', '单词', 'word'],
   zh: ['zh', 'chinese', 'meaning', 'meaning_zh', '中文', '繁體', '繁体', '釋義', '释义', '意思', '翻譯', '翻译'],
   romanization: ['romanization', 'roman', '羅馬音', '罗马音', '發音', '发音', '讀音', '读音'],
+  hanja: ['hanja', '漢字', '汉字', '漢字詞', '汉字词', '한자'],
   item_type: ['type', 'item_type', '類型', '类型', '分類', '分类'],
   pos: ['pos', '詞性', '词性', 'part_of_speech'],
   example_ko: ['example_ko', '例句', '韓文例句', '韩文例句', 'example'],

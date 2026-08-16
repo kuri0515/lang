@@ -397,6 +397,7 @@ export async function insertItems(deckId, deckSlug, rows) {
     item_type: r.item_type || 'word',
     ko: r.ko, zh: r.zh,
     romanization: r.romanization || null,
+    hanja: r.hanja || null,
     pos: r.pos || null,
     example_ko: r.example_ko || null,
     example_zh: r.example_zh || null,
