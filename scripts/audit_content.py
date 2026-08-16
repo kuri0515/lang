@@ -283,7 +283,10 @@ def check_examples(items):
           "主語是尊稱時謂語要用 -시-，否則文法對但失禮。")
 
     third = re.compile(r"[他她]")
-    ko_subj = re.compile(r"(그|그녀|그분|그 사람|저 사람|배우|사장|선생|친구|동생|언니|누나|형|오빠)")
+    # 걔／얘／쟤 是口語的第三人稱（걔 ＝ 그 애）。網路用語那批全用半語，
+    # 少了它們會把「걔는 진짜 고답이야」誤報成沒有主語。
+    ko_subj = re.compile(r"(그|그녀|그분|그 사람|저 사람|걔|얘|쟤|선배|"
+                         r"배우|사장|선생|친구|동생|언니|누나|형|오빠)")
     issue("warn", "例句主語與譯文對不上",
           [f"{x['ko']}: {x['example_ko']}  →  {x['example_zh']}" for x in ex
            if third.search(x.get("example_zh") or "") and not ko_subj.search(x["example_ko"])],
