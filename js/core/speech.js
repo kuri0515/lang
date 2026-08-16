@@ -71,24 +71,41 @@ export function onVoicesReady(cb) {
 }
 
 /**
+ * 短詞自動放慢。
+ *
+ * 兩三個音節的詞在 TTS 下 0.5 秒就結束，又沒有上下文可以推敲，
+ * 常常聽過去了還沒反應過來 —— 實際使用中 오빠 就卡了 23 秒。
+ * 詞越短給的資訊越少，就該念得越慢。
+ */
+function autoRate(text, base) {
+  const syllables = (String(text).match(/[\uac00-\ud7af]/g) || []).length;
+  if (syllables <= 2) return Math.max(0.45, base - 0.25);
+  if (syllables <= 4) return Math.max(0.5, base - 0.12);
+  return base;
+}
+
+/**
  * 朗讀韓文。有音檔優先播音檔。
  * @param {string} text
  * @param {string|null} audioUrl
+ * @param {{rate?:number, slow?:boolean}} opts  slow=true 時再放慢一檔
  */
-export function speak(text, audioUrl = null) {
-  if (audioUrl) {
-    new Audio(audioUrl).play().catch(() => speakTTS(text));
+export function speak(text, audioUrl = null, opts = {}) {
+  if (audioUrl && !opts.slow) {
+    // 慢速播放 TTS 才做得到，有音檔時的慢速仍走 TTS
+    new Audio(audioUrl).play().catch(() => speakTTS(text, opts));
     return;
   }
-  speakTTS(text);
+  speakTTS(text, opts);
 }
 
-function speakTTS(text) {
+function speakTTS(text, { rate: override, slow = false } = {}) {
   if (!('speechSynthesis' in window)) return;
   speechSynthesis.cancel();                    // 打斷上一句，避免排隊堆積
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'ko-KR';
-  u.rate = rate();                             // 略慢於預設，學習時聽得清楚
+  const base = override ?? autoRate(text, rate());
+  u.rate = slow ? Math.max(0.4, base - 0.25) : base;
   u.pitch = 1;
   const v = currentVoice();
   if (v) u.voice = v;

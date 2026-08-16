@@ -24,7 +24,8 @@ export function initStudy({ session: s, getCtx, onQuit: quitCb }) {
     roman: $('c-roman'), pos: $('c-pos'), type: $('c-type'), dir: $('c-dir'),
     example: $('c-example'), exKo: $('c-ex-ko'), exZh: $('c-ex-zh'),
     note: $('c-note'), acc: $('c-acc'), hanja: $('c-hanja'), hanjaRel: $('c-hanja-rel'),
-    listen: $('c-listen'), choices: $('choices'), grade: $('grade'),
+    listen: $('c-listen'), listenSlow: $('c-listen-slow'), listenBox: $('listen-box'),
+    choices: $('choices'), grade: $('grade'),
     scramble: $('scramble'), sAnswer: $('s-answer'), sPool: $('s-pool'), sResult: $('s-result'),
     show: $('btn-show'), prog: $('prog'), pos_: $('pos-label'),
   });
@@ -129,7 +130,7 @@ export function render(state) {
   els.grade.classList.add('hidden');
   els.choices.classList.add('hidden');
   els.scramble.classList.add('hidden');
-  els.listen.classList.add('hidden');
+  els.listenBox.classList.add('hidden');
   els.show.classList.add('hidden');
 
   const mode = getMode(c.modeId);
