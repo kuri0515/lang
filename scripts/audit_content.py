@@ -260,6 +260,36 @@ def check_counter_sync(url, key):
           "以 reviews 為準重算。日誌是只追加的權威來源。")
 
 
+def check_examples(items):
+    """
+    例句的兩種錯，人眼一條條掃時最容易放行。
+
+    【敬語不一致】主語是尊稱時，謂語必須帶 -시-。
+      「사장님은 아직 젊어요」文法沒錯但失禮，學生照著學會得罪人。
+      只在 님 後面接主格助詞（은/는/이/가/께서）時才算主語 ——
+      「선생님께 질문이 있어요」的 님 是與格，主語是「我」，不必加敬語。
+      分不清這點會誤報，而誤報多了整項檢查就沒人看了。
+
+    【主語對不上】韓語常省略主語，中文譯文卻寫了「他」。
+      學生會以為那個「他」在韓語句子裡有對應的詞，其實沒有。
+    """
+    ex = [x for x in items if x.get("example_ko")]
+
+    hon = re.compile(r"(세요|셨|시어|십니|으시|께서|시죠|시네)")
+    subj_hon = re.compile(r"(님|할아버지|할머니|어머니|아버지)\s*(은|는|이|가|께서)")
+    issue("warn", "例句敬語不一致（主語尊稱，謂語無敬語詞尾）",
+          [f"{x['ko']}: {x['example_ko']}" for x in ex
+           if subj_hon.search(x["example_ko"]) and not hon.search(x["example_ko"])],
+          "主語是尊稱時謂語要用 -시-，否則文法對但失禮。")
+
+    third = re.compile(r"[他她]")
+    ko_subj = re.compile(r"(그|그녀|그분|그 사람|저 사람|배우|사장|선생|친구|동생|언니|누나|형|오빠)")
+    issue("warn", "例句主語與譯文對不上",
+          [f"{x['ko']}: {x['example_ko']}  →  {x['example_zh']}" for x in ex
+           if third.search(x.get("example_zh") or "") and not ko_subj.search(x["example_ko"])],
+          "譯文寫了「他／她」但韓語句裡沒有對應的詞，學生會找不到。")
+
+
 def check_completeness(items, decks):
     """
     完整度只對「該有這個欄位的條目」計算。
@@ -316,6 +346,7 @@ def main():
     check_type(items)
     check_simplified(items)
     check_same_meaning(items)
+    check_examples(items)
     check_tags(items)
     check_counter_sync(url, key)
     check_completeness(items, decks)
