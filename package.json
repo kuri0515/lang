@@ -9,7 +9,9 @@
     "test:session": "node tests/session.test.mjs",
     "test:modes": "node tests/modes.test.mjs tests/fixtures/pool.json",
     "test:dom": "node tests/dom.test.mjs tests/fixtures/pool.json",
-    "serve": "python3 -m http.server 8000"
+    "serve": "python3 -m http.server 8000",
+    "backup": "python3 scripts/backup.py",
+    "audit": "python3 scripts/audit_content.py"
   },
   "devDependencies": {
     "jsdom": "^25.0.0"

@@ -148,10 +148,44 @@ GitHub → Settings → Pages → Source 選 `main` / `root`。推上去即上�
 
 ---
 
+## 備份
+
+Supabase 免費方案沒有自動備份。詞庫與全部學習記錄只有雲端一份，
+誤刪、誤改、專案被停用，任何一種都會全沒。
+
+```bash
+npm run backup          # 抓到 backups/YYYY-MM-DD-HHMM/，抓完自動驗一次
+```
+
+備份目錄在 `.gitignore` 裡 —— 裡面含個人學習記錄，不該推上公開倉庫。
+
+存兩種格式，用途不同：
+
+| 檔案 | 內容 | 用途 |
+|------|------|------|
+| `*.json` | 全部七張表的原始列 | 完整存檔，含使用者資料 |
+| `csv/<deck>.csv` | 詞條內容 | **可直接餵回 `import_words.py`** |
+
+CSV 這份才是真正能用的還原路徑 —— 存檔如果沒有回得去的路，等於沒存。
+
+```bash
+python3 scripts/backup.py --verify backups/<目錄>        # 事後再驗一次
+python3 scripts/backup.py --restore-plan backups/<目錄>  # 列出還原步驟
+```
+
+還原刻意不做成一鍵指令：覆蓋線上資料不可逆，必須人看過再決定。
+`--restore-plan` 會印出該做什麼，包含 `reviews` 還原後要重設 identity 序列這類容易漏掉的細節。
+
+建議在每次大批匯入或改結構之前先跑一次。
+
+---
+
 ## 待辦
 
 - [ ] 拼寫模式（看中文，鍵盤打出韓文，自動批改）
-- [ ] 選擇題模式（四選一，適合零基礎起步）
-- [ ] 音檔上傳到 Supabase Storage，取代 TTS
+- [ ] 音檔上傳到 Supabase Storage，取代 TTS（`audio_url` 目前全空）
 - [ ] 學習曲線圖表（資料已在 `v_daily_stats`）
 - [ ] 每日新卡上限（欄位已在 `profiles`，UI 未接）
+- [ ] 開放註冊前必須換掉管理員弱密碼
+
+已完成：選擇題、詞序重組、聽力、自由練習、學習記錄、批次匯入、快速編輯、備份。

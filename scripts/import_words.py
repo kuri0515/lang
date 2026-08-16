@@ -181,12 +181,30 @@ def main():
     # 跨詞庫查重 —— 同一個詞收進兩個詞庫會變成兩張卡，
     # 學起來重複、統計也會被灌水。dry-run 階段就要看得到。
     url, key = load_env()
-    existing = {x["ko"]: x for x in
-                rest(url, key, "GET", "items", None, "?select=ko,deck_id,is_active&limit=5000")}
+    # 不設 limit 上限：分頁撈完。寫死上限會在詞庫長大後靜默漏判，
+    # 那時查重報「乾淨」其實只是沒看到後面的資料。
+    existing = {}
+    while True:
+        page = rest(url, key, "GET", "items", None,
+                    f"?select=ko,deck_id,is_active&offset={len(existing)}&limit=1000")
+        existing.update({x["ko"]: x for x in page})
+        if len(page) < 1000:
+            break
     decks_by_id = {d["id"]: d["slug"] for d in
                    rest(url, key, "GET", "decks", None, "?select=id,slug")}
-    clash = [(r["ko"], decks_by_id.get(existing[r["ko"]]["deck_id"], "?"))
-             for r in rows if r["ko"] in existing]
+
+    # 兩種重複意義不同，不能混報：
+    #   同一詞庫已有 → 就是這批資料本身已匯入過（重跑、還原備份）。略過即可，正常。
+    #   別的詞庫已有 → 真正要人判斷的跨庫重複，會變成兩張卡。
+    same, clash = [], []
+    for r in rows:
+        if r["ko"] not in existing:
+            continue
+        slug = decks_by_id.get(existing[r["ko"]]["deck_id"], "?")
+        (same if slug in groups else clash).append((r["ko"], slug))
+
+    if same:
+        print(f"\n   ℹ️  {len(same)} 條在目標詞庫已存在（重複匯入／還原備份時屬正常），將被略過")
     if clash and args.allow_dup:
         print(f"\n   ℹ️  {len(clash)} 條已存在於其他詞庫，依 --allow-dup 照樣收錄：")
         for ko, dk in clash[:10]:
@@ -197,7 +215,8 @@ def main():
             print(f"        {ko}  （已在 {dk}）")
         if len(clash) > 10:
             print(f"        …另有 {len(clash)-10} 條")
-        skip = {ko for ko, _ in clash}
+    if same or (clash and not args.allow_dup):
+        skip = {ko for ko, _ in same} | (set() if args.allow_dup else {ko for ko, _ in clash})
         rows = [r for r in rows if r["ko"] not in skip]
         groups = {}
         for r in rows:

@@ -30,3 +30,6 @@ __pycache__/
 # npm（前端不需要建置，node_modules 僅測試用）
 node_modules/
 package-lock.json
+
+# 備份含個人學習記錄，不進 git
+backups/
