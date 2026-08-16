@@ -1,0 +1,151 @@
+/* =====================================================================
+   設計取向：Anki 的資訊密度 × 百詞斬的專注感
+   —— 學習卡片獨佔視野、四鍵評分固定在拇指區、深淺色自動切換
+   ===================================================================== */
+:root {
+  --bg: #f6f7fb;
+  --surface: #ffffff;
+  --border: #e5e6ef;
+  --text: #17171f;
+  --muted: #6c6c80;
+  --accent: #4c6ef5;
+  --accent-soft: #edf0ff;
+  --again: #e03131;
+  --hard: #f08c00;
+  --good: #2f9e44;
+  --easy: #1971c2;
+  --radius: 16px;
+  --shadow: 0 1px 2px rgba(20,20,45,.05), 0 10px 30px rgba(20,20,45,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121218; --surface: #1c1c25; --border: #2c2c3a;
+    --text: #ededf4; --muted: #9797ac; --accent: #7c95ff; --accent-soft: #23283f;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: "PingFang TC", "Noto Sans TC", "Apple SD Gothic Neo",
+               "Noto Sans KR", -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.65;
+}
+.wrap { max-width: 680px; margin: 0 auto; padding: 20px 16px 72px; }
+
+header.top {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 13px 18px; border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  backdrop-filter: saturate(180%) blur(12px);
+  position: sticky; top: 0; z-index: 10;
+}
+.brand { font-weight: 700; font-size: 17px; letter-spacing: .3px; }
+.brand span { color: var(--accent); font-weight: 500; }
+.who { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 10px; }
+
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 20px; margin-bottom: 16px;
+}
+h2 { font-size: 16px; letter-spacing: .3px; }
+
+button {
+  font: inherit; cursor: pointer; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  padding: 11px 16px; transition: transform .06s, filter .15s, background .15s;
+}
+button:hover { filter: brightness(.97); }
+button:active { transform: translateY(1px); }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.link { border: none; background: none; color: var(--accent); padding: 4px; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+
+input {
+  font: inherit; width: 100%; padding: 11px 13px; margin: 6px 0 14px;
+  border: 1px solid var(--border); border-radius: 12px;
+  background: var(--bg); color: var(--text);
+}
+input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+label { font-size: 13px; color: var(--muted); }
+
+/* ---------- 首頁統計 ---------- */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; }
+.stats b { display: block; font-size: 24px; font-weight: 650; letter-spacing: -.5px; }
+.stats small { font-size: 11px; color: var(--muted); }
+
+/* ---------- 方向選擇 ---------- */
+.dir-pick { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+.chip { flex: 1; min-width: 150px; position: relative; cursor: pointer; }
+.chip input { position: absolute; opacity: 0; pointer-events: none; }
+.chip span {
+  display: block; text-align: center; font-size: 13px; padding: 9px 10px;
+  border: 1px solid var(--border); border-radius: 12px; color: var(--muted);
+  transition: .15s;
+}
+.chip input:checked + span {
+  background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 500;
+}
+
+/* ---------- 詞庫 ---------- */
+.deck-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 0; border-bottom: 1px solid var(--border);
+}
+.deck-row:last-child { border-bottom: none; }
+.deck-row h3 { margin: 0 0 2px; font-size: 15px; font-weight: 600; }
+.deck-row p { margin: 0; font-size: 12px; color: var(--muted); }
+
+/* ---------- 學習卡片 ---------- */
+.study { text-align: center; padding: 34px 20px 26px; min-height: 300px;
+         display: flex; flex-direction: column; justify-content: center; }
+.dir-tag { font-size: 11px; color: var(--muted); letter-spacing: 1px; margin-bottom: 4px; }
+.type-tag {
+  align-self: center; font-size: 11px; color: var(--accent); background: var(--accent-soft);
+  padding: 2px 10px; border-radius: 999px; margin-bottom: 14px;
+}
+.front { font-size: 40px; font-weight: 600; letter-spacing: .5px; word-break: break-word; }
+/* 句子較長時自動縮小 */
+.front.long { font-size: 26px; line-height: 1.5; }
+.roman { color: var(--muted); font-size: 14px; margin-top: 6px; }
+.divider { height: 1px; background: var(--border); margin: 20px 0 16px; }
+.back { font-size: 26px; font-weight: 500; word-break: break-word; }
+.back.long { font-size: 19px; line-height: 1.6; }
+.pos { display: inline-block; font-size: 12px; color: var(--muted);
+       border: 1px solid var(--border); padding: 1px 9px; border-radius: 999px; margin-top: 10px; }
+.example { font-size: 14px; color: var(--muted); margin-top: 16px;
+           padding-top: 14px; border-top: 1px dashed var(--border); }
+.example b { display: block; color: var(--text); font-weight: 500; margin-bottom: 3px; }
+.note { font-size: 13px; color: var(--muted); margin-top: 10px; font-style: italic; }
+.acc { margin-top: 12px; font-size: 12px; }
+
+.grade { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
+.grade button { display: flex; flex-direction: column; gap: 2px; padding: 12px 4px; font-size: 14px; }
+.grade small { font-size: 10px; color: var(--muted); }
+.grade .g1 { color: var(--again); } .grade .g2 { color: var(--hard); }
+.grade .g3 { color: var(--good); }  .grade .g4 { color: var(--easy); }
+
+.progress { height: 4px; background: var(--border); border-radius: 999px;
+            overflow: hidden; margin-bottom: 18px; }
+.progress i { display: block; height: 100%; background: var(--accent); transition: width .3s; }
+
+/* ---------- 弱項 ---------- */
+.weak-row { display: flex; align-items: center; justify-content: space-between;
+            gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.weak-row:last-child { border-bottom: none; }
+.weak-row .pct { font-variant-numeric: tabular-nums; font-size: 13px; }
+.weak-row .pct.low { color: var(--again); } .weak-row .pct.mid { color: var(--hard); }
+
+.hidden { display: none !important; }
+.center { text-align: center; }
+.muted { color: var(--muted); font-size: 13px; }
+.msg { font-size: 13px; padding: 10px 13px; border-radius: 12px; margin-bottom: 12px; }
+.msg.err { background: #fff1f1; color: #a02020; border: 1px solid #fcdcdc; }
+.msg.ok  { background: #eefaf1; color: #17603a; border: 1px solid #cfe9d8; }
+@media (prefers-color-scheme: dark) {
+  .msg.err { background: #3a1f22; border-color: #5c2b30; color: #ffb3b3; }
+  .msg.ok  { background: #16301f; border-color: #24502f; color: #a7e0bd; }
+}

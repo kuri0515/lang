@@ -1,0 +1,28 @@
+# === 密钥：第一个 commit 就必须挡住 ===
+.env
+.env.*
+!.env.example
+config.local.js
+*.key
+secrets/
+
+# 依赖 / 构建
+node_modules/
+dist/
+.cache/
+
+# 原始素材（体积大，不进 git）
+raw/*
+!raw/.gitkeep
+!raw/README.md
+
+# 系统
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc

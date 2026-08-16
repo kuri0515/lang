@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>한국어 · 韓語單字卡</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">한국어 <span>· 單字卡</span></div>
+    <div class="who">
+      <span id="whoami"></span>
+      <button id="btn-signout" class="link hidden">登出</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div id="msg"></div>
+
+    <!-- ============ 登入 / 註冊 ============ -->
+    <section id="view-auth" class="card hidden">
+      <h2 id="auth-title" style="margin-top:0">登入</h2>
+      <label>電子郵件</label>
+      <input id="f-email" type="email" autocomplete="email" placeholder="you@example.com">
+      <label>密碼</label>
+      <input id="f-pass" type="password" autocomplete="current-password" placeholder="至少 6 位">
+      <div id="row-name" class="hidden">
+        <label>暱稱（選填）</label>
+        <input id="f-name" type="text" placeholder="怎麼稱呼你">
+      </div>
+      <button id="btn-submit" class="primary" style="width:100%">登入</button>
+      <p class="center" style="margin-bottom:0">
+        <button id="btn-toggle" class="link">還沒有帳號？註冊</button>
+      </p>
+    </section>
+
+    <!-- ============ 首頁 ============ -->
+    <section id="view-home" class="hidden">
+      <div class="card">
+        <h2 style="margin-top:0">今日</h2>
+        <div class="stats">
+          <div><b id="s-due">–</b><small>待複習</small></div>
+          <div><b id="s-done">–</b><small>今日已答</small></div>
+          <div><b id="s-acc">–</b><small>今日正確率</small></div>
+          <div><b id="s-all-acc">–</b><small>總正確率</small></div>
+        </div>
+
+        <div class="dir-pick" id="dir-pick">
+          <label class="chip"><input type="checkbox" value="ko2zh" checked><span>看韓文 → 想中文</span></label>
+          <label class="chip"><input type="checkbox" value="zh2ko" checked><span>看中文 → 想韓文</span></label>
+        </div>
+
+        <button id="btn-review" class="primary" style="width:100%;margin-top:14px">開始複習</button>
+      </div>
+
+      <div class="card">
+        <h2 style="margin-top:0">詞庫</h2>
+        <div id="deck-list"><p class="muted">載入中…</p></div>
+      </div>
+
+      <div class="card" id="weak-card">
+        <h2 style="margin-top:0">我的弱項</h2>
+        <div id="weak-list"><p class="muted">答滿 3 次後才會出現統計。</p></div>
+      </div>
+    </section>
+
+    <!-- ============ 學習中 ============ -->
+    <section id="view-study" class="hidden">
+      <div class="progress"><i id="prog" style="width:0%"></i></div>
+
+      <div class="card study">
+        <div class="dir-tag" id="c-dir"></div>
+        <div class="type-tag" id="c-type"></div>
+
+        <!-- 正面：依方向顯示韓文或中文 -->
+        <div class="front" id="c-front"></div>
+        <div class="roman hidden" id="c-roman"></div>
+
+        <!-- 背面 -->
+        <div id="c-back" class="hidden">
+          <div class="divider"></div>
+          <div class="back" id="c-back-text"></div>
+          <div class="pos hidden" id="c-pos"></div>
+          <div class="example hidden" id="c-example">
+            <b id="c-ex-ko"></b><span id="c-ex-zh"></span>
+          </div>
+          <div class="note hidden" id="c-note"></div>
+          <div class="acc muted hidden" id="c-acc"></div>
+        </div>
+
+        <button id="btn-speak" class="link" style="margin-top:14px">🔊 朗讀韓文</button>
+      </div>
+
+      <button id="btn-show" class="primary" style="width:100%">顯示答案</button>
+      <div id="grade" class="grade hidden">
+        <button data-r="1"><span class="g1">忘了</span><small id="p1"></small></button>
+        <button data-r="2"><span class="g2">有點難</span><small id="p2"></small></button>
+        <button data-r="3"><span class="g3">記得</span><small id="p3"></small></button>
+        <button data-r="4"><span class="g4">很簡單</span><small id="p4"></small></button>
+      </div>
+      <p class="center"><button id="btn-quit" class="link">結束本輪</button></p>
+    </section>
+
+    <!-- ============ 本輪完成 ============ -->
+    <section id="view-done" class="card center hidden">
+      <h2 style="margin-top:0">🎉 本輪完成</h2>
+      <p class="muted" id="done-text"></p>
+      <button id="btn-back" class="primary">返回</button>
+    </section>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
