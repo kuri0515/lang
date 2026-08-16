@@ -327,6 +327,8 @@ function render() {
   $('c-ex-zh').textContent = item.example_zh || '';
   $('c-note').textContent = item.note || '';
   $('c-note').classList.toggle('hidden', !item.note);
+  $('c-hanja').classList.add('hidden');
+  $('c-hanja-rel').classList.add('hidden');
 
   const tot = card?.total_reviews ?? 0;
   $('c-acc').textContent = tot ? `過往正確率 ${pct(card.correct_reviews / tot)}（${tot} 次）` : '';
@@ -574,6 +576,36 @@ function reveal() {
   }
   $('grade').classList.remove('hidden');
   $('btn-show').classList.add('hidden');
+  showHanja(item);
+}
+
+// ---------------------------------------------------------------------
+// 漢字詞：揭曉後才顯示。
+// 提前顯示等於送分 —— 看到「學校」誰都猜得出是 학교。
+// ---------------------------------------------------------------------
+async function showHanja(item) {
+  if (!item.hanja) return;
+  $('c-hanja').innerHTML = `漢字 <b>${esc(item.hanja)}</b>`;
+  $('c-hanja').classList.remove('hidden');
+
+  // 挑筆畫串聯度最高的那個漢字去找同源詞
+  const chars = [...item.hanja].filter((c) => c >= '\u4e00' && c <= '\u9fff');
+  if (!chars.length) return;
+
+  const seen = new Set();
+  const groups = [];
+  for (const c of chars) {
+    const rel = await db.sharesHanja(c, item.id, 5).catch(() => []);
+    const fresh = rel.filter((r) => !seen.has(r.id));
+    fresh.forEach((r) => seen.add(r.id));
+    if (fresh.length) groups.push({ c, rel: fresh });
+  }
+  if (!groups.length) return;
+
+  $('c-hanja-rel').innerHTML = groups.map((g) =>
+    `<div><b>${esc(g.c)}</b> — ` + g.rel.map((r) =>
+      `<span class="rel"><b>${esc(r.ko)}</b> ${esc(r.zh)}</span>`).join('') + '</div>').join('');
+  $('c-hanja-rel').classList.remove('hidden');
 }
 
 $('btn-show').onclick = reveal;
@@ -703,6 +735,7 @@ function openEditor(item) {
   $('e-roman').value = item.romanization || '';
   $('e-pos').value   = item.pos || '';
   $('e-type').value  = item.item_type || 'word';
+  $('e-hanja').value = item.hanja || '';
   $('e-ex-ko').value = item.example_ko || '';
   $('e-ex-zh').value = item.example_zh || '';
   $('e-note').value  = item.note || '';
@@ -737,6 +770,7 @@ $('e-save').onclick = async () => {
     romanization: $('e-roman').value.trim() || null,
     pos:          $('e-pos').value.trim() || null,
     item_type:    $('e-type').value,
+    hanja:        $('e-hanja').value.trim() || null,
     example_ko:   $('e-ex-ko').value.trim() || null,
     example_zh:   $('e-ex-zh').value.trim() || null,
     note:         $('e-note').value.trim() || null,
@@ -895,7 +929,8 @@ async function renderBrowse() {
             ${admin ? `<button class="b-speak" data-edit="${r.id}" title="編輯">✏️</button>` : ''}
           </div>
         </div>
-        <div class="b-sub">${[r.romanization, r.pos, TYPE_LABEL[r.item_type]].filter(Boolean).map(esc).join(' · ')}</div>
+        <div class="b-sub">${[r.romanization, r.pos, TYPE_LABEL[r.item_type]].filter(Boolean).map(esc).join(' · ')}
+          ${r.hanja ? `<span class="b-hanja"> · 漢 ${esc(r.hanja)}</span>` : ''}</div>
         ${r.example_ko ? `<div class="b-ex">${esc(r.example_ko)}<br>${esc(r.example_zh || '')}</div>` : ''}
         ${r.note ? `<div class="b-sub">💡 ${esc(r.note)}</div>` : ''}
       </div>`;

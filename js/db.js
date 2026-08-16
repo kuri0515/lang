@@ -209,7 +209,7 @@ export async function weakItems(userId, limit = 20) {
 /** 搜尋 / 篩選條目，並附上「我學到哪了」的狀態 */
 export async function browseItems(userId, { q = '', tag = '', deckId = null, limit = 300 } = {}) {
   let query = sb.from('items')
-    .select('id, ko, zh, romanization, pos, item_type, example_ko, example_zh, note, tags, audio_url')
+    .select('id, ko, zh, romanization, pos, item_type, example_ko, example_zh, note, tags, audio_url, hanja')
     .eq('is_active', true);
 
   if (deckId) query = query.eq('deck_id', deckId);
@@ -303,7 +303,7 @@ export async function dailyStats(userId, days = 30) {
 export async function updateItem(id, patch) {
   const { data, error } = await sb
     .from('items').update(patch).eq('id', id)
-    .select('id, ko, zh, romanization, pos, item_type, example_ko, example_zh, note, tags, audio_url')
+    .select('id, ko, zh, romanization, pos, item_type, example_ko, example_zh, note, tags, audio_url, hanja')
     .single();
   if (error) throw error;
   return data;
@@ -362,7 +362,7 @@ export async function logPractice({ userId, item, direction, rating, elapsedMs }
 /** 自由練習取材：可依標籤／搜尋／指定 id 取任意條目，不看到期時間 */
 export async function pickItems({ ids = null, tag = '', q = '', limit = 50 } = {}) {
   let query = sb.from('items')
-    .select('id, ko, zh, romanization, pos, item_type, example_ko, example_zh, note, tags, audio_url')
+    .select('id, ko, zh, romanization, pos, item_type, example_ko, example_zh, note, tags, audio_url, hanja')
     .eq('is_active', true);
   if (ids?.length) query = query.in('id', ids);
   if (tag) query = query.contains('tags', [tag]);
@@ -405,6 +405,33 @@ export async function insertItems(deckId, deckSlug, rows) {
     sort_order: 9000 + i,      // 排在既有內容之後
   }));
   const { data, error } = await sb.from('items').insert(payload).select('id');
+  if (error) throw error;
+  return data ?? [];
+}
+
+// ---------- 漢字詞 ----------
+/**
+ * 找出共享同一個漢字的其他詞。
+ * 這是漢字詞真正的價值：學 학교(學校) 時順手看到 학생(學生)、
+ * 대학(大學)，一個字帶出一串。
+ */
+export async function sharesHanja(char, excludeId = null, limit = 8) {
+  const { data, error } = await sb.from('items')
+    .select('id, ko, zh, hanja')
+    .eq('is_active', true)
+    .neq('item_type', 'sentence')   // 句子含此詞 ≠ 同源詞，會污染串聯
+    .like('hanja', `%${char}%`)
+    .limit(limit + 1);
+  if (error) throw error;
+  return (data ?? []).filter((x) => x.id !== excludeId).slice(0, limit);
+}
+
+/** 只列漢字詞（給「漢字詞」篩選用） */
+export async function hanjaItems(limit = 300) {
+  const { data, error } = await sb.from('items')
+    .select('id, ko, zh, hanja, romanization, pos, item_type, tags')
+    .eq('is_active', true).not('hanja', 'is', null)
+    .order('sort_order').limit(limit);
   if (error) throw error;
   return data ?? [];
 }
