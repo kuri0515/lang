@@ -57,7 +57,7 @@ async function begin(entries, { freeMode = false, note = '' } = {}) {
   const modeId = home.studyMode();
   if (needsPool(modeId)) await ensurePool();
 
-  session.start(entries, { freeMode });
+  session.start(entries, { freeMode, mode: modeId });
   const mode = getMode(modeId);
   const { kept, dropped } = session.filter((e) => mode.canUse(e.item, studyCtx()));
 

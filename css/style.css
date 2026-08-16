@@ -525,3 +525,31 @@ kbd {
 .m-when { flex-shrink: 0; text-align: right; font-size: 11.5px; color: var(--faint);
           font-variant-numeric: tabular-nums; }
 .m-when small { display: block; font-size: 10.5px; }
+
+/* ---------- 學習場次（可展開）---------- */
+.sess { border-bottom: 1px solid var(--border-soft); }
+.sess:last-child { border-bottom: none; }
+.sess-head {
+  width: 100%; display: flex; align-items: center; gap: 10px;
+  padding: 11px 0; border: none; background: none; text-align: left; border-radius: 0;
+}
+.sess-head:hover { background: none; }
+.sess-icon { font-size: 18px; flex-shrink: 0; width: 24px; text-align: center; }
+.sess-main { flex: 1; min-width: 0; font-size: 13.5px; }
+.sess-main b { font-weight: 600; }
+.sess-main small { display: block; font-size: 11px; color: var(--faint); margin-top: 1px; }
+.sess-stat { flex-shrink: 0; text-align: right; }
+.sess-stat b { font-size: 14.5px; font-variant-numeric: tabular-nums; }
+.sess-stat small { display: block; font-size: 10.5px; color: var(--faint); }
+.acc-good { color: var(--good); } .acc-mid { color: var(--hard); } .acc-low { color: var(--again); }
+.sess-arrow { flex-shrink: 0; color: var(--faint); font-size: 14px; transition: transform .2s; }
+.sess.open .sess-arrow { transform: rotate(180deg); }
+.sess-body {
+  padding: 4px 0 12px 34px; border-left: 2px solid var(--border-soft);
+  margin-left: 11px;
+}
+.sess-body .h-item { padding: 6px 0; }
+.tag-free {
+  font-size: 10px; padding: 1px 7px; border-radius: 999px; margin-left: 5px;
+  background: var(--accent-soft); color: var(--accent); vertical-align: 1px;
+}

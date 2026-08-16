@@ -43,7 +43,8 @@ export async function fetchNewItems(userId, deckId, dirs, limit = 20, tag = '') 
 
 // ---------- 寫入 ----------
 /** 正規複習：更新排程 + 記錄答題 */
-export async function saveReview({ userId, item, direction, prevCard, rating, next, elapsedMs }) {
+export async function saveReview({ userId, item, direction, prevCard, rating, next,
+                                  elapsedMs, mode, sessionId }) {
   const prev = prevCard || {};
   const isCorrect = rating >= 3;
   const cardRow = {
@@ -56,6 +57,7 @@ export async function saveReview({ userId, item, direction, prevCard, rating, ne
     sb.from('reviews').insert({
       user_id: userId, item_id: item.id, direction, rating,
       elapsed_ms: elapsedMs ?? null,
+      mode: mode ?? null, session_id: sessionId ?? null, is_free: false,
       prev_interval_days: prev.interval_days ?? 0,
       prev_ease_factor: prev.ease_factor ?? 2.5,
     }),
@@ -69,9 +71,10 @@ export async function saveReview({ userId, item, direction, prevCard, rating, ne
  * ★ 若也更新到期時間，臨時多背幾遍就會把下次複習日往後推，
  *   破壞間隔重複的節奏。歷史與正確率照記，排程留給正規複習決定。
  */
-export async function logPractice({ userId, item, direction, rating, elapsedMs }) {
+export async function logPractice({ userId, item, direction, rating, elapsedMs, mode, sessionId }) {
   const { error } = await sb.from('reviews').insert({
     user_id: userId, item_id: item.id, direction, rating, elapsed_ms: elapsedMs ?? null,
+    mode: mode ?? null, session_id: sessionId ?? null, is_free: true,
   });
   if (error) throw error;
 }
@@ -198,4 +201,60 @@ export async function itemTimeline(userId, itemId) {
     .select('*').eq('user_id', userId).eq('item_id', itemId);
   if (error) throw error;
   return data ?? [];
+}
+
+// ---------- 學習場次 ----------
+/**
+ * 場次列表（一輪學習一列），新到舊。
+ * 走 v_sessions 讓資料庫做彙總 —— 否則要把幾百筆明細撈回前端
+ * 再自己 group by，資料量一大就慢。
+ */
+export async function listSessions(userId, { limit = 30, before = null } = {}) {
+  let q = sb.from('v_sessions')
+    .select('session_id, mode, direction, is_free, answered, correct, accuracy, started_at, ended_at, duration_sec')
+    .eq('user_id', userId).order('started_at', { ascending: false }).limit(limit);
+  if (before) q = q.lt('started_at', before);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** 某一場次的逐題明細（展開時才查，不預先載入） */
+export async function sessionDetail(userId, sessionId) {
+  const { data, error } = await sb.from('reviews')
+    .select('rating, is_correct, elapsed_ms, reviewed_at, direction, items(ko, zh, romanization, hanja)')
+    .eq('user_id', userId).eq('session_id', sessionId)
+    .order('reviewed_at');
+  if (error) throw error;
+  return (data ?? []).filter((r) => r.items);
+}
+
+/** 0007 之前沒有 session_id 的舊記錄，按天彙總 */
+export async function legacyDays(userId, limit = 400) {
+  const { data, error } = await sb.from('reviews')
+    .select('reviewed_at, is_correct, direction')
+    .eq('user_id', userId).is('session_id', null)
+    .order('reviewed_at', { ascending: false }).limit(limit);
+  if (error) throw error;
+  const byDay = {};
+  for (const r of data ?? []) {
+    const k = r.reviewed_at.slice(0, 10);
+    (byDay[k] ||= { day: k, answered: 0, correct: 0, first: r.reviewed_at, last: r.reviewed_at });
+    byDay[k].answered++;
+    if (r.is_correct) byDay[k].correct++;
+    if (r.reviewed_at < byDay[k].first) byDay[k].first = r.reviewed_at;
+    if (r.reviewed_at > byDay[k].last) byDay[k].last = r.reviewed_at;
+  }
+  return Object.values(byDay).sort((a, b) => b.day.localeCompare(a.day));
+}
+
+/** 某一天的舊記錄明細 */
+export async function legacyDayDetail(userId, day) {
+  const { data, error } = await sb.from('reviews')
+    .select('rating, is_correct, elapsed_ms, reviewed_at, direction, source, items(ko, zh)')
+    .eq('user_id', userId).is('session_id', null)
+    .gte('reviewed_at', `${day}T00:00:00`).lt('reviewed_at', `${day}T23:59:59.999`)
+    .order('reviewed_at');
+  if (error) throw error;
+  return (data ?? []).filter((r) => r.items);
 }

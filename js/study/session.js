@@ -24,8 +24,11 @@ export function createSession({ save, onChange, onFinish, onError }) {
   const graded = new Set();      // 已作答過的佇列位置（回看時不可重複計分）
   let pending = null;            // { payload, snapshot, timer }
   let shownAt = 0;
+  let sessionId = null;          // 同一輪共用，讓「一次學習」成為可查詢的單位
+  let modeId = 'flip';
 
   const state = () => ({
+    sessionId, mode: modeId,
     entry: queue[idx] ?? null,
     idx, total: queue.length, free, stats,
     isGraded: graded.has(idx),
@@ -49,11 +52,13 @@ export function createSession({ save, onChange, onFinish, onError }) {
     get queue() { return queue; },
 
     /** 開始一輪。entries: [{item, direction, card}] */
-    start(entries, { freeMode = false } = {}) {
+    start(entries, { freeMode = false, mode = 'flip' } = {}) {
       flush();
       queue = entries;
       idx = 0;
       free = freeMode;
+      modeId = mode;
+      sessionId = (globalThis.crypto?.randomUUID?.()) || null;
       stats = { n: 0, correct: 0 };
       graded.clear();
       shownAt = Date.now();
@@ -89,6 +94,7 @@ export function createSession({ save, onChange, onFinish, onError }) {
         payload: {
           item: entry.item, direction: entry.direction, prevCard: entry.card,
           rating, next, elapsedMs: Date.now() - shownAt, free,
+          mode: modeId, sessionId,
         },
         snapshot,
         timer: setTimeout(() => flush(true), UNDO_MS),
