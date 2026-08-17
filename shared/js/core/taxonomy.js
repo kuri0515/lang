@@ -54,7 +54,13 @@ export function groupTags(pairs) {
   const t = tx();
   const pronSet = new Set(t.pronOrder);
   const gramSet = new Set(t.grammarTags);
-  const isPron = (tag) => pronSet.has(tag) || t.pronPrefixes.some((p) => tag.startsWith(p));
+  // 認出發音標籤的三條路：列在教學序列裡、符合前綴、或符合正則。
+  // 韓語靠前綴（收音*），日語的行標籤（あ行・か行）只有共同後綴，
+  // 前綴比對抓不到 —— 所以多留一個正則的出口，不是為了通用而通用。
+  const isPron = (tag) =>
+    pronSet.has(tag) ||
+    (t.pronPrefixes || []).some((p) => tag.startsWith(p)) ||
+    (t.pronRe ? t.pronRe.test(tag) : false);
 
   const out = { topic: [], pron: [], grammar: [] };
   for (const [tag, n] of pairs) {

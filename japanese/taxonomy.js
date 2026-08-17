@@ -166,6 +166,9 @@ export const TAXONOMY = {
   // 所以留空 —— 不是漏寫，是這個語言真的沒有這種命名規律。
   // 新增發音標籤時要記得加進 PRON_ORDER，否則會被歸到主題組。
   pronPrefixes: [],
+  // 行標籤（あ行・か行…）只有共同後綴，沒有共同前綴，前綴比對抓不到。
+  // 少了這條，あ行 會掉進「主題」組，跟「水果」「動物」排在一起。
+  pronRe: /^[ぁ-ん]行$/,
   starterTopics: STARTER_TOPICS,
   grammarTags: GRAMMAR_TAGS,
   groups: GROUPS,

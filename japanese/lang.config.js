@@ -15,9 +15,9 @@ export const LANG = {
   langLabel: '日語',
   termLabel: '日文',
   termShort: '日',
-  readingLabel: '假名',     // 韓文站這欄是羅馬音；日文站放假名讀音才有用
+  readingLabel: '羅馬音',   // 書上按「拍」分寫（a ki／i chi go），那是節奏的教學裝置，原樣保留
   hanjaLabel: '漢字',
-  scriptLabel: '假名',      // 匯入警告：「日文欄裡沒有假名」
+  scriptLabel: '假名或漢字',  // 匯入警告：「日文欄裡沒有假名或漢字」
 
   // ── 朗讀 ──
   ttsLang: 'ja-JP',
@@ -46,7 +46,7 @@ export const LANG = {
   // ── 匯入表格的欄位別名（與語言無關的那些在 core/parse-table.js）──
   columnAliases: {
     ko: ['ja', 'japanese', 'kana', '日文', '日語', '日文', '日语', '日本語', '單字', '单词', 'word'],
-    romanization: ['kana', 'よみ', '讀音假名', '假名', 'furigana', 'ふりがな', 'romaji', '羅馬字'],
+    romanization: ['romaji', 'ローマ字', '羅馬字', '罗马字'],
     hanja: ['kanji', '漢字表記'],
     example_ko: ['日文例句', '日语例句', '例文'],
   },
