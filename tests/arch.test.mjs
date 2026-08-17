@@ -163,6 +163,71 @@ chk('querySelector 的 id 錨點都存在', badSelectors);
 const allIds = [...html.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]);
 chk('HTML 的 id 不重複', allIds.filter((x, i) => allIds.indexOf(x) !== i).map((x) => `重複: ${x}`));
 
+// ---------------------------------------------------------------------
+// 共用碼不該寫死任何一個語言的說法
+//
+// 實際踩過：dialogue.js 的按鈕文字寫死「看韓文想中文」，
+// 日文站的 index.html 明明改成「看日文想中文」，JS 一渲染就變回去。
+// HTML 改對了、畫面還是錯的 —— 這種洩漏最容易漏看，
+// 因為它不在你剛改的那個檔案裡。
+//
+// 只查「會顯示給使用者的字串」：字串字面值，且不在註解裡。
+// 註解提到韓語是正常的（很多設計理由本來就源自韓語），擋註解只會製造雜訊。
+// ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
+// 站台的 HTML 不該出現「別的語言的文字」
+//
+// 實際踩過：日文站的詞性欄 placeholder 是「명사 / 동사 …」，
+// 匯入區的範例是「사랑,愛,sarang…」—— 兩處都是從韓文站複製過來時漏改的。
+//
+// ★ 判準用「字元範圍」，不是列舉字詞。
+//   第一版我只查了「韓／한／諺文／收音」這幾個字，
+//   명사 是諺文卻不含那幾個字，所以完全沒被抓到 ——
+//   列舉式的判準永遠會漏掉你沒想到的那一個。
+// ---------------------------------------------------------------------
+console.log('\n【站台用字】');
+{
+  const SCRIPTS = {
+    hangul: /[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF]/,
+    kana: /[\u3040-\u309F\u30A0-\u30FF]/,
+  };
+  // 每站「應該有」哪一種文字；出現別種就是複製時漏改
+  const EXPECT = { korean: 'hangul', japanese: 'kana' };
+  const mine = EXPECT[SITE];
+  const strays = [];
+  if (mine) {
+    for (const [name, re] of Object.entries(SCRIPTS)) {
+      if (name === mine) continue;
+      html.split('\n').forEach((line, i) => {
+        if (re.test(line)) strays.push(`${SITE}/index.html:${i + 1}  ${line.trim().slice(0, 70)}`);
+      });
+    }
+  }
+  chk(`${SITE}/index.html 沒有夾帶其他語言的文字`, strays,
+      '多半是從另一站複製過來時漏改的 placeholder 或範例');
+}
+
+console.log('\n【語言中立】');
+{
+  // 各語言專屬、不該出現在共用碼的字眼
+  const LOCKED = /韓文|韓語|諺文|收音|固有語|한글|한국|日文|日語|假名|平假名|片假名|振り仮名/;
+  const bad = [];
+  for (const f of files) {
+    const src = read(f)
+      .replace(/\/\*[\s\S]*?\*\//g, '')      // 區塊註解
+      .replace(/^\s*\/\/.*$/gm, '');           // 整行註解
+    for (const m of src.matchAll(/(['"`])((?:\\.|(?!\1)[^\\])*)\1/g)) {
+      const lit = m[2];
+      if (!LOCKED.test(lit)) continue;
+      // 模板字串裡用 ${lang().termLabel} 組出來的不算 —— 那正是正確的做法
+      if (m[1] === '`' && /\$\{/.test(lit)) continue;
+      bad.push(`${rel(f)}: ${JSON.stringify(lit).slice(0, 60)}`);
+    }
+  }
+  chk('共用碼沒有寫死某個語言的說法', bad,
+      '語言相關的字一律走 lang()，否則另一站的畫面會悄悄講錯語言');
+}
+
 console.log('\n【安全】');
 // 只盯「使用者可編輯的欄位」。粗篩所有非 esc() 插值會連數字都算違規，
 // 雜訊淹沒真訊號 —— 上一版就是這樣，人只好每次手動複核一遍。

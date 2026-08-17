@@ -28,6 +28,9 @@ export function initVoiceUI() {
     speech.setRate(Number(r.value));
     $('rate-label').textContent = Number(r.value).toFixed(2) + '×';
   };
-  r.onchange = () => speech.speak('한국어를 배우고 있어요');
-  $('voice-test').onclick = () => speech.speak('안녕하세요. 만나서 반갑습니다.');
+  // ★ 試聽用的句子必須是「本站語言」的。
+  //   這裡原本寫死韓文 —— 在日文站按試聽，會用日語語音去唸韓文字，
+  //   出來是一串亂音，而使用者只會以為語音功能壞了。
+  r.onchange = () => speech.speak(lang().voiceSampleShort);
+  $('voice-test').onclick = () => speech.speak(lang().voiceSampleLong);
 }

@@ -68,6 +68,12 @@ export const LANG = {
   // 日文站：hanja 欄存「ko 的注音版本」（駅[えき]は…），漢字上方標假名
   rubyFromHanja: true,
 
+  // ── 語音試聽用的句子 ──
+  // 調語速時放短句、按試聽時放長句。必須是本站的語言，
+  // 否則會用本站的語音去唸另一種語言的字，出來是亂音。
+  voiceSampleShort: '日本語を勉強しています',
+  voiceSampleLong: 'こんにちは。はじめまして。',
+
   // ── localStorage 前綴：兩站同網域，不隔開會互相蓋掉語音與語速設定 ──
   storagePrefix: 'ja',
 

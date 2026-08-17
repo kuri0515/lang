@@ -14,10 +14,11 @@ import { $, qsa, esc } from '../core/dom.js';
 import { groupDialogues, shuffleLines, checkOrder } from '../core/dialogue.js';
 import * as speech from '../core/speech.js';
 import * as content from '../data/content.js';
+import { lang } from '../core/lang.js';
 
 let all = [];          // [{ scene, lines }]
 let cur = null;        // 目前開啟的對話
-let koFirst = true;    // 練習模式看哪一面：韓文→中文 或 中文→韓文
+let koFirst = true;    // 練習模式看哪一面：目標語言→中文 或 中文→目標語言
 let mode = 'learn';    // learn | practice | shuffle
 let picked = [];       // 打亂練習中已排入的行
 let revealed = new Set();   // 練習模式中已翻開的行
@@ -101,7 +102,10 @@ function render() {
   $('dlg-play').classList.toggle('hidden', mode === 'shuffle');
   $('dlg-side').classList.toggle('hidden', mode !== 'practice');
   $('dlg-reset').classList.toggle('hidden', mode !== 'practice');
-  $('dlg-side').textContent = koFirst ? '看韓文想中文' : '看中文想韓文';
+  // ★ 這裡曾寫死韓文站的說法，把 index.html 裡正確的日文版蓋掉 ——
+  //   HTML 改對了、JS 一渲染就變回去，是最容易漏看的一種語言洩漏。
+  const t = lang().termLabel;
+  $('dlg-side').textContent = koFirst ? `看${t}想中文` : `看中文想${t}`;
   $('dlg-hint').textContent = {
     learn: '全部攤開。點 🔊 聽單句，或用整段朗讀。',
     practice: '先自己想，再點氣泡對答案，然後自評。',

@@ -62,6 +62,12 @@ export const LANG = {
   // 韓文站：hanja 欄是漢字詞本身（學校），不是注音來源
   rubyFromHanja: false,
 
+  // ── 語音試聽用的句子 ──
+  // 調語速時放短句、按試聽時放長句。必須是本站的語言，
+  // 否則會用本站的語音去唸另一種語言的字，出來是亂音。
+  voiceSampleShort: '한국어를 배우고 있어요',
+  voiceSampleLong: '안녕하세요. 만나서 반갑습니다.',
+
   // ── localStorage 前綴：兩站同網域，不隔開會互相蓋掉語音與語速設定 ──
   storagePrefix: 'kr',
 
