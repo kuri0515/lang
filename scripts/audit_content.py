@@ -343,6 +343,17 @@ def check_examples(items):
            and not re.search(r"(주의|의의)\s", x["example_ko"])],
           "韓語的 의 多半省略，寫成中文那樣逢「的」就加會不自然。")
 
+    # 譯文混入拉丁字母 —— 打字時中英切換沒切回來的典型症狀。
+    # note 裡寫外來語詞源（externally: candle）是正常的，但例句譯文不該有。
+    # 實際踩過：「居然already賣完了」，肉眼掃過去完全沒發現。
+    # 專有名詞在中文裡本來就保留原文（NewJeans、Vlog），不算錯。
+    # 第一版沒排除，三條全是誤報 —— 誤報會讓整項檢查失去意義。
+    PROPER = re.compile(r"NewJeans|NJZ|Bunnies|Vlog|MBTI|YouTube|Instagram|X\b|K-", re.I)
+    issue("warn", "例句譯文混入英文",
+          [f"{x['ko']}: {x['example_zh']}" for x in ex
+           if re.search(r"[A-Za-z]{2,}", PROPER.sub("", x.get("example_zh") or ""))],
+          "中英切換沒切回來的典型症狀，肉眼很容易滑過去。專有名詞已排除。")
+
     third = re.compile(r"[他她]")
     # 걔／얘／쟤 是口語的第三人稱（걔 ＝ 그 애）。網路用語那批全用半語，
     # 少了它們會把「걔는 진짜 고답이야」誤報成沒有主語。
@@ -443,6 +454,7 @@ def check_life_scene_coverage(items):
         ("設計 · 物件",     {"物品", "購物", "個性"}),
         ("命理 · 運勢",     {"文化"}),
         ("情緒 · 反應",     {"情緒", "網路用語"}),
+        ("口語語感",       {"口語"}),
     ]
     life = [x for x in items if x["deck"] == "life-01"]
     if not life:
