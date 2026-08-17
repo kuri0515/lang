@@ -11,7 +11,15 @@
   <link rel="apple-touch-icon" href="icon.svg">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="{{html.siteName}}">
+  <!-- 先連上這兩個主機：TLS 握手與 DNS 可以和 HTML 解析同時進行，
+       不必等到真的要抓資料時才開始。 -->
+  <link rel="preconnect" href="https://esm.sh" crossorigin>
+  <link rel="preconnect" href="{{supabase.url}}" crossorigin>
   <link rel="stylesheet" href="../shared/css/style.css">
+
+  <!-- ↓ 由 shared/scripts/build-sites.mjs 從真實的 import 圖產生，不要手改。
+       沒有它的話瀏覽器要一層一層發現模組，實測 4 層 × 每次往返。 -->
+{{modulepreload}}
 </head>
 <body>
 

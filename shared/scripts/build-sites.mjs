@@ -27,12 +27,57 @@ const check = process.argv.includes('--check');
 
 const template = fs.readFileSync(`${ROOT}/shared/index.template.html`, 'utf8');
 
+/**
+ * 掃出某個入口的完整模組圖，產生 <link rel="modulepreload">。
+ *
+ * 【為什麼需要】
+ *   ES module 是逐層發現的：瀏覽器要先載完 app.js 才知道它要 dom.js，
+ *   載完 dom.js 才知道下一層。實測這個站有 4 層、再加 esm.sh 的 2 層，
+ *   等於開站前要 6 次往返，每次約 500 ms。
+ *   modulepreload 讓瀏覽器一開始就並行抓全部，深度不再乘以延遲。
+ *
+ * 【為什麼用掃描而不是手寫清單】
+ *   手寫的清單會漂：新增一個模組沒加進去只是「少優化一點」，
+ *   不會報錯也不會有人發現；刪掉一個模組沒拿掉則會產生 404 預載。
+ *   從真實的 import 圖產生，兩種都不會發生。
+ */
+function moduleGraph(entry) {
+  const out = [];
+  const seen = new Set();
+  const walk = (file) => {
+    if (seen.has(file)) return;
+    seen.add(file);
+    out.push(file);
+    const src = fs.readFileSync(file, 'utf8');
+    for (const m of src.matchAll(/from\s+'([^']+)'/g)) {
+      const spec = m[1];
+      if (!spec.startsWith('.')) continue;
+      const target = new URL(spec, `file://${file}`).pathname;
+      if (fs.existsSync(target)) walk(target);
+    }
+  };
+  walk(entry);
+  return out;
+}
+
 /** 從 LANG 取值，支援 html.xxx 這種巢狀路徑 */
 const pick = (lang, path) =>
   path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), lang);
 
-function render(lang) {
+function render(lang, site) {
   let out = template;
+
+  // 預載清單：站台自己的模組 + 共用碼。順序照發現順序，
+  // 瀏覽器會並行抓，所以順序只影響優先度不影響正確性。
+  const files = [
+    ...moduleGraph(`${ROOT}/${site}/main.js`),
+    ...moduleGraph(`${ROOT}/shared/js/app.js`),
+  ];
+  const links = [...new Set(files)]
+    .map((f) => f.replace(`${ROOT}/${site}/`, '').replace(`${ROOT}/`, '../'))
+    .map((href) => `  <link rel="modulepreload" href="${href}">`)
+    .join('\n');
+  out = out.replace('{{modulepreload}}', links);
 
   // ① 條件區塊：{{#grid}}…{{/grid}} —— 只有宣告了字母表的站台才留
   out = out.replace(/\{\{#grid\}\}\n([\s\S]*?)\{\{\/grid\}\}\n/g,
@@ -66,7 +111,7 @@ function render(lang) {
 let bad = 0;
 for (const site of SITES) {
   const { LANG } = await import(`${ROOT}/${site}/lang.config.js`);
-  const out = render(LANG);
+  const out = render(LANG, site);
   const path = `${ROOT}/${site}/index.html`;
   const cur = fs.existsSync(path) ? fs.readFileSync(path, 'utf8') : null;
 
