@@ -32,7 +32,11 @@ import urllib.error
 import urllib.request
 from datetime import datetime
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from site_ctx import SITE, SITE_DIR, load_env  # noqa: E402
+
+# ROOT 現在指「這一站的目錄」而不是倉庫根 —— data/、backups/ 都在站台底下
+ROOT = SITE_DIR
 
 # 表名 → (是否為使用者個人資料, 分頁排序欄位)
 #
@@ -52,19 +56,6 @@ TABLES = {
 CSV_FIELDS = ["ko", "zh", "romanization", "hanja", "item_type", "pos",
               "example_ko", "example_zh", "note", "tags"]
 
-
-def load_env():
-    path = os.path.join(ROOT, ".env.local")
-    if not os.path.exists(path):
-        sys.exit("❌ 缺少 .env.local")
-    env = {}
-    with open(path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, v = line.split("=", 1)
-                env[k.strip()] = v.strip().strip('"').strip("'")
-    return env["SUPABASE_URL"].rstrip("/"), env["SUPABASE_SERVICE_ROLE_KEY"]
 
 
 def rest(url, key, path, tries=3):

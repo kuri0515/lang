@@ -35,7 +35,11 @@ import sys
 import urllib.error
 import urllib.request
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from site_ctx import SITE, SITE_DIR, load_env  # noqa: E402
+
+# ROOT 現在指「這一站的目錄」而不是倉庫根 —— data/、backups/ 都在站台底下
+ROOT = SITE_DIR
 
 ALIASES = {
     "ko": ["ko", "korean", "hangul", "한국어", "한글", "韓文", "韓語", "单词", "單字", "word"],
@@ -58,24 +62,6 @@ TYPE_MAP = {
     "sentence": "sentence", "句子": "sentence", "句": "sentence", "例句": "sentence",
 }
 
-
-def load_env():
-    """從 .env.local 讀取密鑰（不依賴 python-dotenv）。"""
-    path = os.path.join(ROOT, ".env.local")
-    if not os.path.exists(path):
-        sys.exit("❌ 缺少 .env.local —— 複製 .env.example 並填入 service_role key")
-    env = {}
-    with open(path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            k, v = line.split("=", 1)
-            env[k.strip()] = v.strip().strip('"').strip("'")
-    url, key = env.get("SUPABASE_URL"), env.get("SUPABASE_SERVICE_ROLE_KEY")
-    if not url or not key:
-        sys.exit("❌ .env.local 裡缺 SUPABASE_URL 或 SUPABASE_SERVICE_ROLE_KEY")
-    return url.rstrip("/"), key
 
 
 def rest(url, key, method, path, payload=None, params=""):

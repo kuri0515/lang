@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>日本語 · 日語單字卡</title>
+  <meta name="theme-color" content="#4c6ef5">
+  <meta name="description" content="日文 ↔ 中文（繁體）雙向間隔重複學習">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="日語單字卡">
+  <link rel="stylesheet" href="../shared/css/style.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">日本語 <span>單字卡</span></div>
+  <div class="who">
+    <span id="whoami"></span>
+    <span id="admin-tag" class="admin-tag hidden">管理員</span>
+  </div>
+</header>
+
+<div id="msg" class="msg-host"></div>
+
+<main class="wrap">
+
+  <!-- ══════════════ 登入 / 註冊 ══════════════ -->
+  <section id="view-auth" class="hidden">
+    <div class="hero-auth">
+      <div class="hero-icon">あ</div>
+      <h1>日語單字卡</h1>
+      <p class="muted nomargin">日文 ↔ 中文（繁體）雙向間隔重複</p>
+    </div>
+    <div class="card">
+      <h2 id="auth-title">登入</h2>
+      <label>帳號名</label>
+      <input id="f-email" type="text" autocomplete="username" placeholder="kuri">
+      <label>密碼</label>
+      <input id="f-pass" type="password" autocomplete="current-password" placeholder="密碼">
+      <div id="row-name" class="hidden">
+        <label>暱稱（選填）</label>
+        <input id="f-name" type="text" placeholder="怎麼稱呼你">
+      </div>
+      <button id="btn-submit" class="primary block">登入</button>
+      <p class="center nomargin"><button id="btn-toggle" class="link">還沒有帳號？註冊</button></p>
+    </div>
+  </section>
+
+  <!-- ══════════════ ① 學習 ══════════════ -->
+  <section id="view-home" class="hidden">
+
+    <div class="card hero">
+      <div class="hero-stats">
+        <div><b id="s-due">–</b><small>待複習</small></div>
+        <div><b id="s-done">–</b><small>今日已答</small></div>
+        <div><b id="s-acc">–</b><small>今日正確</small></div>
+        <div><b id="s-all-acc">–</b><small>已掌握</small></div>
+      </div>
+      <div id="streak" class="streak"></div>
+
+      <div id="suggest" class="suggest"></div>
+      <button id="btn-primary" class="primary block big">開始複習</button>
+      <div class="row2" style="margin-top:8px">
+        <button id="btn-review" class="ghost">複習</button>
+        <button id="btn-free" class="ghost">自由練習</button>
+      </div>
+    </div>
+
+    <section class="card" id="pron-card">
+      <h2>發音課程</h2>
+      <div id="pron-next"></div>
+      <details class="pron-all">
+        <summary>看完整課程（<span id="pron-count">–</span> 課）</summary>
+        <div id="pron-list"></div>
+      </details>
+    </section>
+
+    <section class="card hidden" id="life-card">
+      <h2>生活 · 興趣</h2>
+      <div id="life-pick"></div>
+      <div id="life-list"></div>
+    </section>
+
+    <details class="card details" id="opt-box">
+      <summary>
+        <span>練習方式</span>
+        <span id="opt-summary" class="muted"></span>
+      </summary>
+      <div class="details-body">
+        <label class="field-label">題型</label>
+        <div class="seg seg-4" id="mode-pick">
+          <label><input type="radio" name="mode" value="flip" checked><span>翻卡自評</span></label>
+          <label><input type="radio" name="mode" value="choice"><span>四選一</span></label>
+          <label><input type="radio" name="mode" value="scramble"><span>詞序重組</span></label>
+          <label><input type="radio" name="mode" value="listen"><span>聽音選義</span></label>
+        </div>
+        <p id="mode-hint" class="hint"></p>
+
+        <label class="field-label">方向</label>
+        <div class="seg" id="dir-pick">
+          <label><input type="radio" name="dir" value="ko2zh" checked><span>日 → 中</span></label>
+          <label><input type="radio" name="dir" value="zh2ko"><span>中 → 日</span></label>
+        </div>
+      </div>
+    </details>
+
+    <div class="card">
+      <h2>詞庫</h2>
+      <div id="deck-list"><p class="muted nomargin">載入中…</p></div>
+    </div>
+
+    <div class="card" id="weak-card">
+      <div class="card-head">
+        <h2>我的弱項</h2>
+        <button id="btn-drill-weak" class="small hidden">集中練這些</button>
+      </div>
+      <div id="weak-list"></div>
+    </div>
+  </section>
+
+  <!-- ══════════════ ② 詞庫瀏覽 ══════════════ -->
+  <section id="view-browse" class="hidden">
+    <div class="seg seg-2 subtabs" id="b-tabs">
+      <label><input type="radio" name="btab" value="words" checked><span>單字</span></label>
+      <label><input type="radio" name="btab" value="dialogue"><span>情境對話</span></label>
+    </div>
+
+    <div id="b-pane-dialogue" class="hidden">
+      <div class="card" id="dlg-list-card">
+        <div class="browse-head">
+          <span id="dlg-count" class="muted"></span>
+          <button id="dlg-tr-all" class="small primary">全部對話 · 隨機翻譯練習</button>
+        </div>
+        <div id="dlg-list"></div>
+      </div>
+
+      <div id="dlg-detail" class="hidden">
+        <div class="card">
+          <div class="dlg-head">
+            <button id="dlg-back" class="link">← 全部對話</button>
+            <h2 id="dlg-title" class="nomargin"></h2>
+          </div>
+          <div class="seg seg-3" id="dlg-tabs">
+            <label><input type="radio" name="dmode" value="learn" checked><span>學習</span></label>
+            <label><input type="radio" name="dmode" value="practice"><span>練習</span></label>
+            <label><input type="radio" name="dmode" value="shuffle"><span>打亂順序</span></label>
+          </div>
+          <div class="dlg-tools">
+            <button id="dlg-play" class="small">▶ 整段朗讀</button>
+            <button id="dlg-side" class="small hidden">看日文想中文</button>
+            <button id="dlg-reset" class="small hidden">重新練</button>
+          </div>
+          <div class="dlg-tools">
+            <button id="dlg-tr-order" class="small ghost">翻譯練習 · 照順序</button>
+            <button id="dlg-tr-mix" class="small ghost">翻譯練習 · 打亂</button>
+          </div>
+          <p id="dlg-hint" class="hint nomargin"></p>
+          <div id="dlg-body"></div>
+          <div id="dlg-pool" class="dlg-pool hidden"></div>
+          <p id="dlg-result" class="hint center"></p>
+        </div>
+      </div>
+    </div>
+
+    <div id="b-pane-words">
+    <div class="card sticky-search">
+      <input id="b-search" type="search" placeholder="搜尋日文／中文／假名…" class="nomargin">
+      <details class="filter-box" id="b-filter">
+        <summary><span>篩選</span><b id="b-filter-now">全部</b></summary>
+        <div id="b-tags"></div>
+      </details>
+    </div>
+    <div class="card">
+      <div class="browse-head">
+        <span id="b-count" class="muted"></span>
+        <span class="browse-actions">
+          <button id="btn-practice-sel" class="small hidden">練所選</button>
+          <button id="btn-study-tag" class="small primary hidden">學這組</button>
+        </span>
+      </div>
+      <div id="b-list"></div>
+      <div id="b-more" class="pager"></div>
+    </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ ③ 學習記錄 ══════════════ -->
+  <section id="view-history" class="hidden">
+    <div class="card">
+      <div class="prog-head">
+        <div>
+          <b id="ov-started">–</b><span class="muted"> / <span id="ov-total">–</span> 詞已接觸</span>
+        </div>
+        <span id="ov-pct" class="prog-pct"></span>
+      </div>
+      <div class="funnel" id="funnel"></div>
+      <div class="funnel-legend scroll-x" id="funnel-legend"></div>
+
+      <div class="dir-compare" id="dir-compare"></div>
+
+      <details class="mini-details">
+        <summary><span>近 30 天</span><span id="chart-legend" class="muted"></span></summary>
+        <div class="chart" id="chart"></div>
+      </details>
+    </div>
+
+    <div class="seg seg-2 subtabs" id="h-tabs">
+      <label><input type="radio" name="htab" value="sessions" checked><span>學習場次</span></label>
+      <label><input type="radio" name="htab" value="words"><span>單詞進度</span></label>
+    </div>
+
+    <!-- 場次視圖 -->
+    <div id="h-pane-sessions">
+      <div id="h-list"></div>
+      <p class="center"><button id="h-more" class="link hidden">載入更早的記錄</button></p>
+    </div>
+
+    <!-- 單詞視圖 -->
+    <div id="h-pane-words" class="hidden">
+      <div class="card">
+        <div class="tag-row scroll-x" id="w-filter">
+          <button class="tag on" data-f="all">全部</button>
+          <button class="tag" data-f="mastered">已掌握</button>
+          <button class="tag" data-f="review">複習中</button>
+          <button class="tag" data-f="learning">學習中</button>
+          <button class="tag" data-f="practiced">練習過</button>
+          <button class="tag" data-f="weak">弱項</button>
+          <button class="tag" data-f="new">未開始</button>
+        </div>
+        <input id="w-search" type="search" placeholder="搜尋…" class="nomargin" style="margin-top:11px">
+      </div>
+      <div class="card">
+        <div class="browse-head">
+          <span id="w-count" class="muted"></span>
+          <button id="w-drill" class="small primary hidden">練這批</button>
+        </div>
+        <div id="w-list"></div>
+        <div id="w-more" class="pager"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ ④ 我的 ══════════════ -->
+  <section id="view-me" class="hidden">
+    <div class="card">
+      <h2>外觀</h2>
+      <div class="seg seg-3" id="theme-pick">
+        <label><input type="radio" name="theme" value="system" checked><span>跟隨系統</span></label>
+        <label><input type="radio" name="theme" value="light"><span>淺色</span></label>
+        <label><input type="radio" name="theme" value="dark"><span>深色</span></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>鍵盤快捷鍵</h2>
+      <div class="keys">
+        <div><kbd>空白</kbd><span>顯示答案</span></div>
+        <div><kbd>1</kbd>–<kbd>4</kbd><span>評分／選項</span></div>
+        <div><kbd>←</kbd><kbd>→</kbd><span>上一個／下一個</span></div>
+        <div><kbd>S</kbd><span>朗讀</span></div>
+        <div><kbd>U</kbd><span>撤銷</span></div>
+        <div><kbd>Esc</kbd><span>結束本輪</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>朗讀語音</h2>
+      <div class="voice-row">
+        <select id="voice-pick"></select>
+        <button id="voice-test" class="small">試聽</button>
+      </div>
+      <div class="voice-row">
+        <span class="muted fixed-w">語速</span>
+        <input id="voice-rate" type="range" min="0.5" max="1.3" step="0.05">
+        <span id="rate-label" class="muted fixed-w right"></span>
+      </div>
+      <p class="hint">
+        系統內建的趣味語音（Eddy、Grandma、Rocko…）聽起來機械，已自動濾除。
+        最自然的是 Yuna；到「系統設定 → 輔助使用 → 朗讀內容 → 系統聲音」
+        下載 Yuna 的「增強版」音質會再好一截。
+      </p>
+    </div>
+
+    <div class="card hidden" id="admin-card">
+      <h2>內容管理</h2>
+      <div class="row2" id="admin-row">
+        <button id="btn-add">＋ 新增條目</button>
+        <button id="btn-import">批次匯入</button>
+      </div>
+      <details class="mini-details">
+        <summary><span>內容修改記錄</span><span id="edits-count" class="muted"></span></summary>
+        <div id="edits-list"></div>
+      </details>
+    </div>
+
+    <div class="card">
+      <h2>帳號</h2>
+      <p class="muted nomargin" id="me-account"></p>
+      <button id="btn-signout" class="block ghost" style="margin-top:14px">登出</button>
+    </div>
+
+    <p class="hint center">日本語 單字卡 · 資料存於 Supabase，多裝置同步</p>
+  </section>
+
+  <!-- ══════════════ 批次匯入 ══════════════ -->
+  <section id="view-import" class="hidden">
+    <div class="card">
+      <h2>批次匯入</h2>
+      <p class="hint">
+        直接從 Excel／Google 試算表複製貼上，或貼 CSV。
+        第一列可以是表頭（<code>ko,zh,romanization,type,pos,example_ko,example_zh,note,tags</code>，
+        中文欄名也認）；沒有表頭則按「日文,中文,假名…」的順序解讀。
+      </p>
+      <label>目標詞庫</label>
+      <select id="i-deck"></select>
+      <label>貼上內容</label>
+      <textarea id="i-text" rows="8" placeholder="사랑,愛,sarang,單字,명사,,,,情感"></textarea>
+      <div class="row2">
+        <button id="i-parse">解析預覽</button>
+        <button id="i-apply" class="primary" disabled>確認匯入</button>
+      </div>
+    </div>
+    <div class="card hidden" id="i-preview-card">
+      <div id="i-summary" class="hint"></div>
+      <div id="i-preview"></div>
+    </div>
+    <p class="center"><button id="btn-import-back" class="link">← 返回</button></p>
+  </section>
+
+  <!-- ══════════════ 學習中 ══════════════ -->
+  <section id="view-study" class="hidden">
+    <div class="study-head">
+      <button id="btn-quit" class="icon-btn" title="結束本輪">✕</button>
+      <div class="progress"><i id="prog"></i></div>
+      <span id="pos-label" class="muted"></span>
+    </div>
+
+    <details class="lesson-intro hidden" id="lesson-intro">
+      <summary><span id="lesson-title"></span><span class="li-cue">看說明</span></summary>
+      <p id="lesson-body"></p>
+    </details>
+
+    <div class="card study">
+      <div class="card-meta">
+        <span class="dir-tag" id="c-dir"></span>
+        <span class="type-tag" id="c-type"></span>
+      </div>
+
+      <div id="listen-box" class="listen-box hidden">
+        <button id="c-listen" class="listen-btn">🔊</button>
+        <button id="c-listen-slow" class="link">🐢 慢速再聽</button>
+      </div>
+      <div class="front" id="c-front"></div>
+      <div class="roman hidden" id="c-roman"></div>
+
+      <div id="c-back" class="hidden">
+        <div class="divider"></div>
+        <div class="back" id="c-back-text"></div>
+        <div class="pos hidden" id="c-pos"></div>
+        <div class="hanja hidden" id="c-hanja"></div>
+        <div class="hanja-rel hidden" id="c-hanja-rel"></div>
+        <div class="example hidden" id="c-example">
+          <b id="c-ex-ko"></b><span id="c-ex-zh"></span>
+        </div>
+        <div class="note hidden" id="c-note"></div>
+        <div class="same-mean hidden" id="c-same"></div>
+        <div class="acc hint hidden" id="c-acc"></div>
+      </div>
+
+      <div class="card-tools">
+        <button id="btn-speak" class="link">🔊 朗讀</button>
+        <button id="btn-edit-card" class="link hidden">✏️ 這條有錯</button>
+      </div>
+    </div>
+
+    <div id="scramble" class="scramble hidden">
+      <div id="s-answer" class="s-answer" data-empty="點下方詞塊，依正確語序排列"></div>
+      <div id="s-pool" class="s-pool"></div>
+      <div id="s-result" class="s-result hidden"></div>
+    </div>
+
+    <div id="choices" class="choices hidden"></div>
+    <button id="btn-show" class="primary block big">顯示答案</button>
+    <div id="grade" class="grade hidden">
+      <button data-r="1"><span class="g1">忘了</span><small id="p1"></small></button>
+      <button data-r="2"><span class="g2">有點難</span><small id="p2"></small></button>
+      <button data-r="3"><span class="g3">記得</span><small id="p3"></small></button>
+      <button data-r="4"><span class="g4">很簡單</span><small id="p4"></small></button>
+    </div>
+
+    <div class="nav-row">
+      <button id="btn-prev" class="small">← 上一個</button>
+      <button id="btn-undo" class="link" disabled>↩︎ 撤銷</button>
+      <button id="btn-next" class="small">下一個 →</button>
+    </div>
+  </section>
+
+  <!-- ══════════════ 本輪完成 ══════════════ -->
+  <section id="view-done" class="hidden">
+    <div class="card center done-card">
+      <div class="done-emoji">🎉</div>
+      <h2>本輪完成</h2>
+      <p class="muted" id="done-text"></p>
+      <p class="done-outro hidden" id="done-outro"></p>
+      <button id="btn-back" class="primary block">返回</button>
+    </div>
+  </section>
+</main>
+
+<!-- ══════════════ 底部導覽 ══════════════ -->
+<nav class="tabbar hidden" id="tabbar">
+  <button data-tab="view-home"><span>📚</span>學習</button>
+  <button data-tab="view-browse"><span>🔍</span>詞庫</button>
+  <button data-tab="view-history"><span>📈</span>記錄</button>
+  <button data-tab="view-me"><span>⚙️</span>我的</button>
+</nav>
+
+<!-- ══════════════ 編輯條目（管理員）══════════════ -->
+<div id="editor" class="overlay hidden">
+  <div class="editor-card">
+    <div class="editor-head">
+      <h2>編輯條目</h2>
+      <button id="e-close" class="icon-btn">✕</button>
+    </div>
+    <div class="editor-body">
+      <div id="e-deck-row" class="hidden">
+        <label>詞庫</label>
+        <select id="e-deck"></select>
+      </div>
+      <label>日文 *</label>       <input id="e-ko" type="text">
+      <label>中文（繁體）*</label> <input id="e-zh" type="text">
+      <div class="row2">
+        <div><label>假名</label><input id="e-roman" type="text"></div>
+        <div><label>詞性</label><input id="e-pos" type="text" placeholder="명사 / 동사 …"></div>
+      </div>
+      <label>類型</label>
+      <select id="e-type">
+        <option value="word">單字</option>
+        <option value="phrase">詞組</option>
+        <option value="sentence">句子</option>
+      </select>
+      <label>漢字表記（與詞條相同時留空）</label> <input id="e-hanja" type="text">
+      <label>例句（日）</label> <input id="e-ex-ko" type="text">
+      <label>例句（中）</label> <input id="e-ex-zh" type="text">
+      <label>備註</label>       <input id="e-note" type="text">
+      <label>標籤（逗號分隔）</label> <input id="e-tags" type="text">
+    </div>
+    <div id="e-msg" class="editor-msg"></div>
+    <div class="editor-foot">
+      <button id="e-cancel">取消</button>
+      <button id="e-save" class="primary">儲存並同步</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>

@@ -25,7 +25,11 @@ import urllib.parse
 import urllib.request
 import os
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from site_ctx import SITE, SITE_DIR, load_env  # noqa: E402
+
+# ROOT 現在指「這一站的目錄」而不是倉庫根 —— data/、backups/ 都在站台底下
+ROOT = SITE_DIR
 
 # ---------------------------------------------------------------------
 # 逐條判定。key = ko，value = pos
@@ -79,16 +83,6 @@ LEAVE_BLANK = {
     "낄끼빠빠":         "整句順口溜的縮語（낄 때 끼고 빠질 때 빠져라），無單一中心詞",
 }
 
-
-def load_env():
-    env = {}
-    with open(os.path.join(ROOT, ".env.local"), encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, v = line.split("=", 1)
-                env[k.strip()] = v.strip().strip('"').strip("'")
-    return env["SUPABASE_URL"].rstrip("/"), env["SUPABASE_SERVICE_ROLE_KEY"]
 
 
 def req(url, key, method, path, body=None):

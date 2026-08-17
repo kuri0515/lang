@@ -15,13 +15,23 @@
 #                                      —— 給「先前已手動跑過」的那批用。
 #                                      必須指定上限，否則會把還沒跑的也
 #                                      登記掉，之後 up 就會跳過它們。
+#
+# 站台：SITE=japanese scripts/migrate.sh up（預設 korean）
+#   migration SQL 只有一份，兩站共用同一套 schema，
+#   但跑在各自的 Supabase 專案上。連錯專案是這支腳本最貴的錯誤，
+#   所以每次都把 project ref 印出來 —— 靜默地連對或連錯，人看不出差別。
 # =====================================================================
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.."          # → shared/
+REPO="$(cd .. && pwd)"
 export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
 
-set -a; . ./.env.local; set +a
+SITE="${SITE:-korean}"
+ENV_FILE="$REPO/$SITE/.env.local"
+[ -f "$ENV_FILE" ] || { echo "❌ 缺少 $SITE/.env.local" >&2; exit 1; }
+set -a; . "$ENV_FILE"; set +a
 REF=$(echo "$SUPABASE_URL" | sed 's#https://##;s#\.supabase\.co##')
+echo "🎯 站台 $SITE · Supabase 專案 $REF" >&2
 export PGPASSWORD="$SUPABASE_DB_PASSWORD"
 PSQL=(psql -h "db.$REF.supabase.co" -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1 -q)
 

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#e8590c"/>
+  <text x="256" y="248" font-family="Hiragino Sans, Noto Sans JP, sans-serif"
+        font-size="190" font-weight="700" fill="#fff" text-anchor="middle">あ</text>
+  <text x="256" y="396" font-family="PingFang TC, Noto Sans TC, sans-serif"
+        font-size="128" font-weight="600" fill="#fbd3b8" text-anchor="middle">日</text>
+</svg>

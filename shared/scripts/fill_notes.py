@@ -22,7 +22,11 @@
   湊字數只會稀釋真正重要的提醒。
 """
 import argparse, json, os, sys, urllib.parse, urllib.request
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from site_ctx import SITE, SITE_DIR, load_env  # noqa: E402
+
+# ROOT 現在指「這一站的目錄」而不是倉庫根 —— data/、backups/ 都在站台底下
+ROOT = SITE_DIR
 
 NOTES = {
  # ---- ① 漢字詞與中文不同（最高價值）----
@@ -144,13 +148,6 @@ NOTES = {
  "이불":"被子。「蓋被子」是 이불을 덮다",
 }
 
-def load_env():
-    env={}
-    for line in open(os.path.join(ROOT,".env.local"),encoding="utf-8"):
-        line=line.strip()
-        if line and not line.startswith("#") and "=" in line:
-            k,v=line.split("=",1); env[k.strip()]=v.strip().strip('"').strip("'")
-    return env["SUPABASE_URL"].rstrip("/"), env["SUPABASE_SERVICE_ROLE_KEY"]
 
 def req(url,key,method,path,body=None):
     data=json.dumps(body,ensure_ascii=False).encode() if body is not None else None

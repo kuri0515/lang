@@ -2,12 +2,17 @@
 import choice from './choice.js';
 import * as speech from '../../core/speech.js';
 import { lang } from '../../core/lang.js';
-const L = lang();
 
 export default {
   id: 'listen',
   label: '聽音選義',
-  hint: `只聽發音，選出對應的中文。答完會顯示${L.termLabel}拼寫。方向固定為「${L.termShort} → 中」。`,
+  // ★ getter 而不是字串：模組載入時就求值，等於把當下的語言快照起來。
+  //   正式站一頁只有一種語言看不出差別，但測試會在同一個 node 行程裡
+  //   連跑兩站 —— 那時第二站會拿到第一站的字。改成取用時才算，沒有快照就沒有這個坑。
+  get hint() {
+    const L = lang();
+    return `只聽發音，選出對應的中文。答完會顯示${L.termLabel}拼寫。方向固定為「${L.termShort} → 中」。`;
+  },
   direction: 'ko2zh',        // 聽目標語言選中文，方向固定
   needsPool: true,
   canUse: (item, ctx) => ctx.pool.length >= 4,

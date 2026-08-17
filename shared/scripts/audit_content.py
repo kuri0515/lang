@@ -32,23 +32,14 @@ import urllib.error
 import urllib.request
 from collections import Counter, defaultdict
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from site_ctx import SITE, SITE_DIR, load_env  # noqa: E402
+
+# ROOT 現在指「這一站的目錄」而不是倉庫根 —— data/、backups/ 都在站台底下
+ROOT = SITE_DIR
 HANGUL = re.compile(r"[ᄀ-ᇿ㄰-㆏ꥠ-꥿가-힯]")
 HANJA = re.compile(r"[一-鿿]")
 
-
-def load_env():
-    path = os.path.join(ROOT, ".env.local")
-    if not os.path.exists(path):
-        sys.exit("❌ 缺少 .env.local")
-    env = {}
-    with open(path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, v = line.split("=", 1)
-                env[k.strip()] = v.strip().strip('"').strip("'")
-    return env["SUPABASE_URL"].rstrip("/"), env["SUPABASE_SERVICE_ROLE_KEY"]
 
 
 def rest(url, key, method, path, payload=None, tries=3):

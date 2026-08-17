@@ -11,10 +11,11 @@ node_modules/
 dist/
 .cache/
 
-# 原始素材（体积大，不进 git）
-raw/*
-!raw/.gitkeep
-!raw/README.md
+# 原始素材（体积大，不进 git）。拆 monorepo 後 raw/ 在各站底下，
+# 所以規則要帶 **/ —— 少了它，korean/raw/ 會整包被 commit 進去
+**/raw/*
+!**/raw/.gitkeep
+!**/raw/README.md
 
 # 系统
 .DS_Store

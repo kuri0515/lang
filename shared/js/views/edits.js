@@ -15,10 +15,15 @@ const ACTION = {
   deactivate: { label: '下架', },
   restore:    { label: '恢復', },
 };
-const FIELD = {
-  ko: lang().termLabel, zh: '中文', romanization: lang().readingLabel, hanja: lang().hanjaLabel,
-  pos: '詞性', item_type: '類型', example_ko: '例句(韓)',
-  example_zh: '例句(中)', note: '備註', tags: '標籤', is_active: '上架狀態',
+// 函式而不是常量：物件字面值會在模組載入當下就把語言快照起來
+// （同樣的坑見 study/modes/listen.js 的 hint）。
+const fieldLabels = () => {
+  const L = lang();
+  return {
+    ko: L.termLabel, zh: '中文', romanization: L.readingLabel, hanja: L.hanjaLabel,
+    pos: '詞性', item_type: '類型', example_ko: `例句(${L.termShort})`,
+    example_zh: '例句(中)', note: '備註', tags: '標籤', is_active: '上架狀態',
+  };
 };
 
 let loaded = false;
@@ -54,7 +59,7 @@ async function load() {
     $('edits-list').innerHTML = rows.map((r) => {
       const diff = (r.changed || [])
         .filter((f) => f !== 'is_active')
-        .map((f) => `<div><span class="muted">${FIELD[f] || f}</span>
+        .map((f) => `<div><span class="muted">${fieldLabels()[f] || f}</span>
             <span class="old">${esc(short(r.before?.[f]))}</span> →
             <span class="new">${esc(short(r.after?.[f]))}</span></div>`).join('');
       return `<div class="edit-row">

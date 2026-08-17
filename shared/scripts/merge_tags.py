@@ -17,7 +17,11 @@
 """
 import argparse, json, os, sys, urllib.parse, urllib.request
 from collections import Counter
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from site_ctx import SITE, SITE_DIR, load_env  # noqa: E402
+
+# ROOT 現在指「這一站的目錄」而不是倉庫根 —— data/、backups/ 都在站台底下
+ROOT = SITE_DIR
 
 # 舊標籤 → 新標籤。理由寫在旁邊，日後回頭看才知道當初怎麼判的。
 MERGE = {
@@ -44,13 +48,6 @@ KEEP_SINGLE = {
     "收音ㄽ": "同上（외곬）",
 }
 
-def load_env():
-    env={}
-    for line in open(os.path.join(ROOT,".env.local"),encoding="utf-8"):
-        line=line.strip()
-        if line and not line.startswith("#") and "=" in line:
-            k,v=line.split("=",1); env[k.strip()]=v.strip().strip('"').strip("'")
-    return env["SUPABASE_URL"].rstrip("/"), env["SUPABASE_SERVICE_ROLE_KEY"]
 
 def req(url,key,method,path,body=None):
     data=json.dumps(body,ensure_ascii=False).encode() if body is not None else None

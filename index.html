@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>單字卡 · 選一個語言</title>
+<meta name="description" content="韓語／日語 ↔ 中文（繁體）雙向間隔重複學習">
+<style>
+  /* 這一頁刻意不吃 shared/css/style.css ——
+     它只是個岔路口，載入整套主題系統只為了畫兩張卡片並不划算，
+     而且那套 css 依賴站台的 DOM 結構，這裡沒有。 */
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100dvh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 28px; padding: 32px 20px;
+    font-family: -apple-system, "PingFang TC", "Noto Sans TC", sans-serif;
+    background: #f6f7fb; color: #1f2430;
+  }
+  h1 { margin: 0; font-size: 1.35rem; font-weight: 700; }
+  p.sub { margin: -18px 0 0; font-size: .9rem; opacity: .65; }
+  .row { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; }
+  a.card {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    width: 168px; height: 168px; border-radius: 26px;
+    text-decoration: none; color: #fff; gap: 6px;
+    box-shadow: 0 6px 20px rgb(0 0 0 / .13);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  a.card:hover, a.card:focus-visible { transform: translateY(-4px); box-shadow: 0 12px 28px rgb(0 0 0 / .2); }
+  a.ko { background: #4c6ef5; }
+  a.ja { background: #e8590c; }
+  .glyph { font-size: 3.4rem; font-weight: 700; line-height: 1; }
+  .name { font-size: .95rem; font-weight: 600; }
+  .note { font-size: .78rem; opacity: .8; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #14161c; color: #e7e9ee; }
+  }
+</style>
+</head>
+<body>
+  <h1>單字卡</h1>
+  <p class="sub">↔ 中文（繁體）雙向間隔重複</p>
+  <div class="row">
+    <a class="card ko" href="korean/">
+      <span class="glyph">한</span>
+      <span class="name">韓語</span>
+    </a>
+    <a class="card ja" href="japanese/">
+      <span class="glyph">あ</span>
+      <span class="name">日語</span>
+      <span class="note">建置中</span>
+    </a>
+  </div>
+</body>
+</html>
