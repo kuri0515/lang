@@ -336,6 +336,17 @@ console.log('\n【情境對話】');
   chk('逐格標示對錯，不是只說一句錯了',
       !r2.correct && r2.flags.join() === 'true,false,false',
       '只說錯不告訴哪裡錯，等於要人重猜');
+
+  // ---- 三種模式的 DOM 契約 ----
+  const modes = [...document.querySelectorAll('input[name="dmode"]')].map((x) => x.value);
+  chk('三種模式都在：學習／練習／打亂',
+      modes.join() === 'learn,practice,shuffle');
+  chk('預設是學習模式',
+      document.querySelector('input[name="dmode"]:checked')?.value === 'learn',
+      '第一次點進來的任務是理解，不是被考');
+  chk('練習模式的切面與重練按鈕存在',
+      !!$('dlg-side') && !!$('dlg-reset'));
+  chk('朗讀按鈕存在', !!$('dlg-play'));
 }
 
 console.log(f?`\n❌ 失敗 ${f} 項`:'\n✅ 全部通過');

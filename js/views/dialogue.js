@@ -1,11 +1,14 @@
 // =====================================================================
 // 情境對話畫面
 //
-// 兩種練法，因為它們練的是不同能力：
-//   朗讀（保留順序）—— 練理解與語流。看得到誰在說、聽得到怎麼唸。
-//   打亂（排回原序）—— 練「這句接哪句」。單句看得懂，不代表接得上話。
+// 三種模式，各練一種能力：
+//   學習 —— 全部攤開（韓文·羅馬音·中文·語法），配 🔊 聽發音。先看懂再說。
+//   練習 —— 只顯示一面，自己回想，點開對答案，再自評記不記得。
+//   打亂 —— 排回原順序。單句看得懂，不代表接得上話。
 //
-// 中文預設隱藏。看著翻譯讀韓文等於沒讀 —— 要先自己想，想不出來再開。
+// 學習模式刻意全顯示：這個階段的任務是理解，蓋住反而妨礙。
+// 練習模式刻意只顯示一面：看著翻譯讀韓文等於沒讀。
+// 同一份內容兩種呈現，差別只在「現在要理解，還是要檢驗」。
 // =====================================================================
 import { $, qsa, esc } from '../core/dom.js';
 import { groupDialogues, shuffleLines, checkOrder } from '../core/dialogue.js';
@@ -14,9 +17,11 @@ import * as content from '../data/content.js';
 
 let all = [];          // [{ scene, lines }]
 let cur = null;        // 目前開啟的對話
-let showZh = false;
-let mode = 'read';     // read | shuffle
+let koFirst = true;    // 練習模式看哪一面：韓文→中文 或 中文→韓文
+let mode = 'learn';    // learn | practice | shuffle
 let picked = [];       // 打亂練習中已排入的行
+let revealed = new Set();   // 練習模式中已翻開的行
+let rated = new Map();      // 行 → 自評結果（true＝想起來了）
 let loaded = false;
 
 let deps = null;
@@ -30,13 +35,12 @@ export function initDialogue(d) {
   $('dlg-tr-order').onclick = () => cur && practice(cur.lines, true);
   $('dlg-tr-mix').onclick = () => cur && practice(cur.lines, false);
   $('dlg-tr-all').onclick = () => practice(all.flatMap((d2) => d2.lines), false);
-  $('dlg-zh').onclick = () => { showZh = !showZh; render(); };
   $('dlg-play').onclick = () => playAll();
-  $('dlg-mode').onclick = () => {
-    mode = mode === 'read' ? 'shuffle' : 'read';
-    picked = [];
-    render();
-  };
+  $('dlg-side').onclick = () => { koFirst = !koFirst; resetPractice(); render(); };
+  $('dlg-reset').onclick = () => { resetPractice(); render(); };
+  qsa('input[name="dmode"]').forEach((r) => {
+    r.onchange = () => { mode = r.value; picked = []; resetPractice(); render(); };
+  });
 }
 
 export async function open() {
@@ -78,10 +82,14 @@ function showList() {
   });
 }
 
+function resetPractice() { revealed = new Set(); rated = new Map(); }
+
 function openOne(d) {
   cur = d;
-  mode = 'read';
+  mode = 'learn';
+  qsa('input[name="dmode"]').forEach((r) => { r.checked = r.value === 'learn'; });
   picked = [];
+  resetPractice();
   $('dlg-list-card').classList.add('hidden');
   $('dlg-detail').classList.remove('hidden');
   render();
@@ -90,32 +98,101 @@ function openOne(d) {
 function render() {
   if (!cur) return;
   $('dlg-title').textContent = cur.scene;
-  $('dlg-zh').textContent = showZh ? '隱藏中文' : '顯示中文';
-  $('dlg-mode').textContent = mode === 'read' ? '打亂順序' : '回到朗讀';
-  $('dlg-play').classList.toggle('hidden', mode !== 'read');
-  $('dlg-hint').textContent = mode === 'read'
-    ? '點氣泡裡的 🔊 聽單句，或用上面的整段朗讀。'
-    : '照對話順序點下面的句子。單句看得懂，不代表接得上話。';
+  $('dlg-play').classList.toggle('hidden', mode === 'shuffle');
+  $('dlg-side').classList.toggle('hidden', mode !== 'practice');
+  $('dlg-reset').classList.toggle('hidden', mode !== 'practice');
+  $('dlg-side').textContent = koFirst ? '看韓文想中文' : '看中文想韓文';
+  $('dlg-hint').textContent = {
+    learn: '全部攤開。點 🔊 聽單句，或用整段朗讀。',
+    practice: '先自己想，再點氣泡對答案，然後自評。',
+    shuffle: '照對話順序點下面的句子。單句看得懂，不代表接得上話。',
+  }[mode];
 
-  if (mode === 'read') renderRead(); else renderShuffle();
+  if (mode === 'learn') renderLearn();
+  else if (mode === 'practice') renderPractice();
+  else renderShuffle();
 }
 
-function renderRead() {
+/** 學習模式：全部攤開。這個階段要理解，蓋住反而妨礙 */
+function renderLearn() {
   $('dlg-pool').classList.add('hidden');
   $('dlg-result').textContent = '';
-  $('dlg-body').innerHTML = cur.lines.map((l, i) => `
-    <div class="dlg-row ${l.speaker === 'B' ? 'b' : 'a'}">
-      <div class="dlg-bubble">
-        <div class="dlg-who">${esc(l.speaker)}</div>
-        <div class="dlg-ko">${esc(l.item.ko)}
-          <button data-say="${i}" title="朗讀">🔊</button></div>
-        ${l.item.romanization ? `<div class="dlg-roman">${esc(l.item.romanization)}</div>` : ''}
-        ${showZh ? `<div class="dlg-zh">${esc(l.item.zh)}</div>` : ''}
-        ${l.grammar ? `<div class="dlg-gram">${esc(l.grammar)}</div>` : ''}
-      </div>
-    </div>`).join('');
-  qsa('[data-say]', $('dlg-body')).forEach((b) => {
+  $('dlg-body').innerHTML = cur.lines.map((l, i) => bubble(l, i, `
+    <div class="dlg-ko">${esc(l.item.ko)}<button data-say="${i}" title="朗讀">🔊</button></div>
+    ${l.item.romanization ? `<div class="dlg-roman">${esc(l.item.romanization)}</div>` : ''}
+    <div class="dlg-zh">${esc(l.item.zh)}</div>
+    ${l.grammar ? `<div class="dlg-gram">${esc(l.grammar)}</div>` : ''}`)).join('');
+  bindSay();
+}
+
+/**
+ * 練習模式：只顯示一面，點開對答案，再自評。
+ *
+ * 自評走 logPractice —— 記成績但不動複習排程，
+ * 與自由練習同一個原則：檢驗自己的臨時動作，不該打亂長期的複習節奏。
+ */
+function renderPractice() {
+  $('dlg-pool').classList.add('hidden');
+  const shown = (l) => (koFirst ? l.item.ko : l.item.zh);
+  const hidden = (l) => (koFirst ? l.item.zh : l.item.ko);
+
+  $('dlg-body').innerHTML = cur.lines.map((l, i) => {
+    const open_ = revealed.has(l);
+    const mark = rated.get(l);
+    const front = koFirst
+      ? `<div class="dlg-ko">${esc(shown(l))}<button data-say="${i}" title="朗讀">🔊</button></div>`
+      + (l.item.romanization ? `<div class="dlg-roman">${esc(l.item.romanization)}</div>` : '')
+      : `<div class="dlg-ko">${esc(shown(l))}</div>`;
+    const back = !open_
+      ? `<div class="dlg-hide" data-open="${i}">點一下看答案</div>`
+      : `<div class="dlg-zh">${esc(hidden(l))}</div>`
+        + (l.grammar ? `<div class="dlg-gram">${esc(l.grammar)}</div>` : '')
+        + (mark === undefined
+            ? `<div class="dlg-rate">
+                 <button data-rate="${i}" data-ok="0">沒想起來</button>
+                 <button data-rate="${i}" data-ok="1" class="primary">想起來了</button>
+               </div>`
+            : `<div class="dlg-mark ${mark ? 'ok' : 'no'}">${mark ? '✓ 記得' : '· 再看一次'}</div>`);
+    return bubble(l, i, front + back, mark !== undefined ? 'done' : '');
+  }).join('');
+
+  const n = rated.size;
+  const ok = [...rated.values()].filter(Boolean).length;
+  $('dlg-result').textContent = n
+    ? (n < cur.lines.length ? `已自評 ${n}/${cur.lines.length}`
+       : `這段 ${cur.lines.length} 句，記得 ${ok} 句。`)
+    : '';
+
+  bindSay();
+  qsa('[data-open]', $('dlg-body')).forEach((el) => {
+    el.onclick = () => { revealed.add(cur.lines[Number(el.dataset.open)]); render(); };
+  });
+  qsa('[data-rate]', $('dlg-body')).forEach((b) => {
     b.onclick = () => {
+      const l = cur.lines[Number(b.dataset.rate)];
+      const ok_ = b.dataset.ok === '1';
+      rated.set(l, ok_);
+      // 記成績但不動排程 —— 與自由練習同一個原則
+      deps?.onSelfRate?.(l.item, koFirst ? 'ko2zh' : 'zh2ko', ok_);
+      render();
+    };
+  });
+}
+
+/** 氣泡外框。三種模式共用，避免同一段結構寫三遍後各自漂移 */
+function bubble(l, i, inner, extra = '') {
+  return `<div class="dlg-row ${l.speaker === 'B' ? 'b' : 'a'}">
+    <div class="dlg-bubble ${extra}">
+      <div class="dlg-who">${esc(l.speaker)}</div>
+      ${inner}
+    </div>
+  </div>`;
+}
+
+function bindSay() {
+  qsa('[data-say]', $('dlg-body')).forEach((b) => {
+    b.onclick = (e) => {
+      e.stopPropagation();
       const l = cur.lines[Number(b.dataset.say)];
       speech.speak(l.item.ko, l.item.audio_url);
     };
@@ -172,7 +249,7 @@ function renderShuffle() {
  */
 let playing = false;
 async function playAll() {
-  if (playing) { speech.cancel?.(); playing = false; $('dlg-play').textContent = '▶ 整段朗讀'; return; }
+  if (playing) { speech.cancel(); playing = false; $('dlg-play').textContent = '▶ 整段朗讀'; return; }
   playing = true;
   $('dlg-play').textContent = '⏹ 停止';
   const lines = cur.lines;

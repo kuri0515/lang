@@ -143,10 +143,15 @@
             <button id="dlg-back" class="link">← 全部對話</button>
             <h2 id="dlg-title" class="nomargin"></h2>
           </div>
+          <div class="seg seg-3" id="dlg-tabs">
+            <label><input type="radio" name="dmode" value="learn" checked><span>學習</span></label>
+            <label><input type="radio" name="dmode" value="practice"><span>練習</span></label>
+            <label><input type="radio" name="dmode" value="shuffle"><span>打亂順序</span></label>
+          </div>
           <div class="dlg-tools">
-            <button id="dlg-zh" class="small">顯示中文</button>
             <button id="dlg-play" class="small">▶ 整段朗讀</button>
-            <button id="dlg-mode" class="small primary">打亂順序</button>
+            <button id="dlg-side" class="small hidden">看韓文想中文</button>
+            <button id="dlg-reset" class="small hidden">重新練</button>
           </div>
           <div class="dlg-tools">
             <button id="dlg-tr-order" class="small ghost">翻譯練習 · 照順序</button>

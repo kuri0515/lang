@@ -827,3 +827,13 @@ kbd {
 .dlg-item:last-child { border-bottom: none; }
 .dlg-item b { font-weight: 600; font-size: 14.5px; }
 .dlg-item span { font-size: 12px; color: var(--faint); }
+
+/* 練習模式：蓋住的那一面 */
+.dlg-hide { color: var(--faint); font-size: 13px; margin-top: 4px; cursor: pointer; }
+.dlg-rate { display: flex; gap: 6px; margin-top: 8px; }
+.dlg-rate button { flex: 1; padding: 6px 10px; font-size: 12.5px; border-radius: 8px; }
+.dlg-bubble.done { opacity: .55; }
+.dlg-bubble.done .dlg-rate { display: none; }
+.dlg-mark { font-size: 11px; margin-top: 5px; }
+.dlg-mark.ok { color: var(--ok-fg); }
+.dlg-mark.no { color: var(--no-fg); }

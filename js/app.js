@@ -195,6 +195,12 @@ browse.initBrowse({ ...deps,
   onStudyTag: (t) => startNew(null, t),
   // 對話的翻譯練習：走同一條自由練習的路，只差要不要打亂
   onPracticeDialogue: (ids, keepOrder) => startFree({ ids, keepOrder, kind: 'drill' }),
+  // 對話練習模式的自評：記成績但不動複習排程 ——
+  // 檢驗自己的臨時動作，不該打亂長期的複習節奏（與自由練習同一個原則）
+  onSelfRate: (item, direction, ok) =>
+    progress.logPractice({ item, direction, rating: ok ? 3 : 1,
+                           mode: 'flip', activity: 'free' })
+            .catch(() => {}),
 });
 history.initHistory(deps);
 history.initWords((ids) => startFree({ ids, kind: 'drill' }));
