@@ -960,3 +960,12 @@ ruby rt {
 }
 /* 日語本來就沒有這個音 —— 留白比補一個灰格更誠實 */
 .g-none { flex: 1; min-width: 34px; height: 34px; }
+
+/* 濁音對照：清音一列（淡）、變化形一列（可點）。
+   兩列緊貼是刻意的 —— 要讓人一眼看到「同一個字加了兩點」。 */
+#dakuon { margin-top: 6px; }
+.d-block { margin-bottom: 10px; }
+.d-lab { font-size: 11px; color: var(--muted); margin-bottom: 3px; padding-left: 2px; }
+.d-block .g-row { gap: 4px; margin-bottom: 2px; }
+.d-block .g-cell { min-width: 34px; height: 30px; font-size: 15px; }
+.d-block .g-row:first-of-type .g-cell { height: 24px; font-size: 13px; }

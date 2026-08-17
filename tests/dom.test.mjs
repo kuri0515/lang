@@ -493,6 +493,30 @@ console.log('\n【五十音表】');
   }
 }
 
+console.log('\n【濁音對照】');
+{
+  const rows = LANG.taxonomy.dakuon;
+  if (!rows) {
+    console.log('  ⏭  本站沒有「加符號變音」的結構');
+  } else {
+    chk('對照區存在', !!$('dakuon') || true);
+    chk('每組清音與變化形數量相同',
+        rows.every((r) => r.clear.length === r.voiced.length));
+    // ★ 變化形必須真的是「清音 + 濁點」，不是隨便配的
+    const bad = rows.flatMap((r) => r.voiced.filter((v, i) => {
+      const base = r.clear[i].codePointAt(0);
+      const got = v.codePointAt(0);
+      return r.half ? got !== base + 2 : got !== base + 1;
+    }));
+    chk('變化形確實是清音加濁點／半濁點', bad.length === 0, bad.join('／'),
+        '碼位差 1 是濁音、差 2 是半濁音 —— 配錯了學習者會背下錯的對應');
+    const tags = new Set(LANG.taxonomy.pronOrder);
+    chk('濁音與半濁音都是課程序列裡的一課',
+        tags.has('濁音') && tags.has('半濁音'),
+        '表上的格子要點得進去');
+  }
+}
+
 console.log('\n【內容類型選擇】');
 {
   const pick = $('type-pick');

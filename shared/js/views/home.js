@@ -426,7 +426,44 @@ export function renderGojuon(grid, rows, available) {
       }).join('')}
     </div>`).join('');
 
-  qsa('#gojuon [data-pron]').forEach((b) => {
+  renderDakuon(lang().taxonomy.dakuon, by);
+
+  qsa('#gojuon [data-pron], #dakuon [data-pron]').forEach((b) => {
     b.onclick = () => deps.onStudyTag(b.dataset.pron);
   });
+}
+
+/**
+ * 濁音・半濁音對照：清音在上、變化形在下。
+ *
+ * 這一區存在的理由只有一句話：讓學習者看到「が 是 か 加兩點」，
+ * 而不是把它當第 47 個要背的新符號。
+ * 所以顯示方式是「並排對照」而不是「另一張表」——
+ * 另開一張表等於承認它們是新字，正好與要教的相反。
+ */
+function renderDakuon(rows, by) {
+  const box = opt('dakuon');
+  if (!box) return;
+  if (!rows) { box.classList.add('hidden'); return; }
+  box.classList.remove('hidden');
+
+  // 這些字沒有各自的課，全部指向「濁音」／「半濁音」那一課
+  const cell = (k, tag) => {
+    const p = by[tag];
+    const done = p && p.mastered / p.total >= LESSON_DONE;
+    const seen = p && p.started >= p.total;
+    return `<button class="g-cell ${done ? 'g-done' : seen ? 'g-seen' : 'g-new'}"
+      data-pron="${esc(tag)}" title="${esc(k)}　點一下練「${esc(tag)}」這一課">${esc(k)}</button>`;
+  };
+
+  box.innerHTML = rows.map((r) => {
+    const tag = r.half ? '半濁音' : '濁音';
+    const mark = r.half ? '゜' : '゛';
+    return `<div class="d-block">
+      <div class="d-lab">${esc(r.from)} <span class="muted">＋${mark}</span></div>
+      <div class="g-row">${r.clear.map((k) =>
+        `<span class="g-cell g-todo" title="清音（已在上表）">${esc(k)}</span>`).join('')}</div>
+      <div class="g-row">${r.voiced.map((k) => cell(k, tag)).join('')}</div>
+    </div>`;
+  }).join('');
 }
