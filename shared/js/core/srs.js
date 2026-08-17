@@ -9,24 +9,39 @@ export const RATING = { AGAIN: 1, HARD: 2, GOOD: 3, EASY: 4 };
 
 // 学习阶段的分钟级步长（新卡在毕业前反复出现）
 const LEARNING_STEPS_MIN = [1, 10];
-const GRADUATING_INTERVAL_DAYS = 1;
-// 畢業後的前三次固定間隔（天）。之後交給 ease。
-const REVIEW_STEPS = [1, 3, 7];
-
-/**
- * 間隔上限。
- *
- * ease 每次「很簡單」都 +0.15，再乘 1.3 —— 複利之下，
- * 連按五次「很簡單」會排到 3275 天（九年）後，等於這張卡永遠不再出現。
- * 而九年沒複習還記得，本來就不是這套系統該預測的事。
- *
- * 一年是「久到不打擾、又還在人生範圍內」的界線：
- * 學語言的人寧可一年見它一次，也不要它悄悄消失。
- */
-const MAX_INTERVAL_DAYS = 365;
-const EASY_INTERVAL_DAYS = 4;
 const MIN_EASE = 1.3;
 
+/**
+ * 複習階梯 —— 費氏數列，單位是天。
+ *
+ * 【為什麼是固定階梯而不是乘一個係數】
+ *   乘係數（interval × ease）的問題是它會複利：ease 稍微高一點，
+ *   幾次之後就跑到幾百天、甚至幾年，而那個數字沒有任何現實意義 ——
+ *   沒有人能預測「九年後還記不記得」。
+ *   固定階梯的每一階都是真實可解釋的時間，也不會失控。
+ *
+ * 【為什麼是費氏】
+ *   成長比趨近 1.618，比常見的 2.5 保守 —— 對全新的文字系統，
+ *   前兩週多看幾次遠比省下幾次划算。
+ *   而且 1、2、3、5、8、13 是人講得出口的節奏
+ *   （明天、後天、大後天、五天後、一週多、兩週），
+ *   學習者能預期自己什麼時候會再見到它，這件事本身會提高持續率。
+ *
+ * 【為什麼停在 89 而不繼續往上】
+ *   89 天≈三個月，是一個詞進入長期記憶後的維護週期。
+ *   再往外推（144、233…）就變成「幾乎不再出現」，
+ *   那和刪掉它沒有差別，卻讓人以為自己還記得。
+ *   到頂之後就固定每三個月見一次，這是維護不是學習。
+ */
+const LADDER = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
+const TOP = LADDER.length - 1;
+
+/** 目前的間隔落在第幾階（取「不超過它」的最高階，舊資料的 2.5 天也對得上）*/
+function rungOf(interval) {
+  let i = 0;
+  while (i < TOP && LADDER[i + 1] <= interval) i++;
+  return i;
+}
 const DAY_MS = 86400000;
 
 /**
@@ -54,8 +69,9 @@ export function schedule(card, rating, now = new Date()) {
       return commit('learning', minutes(LEARNING_STEPS_MIN[0]));
     }
     if (rating === RATING.EASY) {
+      // 一看就會 → 直接跳到第三階（3 天），不必從 1 天爬
       repetitions += 1;
-      interval = EASY_INTERVAL_DAYS;
+      interval = LADDER[2];
       return commit('review', days(interval));
     }
     // HARD / GOOD：沿学习步骤前进
@@ -63,8 +79,8 @@ export function schedule(card, rating, now = new Date()) {
     if (repetitions < LEARNING_STEPS_MIN.length) {
       return commit('learning', minutes(LEARNING_STEPS_MIN[repetitions]));
     }
-    // 毕业
-    interval = GRADUATING_INTERVAL_DAYS;
+    // 毕业 → 階梯第一階
+    interval = LADDER[0];
     return commit('review', days(interval));
   }
 
@@ -78,27 +94,23 @@ export function schedule(card, rating, now = new Date()) {
   }
 
   repetitions += 1;
-  if (rating === RATING.HARD) {
-    ease = Math.max(MIN_EASE, ease - 0.15);
-    // ×1.2 幾乎不成長：1.2 → 1.44 → 1.73，按了七次還在 2.5 天。
-    // 一張稍難的卡會天天出現、永遠畢不了業，而且只進不出 ——
-    // 複習量堆到後來，人就不想開了。ease 的懲罰保留，但間隔要會長大。
-    interval = Math.max(1, interval * 1.5);
-  } else if (rating === RATING.GOOD) {
-    // ★ 前三次用固定間隔，之後才交給 ease。
-    //   1／3／7 是人記得住的節奏（隔天、三天後、一週後）；
-    //   純 ×ease 會落在 2.5 天、6.25 天這種說不出口的時間點。
-    //   而且對全新的文字系統，頭一週決定成敗 ——
-    //   個人差異要到第四次之後才顯現，那時 ease 才有意義。
-    interval = interval <= 1 ? REVIEW_STEPS[1]
-             : interval <= REVIEW_STEPS[1] ? REVIEW_STEPS[2]
-             : Math.max(1, interval * ease);
-  } else {
-    // EASY
-    ease = ease + 0.15;
-    interval = Math.max(1, interval * ease * 1.3);
-  }
-  interval = Math.min(MAX_INTERVAL_DAYS, Math.round(interval * 100) / 100);
+
+  // ★ 用評分決定「爬幾階」，不是乘一個係數。
+  //   很簡單 → +2 階（本來就會的不必一階一階爬）
+  //   記得   → +1 階
+  //   有點難 → 原地（同樣的間隔再來一次）
+  //
+  //   「有點難」原地而不是退階：退階會讓一張詞在 3→2→3→2 之間來回，
+  //   永遠畢不了業。原地的意思是「你還沒準備好前進，但也沒退步」。
+  const step = rating === RATING.EASY ? 2 : rating === RATING.GOOD ? 1 : 0;
+  interval = LADDER[Math.min(TOP, rungOf(interval) + step)];
+
+  // ease 已經不參與排程計算（階梯是固定的）。仍然更新它，
+  // 因為 reviews.prev_ease_factor 是歷史資料的一部分，
+  // 而且它是一個誠實的難度訊號：日後要換 FSRS 之類的演算法時用得上。
+  if (rating === RATING.HARD) ease = Math.max(MIN_EASE, ease - 0.15);
+  else if (rating === RATING.EASY) ease += 0.15;
+
   return commit('review', days(interval));
 
   // -------------------------------------------------------------------

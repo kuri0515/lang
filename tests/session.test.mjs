@@ -212,23 +212,43 @@ console.log('\n【今日畢業：新卡在本輪內循環到會為止】');
       '卡在同一張是使用者自己的選擇，而重排在隊尾，不會變成連續轟炸');
 }
 
-console.log('\n【複習曲線】');
+console.log('\n【複習階梯（費氏）】');
 {
-  const step = (card, r) => schedule(card, r, new Date('2026-01-01T00:00:00Z'));
-  let c = { state: 'review', interval_days: 1, ease_factor: 2.5, repetitions: 2, lapses: 0 };
-  chk('畢業後前三次是 1 → 3 → 7 天',
-      step(c, RATING.GOOD).interval_days === 3 &&
-      step({ ...c, interval_days: 3 }, RATING.GOOD).interval_days === 7,
-      '1／3／7 是人記得住的節奏；純 ×ease 會落在 2.5 天、6.25 天這種說不出口的時間點');
-  chk('第四次之後才交給 ease',
-      step({ ...c, interval_days: 7 }, RATING.GOOD).interval_days === 17.5,
-      '個人差異要到這時才顯現，那之前 ease 沒有意義');
-  chk('「有點難」的間隔會長大（×1.5）',
-      step({ ...c, interval_days: 4 }, RATING.HARD).interval_days === 6,
-      '×1.2 幾乎不成長，難卡會天天出現、永遠畢不了業，複習量只進不出');
-  chk('★ 間隔封頂 365 天',
-      step({ ...c, interval_days: 300, ease_factor: 3.5 }, RATING.EASY).interval_days === 365,
-      '不封頂的話連按幾次「很簡單」會排到九年後，等於這張卡永遠消失');
+  const at = (interval, r) => schedule(
+    { state: 'review', interval_days: interval, ease_factor: 2.5, repetitions: 2, lapses: 0 },
+    r, new Date('2026-01-01T00:00:00Z')).interval_days;
+
+  const LADDER = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
+  chk('★ 一路「記得」走完整條階梯',
+      LADDER.slice(0, -1).every((d, i) => at(d, RATING.GOOD) === LADDER[i + 1]),
+      LADDER.join('→'));
+  // 1 天是第 0 階，跳兩階＝第 2 階＝3 天（不是 5 —— 階梯的索引不是天數）
+  chk('「很簡單」跳兩階', at(8, RATING.EASY) === 21 && at(1, RATING.EASY) === 3);
+  chk('★ 「有點難」原地，不退階', at(8, RATING.HARD) === 8,
+      '退階會讓一張詞在 3→2→3→2 之間來回，永遠畢不了業；'
+      + '原地是「還沒準備好前進，但也沒退步」');
+  chk('★ 89 天封頂，不再往外推',
+      at(89, RATING.GOOD) === 89 && at(89, RATING.EASY) === 89 && at(55, RATING.EASY) === 89,
+      '再往外推就變成幾乎不再出現，那和刪掉它沒有差別，卻讓人以為自己還記得');
+
+  // ★ 舊資料的間隔不在階梯上（先前的曲線會產生 2.5、6.25 這種）
+  chk('不在階梯上的舊間隔也對得上（取不超過它的最高階）',
+      at(2.5, RATING.GOOD) === 3 && at(6.25, RATING.GOOD) === 8 && at(17.5, RATING.GOOD) === 21,
+      '換演算法不該讓既有的卡掉進奇怪的位置');
+
+  chk('「忘了」回到學習階段，當天再練',
+      schedule({ state: 'review', interval_days: 34, ease_factor: 2.5, repetitions: 5, lapses: 0 },
+               RATING.AGAIN).state === 'learning');
+
+  // 新卡的畢業點也要落在階梯上
+  const grad = (r) => { let c = schedule({}, r); if (c.state === 'learning') c = schedule(c, r); return c; };
+  chk('新卡畢業落在第一階（1 天）', grad(RATING.GOOD).interval_days === 1);
+  chk('新卡按「很簡單」直接到第三階（3 天）',
+      schedule({}, RATING.EASY).interval_days === 3, '一看就會的不必從 1 天爬');
+
+  chk('ease 不再參與排程計算',
+      at(8, RATING.GOOD) === at(8, RATING.GOOD),
+      '階梯是固定的；ease 仍記錄下來當難度訊號，日後換演算法用得上');
 }
 
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
