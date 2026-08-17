@@ -21,12 +21,13 @@ import { initEditor, openEditor, loadDecksInto } from './views/editor.js';
 import { initEdits } from './views/edits.js';
 import * as home from './views/home.js';
 import * as study from './views/study.js';
-import { LESSON_INTRO } from './core/taxonomy.js';
+import { lessonIntro } from './core/taxonomy.js';
 
 let currentLesson = '';   // 本輪練的是哪一課，結束畫面要用
 import * as browse from './views/browse.js';
 import * as history from './views/history.js';
 import * as importer from './views/importer.js';
+import { lang } from './core/lang.js';
 
 // ---------------------------------------------------------------------
 // 應用狀態：只有這三個是跨模組共享的，其餘各自封裝
@@ -64,7 +65,7 @@ async function ensurePool() {
 async function begin(entries, { freeMode = false, kind = 'review', note = '', lesson = '' } = {}) {
   // 導言與收尾話每輪都要重設 —— 不清掉的話，下一輪會掛著上一課的內容
   currentLesson = lesson;
-  study.setLesson(lesson, lesson ? LESSON_INTRO[lesson] : '');
+  study.setLesson(lesson, lesson ? lessonIntro()[lesson] : '');
   const modeId = home.studyMode();
   if (needsPool(modeId)) await ensurePool();
 
@@ -74,7 +75,7 @@ async function begin(entries, { freeMode = false, kind = 'review', note = '', le
 
   if (!kept) {
     return msg(`這批內容沒有適合「${mode.label}」的題目`
-             + (modeId === 'scramble' ? '（需要韓文能拆成 2 個以上詞塊）' : '')
+             + (modeId === 'scramble' ? `（需要${lang().termLabel}能拆成 2 個以上詞塊）` : '')
              + '。換個題型，或換一批內容。');
   }
   if (dropped) msg(`本輪 ${kept} 題（已略過 ${dropped} 條不適用的）`, 'ok');

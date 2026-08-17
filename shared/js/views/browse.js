@@ -1,9 +1,9 @@
 // 詞庫瀏覽：搜尋、標籤、雙向學習狀態、批次下架（管理員）
 import { $, esc, msg, qsa, debounce, skeleton, emptyState, createPager } from '../core/dom.js';
 import { on, emit, EVENTS } from '../core/bus.js';
-import { STATE_LABEL, TYPE_LABEL, DIR_SHORT } from '../data/client.js';
+import { STATE_LABEL, TYPE_LABEL, dirShort } from '../data/client.js';
 import * as content from '../data/content.js';
-import { groupTags, GROUPS } from '../core/taxonomy.js';
+import { groupTags, groups } from '../core/taxonomy.js';
 import * as dialogue from './dialogue.js';
 import * as admin from '../data/admin.js';
 import * as progress from '../data/progress.js';
@@ -54,7 +54,7 @@ export async function open() {
       const g = groupTags(tags);
       const btn = ([t, n]) => `<button class="tag" data-tag="${esc(t)}">${esc(t)} ${n}</button>`;
       $('b-tags').innerHTML = '<div class="tag-row"><button class="tag on" data-tag="">全部</button></div>'
-        + GROUPS.filter((x) => g[x.key].length).map((x) =>
+        + groups().filter((x) => g[x.key].length).map((x) =>
             `<div class="tag-group"><div class="tag-group-h">${esc(x.label)}`
             + `<span>${esc(x.hint)}</span></div>`
             + `<div class="tag-row">${g[x.key].map(btn).join('')}</div></div>`).join('');
@@ -99,7 +99,7 @@ export async function render() {
       const badge = (dir) => {
         const c = r.cards[dir];
         const acc = c?.total_reviews ? ` ${Math.round(c.correct_reviews / c.total_reviews * 100)}%` : '';
-        return `<span class="dot ${c ? c.state : ''}" title="${DIR_SHORT[dir]}：${c ? STATE_LABEL[c.state] : '未學'}">${DIR_SHORT[dir]}${acc}</span>`;
+        return `<span class="dot ${c ? c.state : ''}" title="${dirShort()[dir]}：${c ? STATE_LABEL[c.state] : '未學'}">${dirShort()[dir]}${acc}</span>`;
       };
       return `<div class="b-row" data-id="${r.id}">
         <div class="b-main">

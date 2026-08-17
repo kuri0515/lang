@@ -1,7 +1,9 @@
-// 詞序重組：看中文，把打散的韓文詞塊排回正確語序
+// 詞序重組：看中文，把打散的目標語言詞塊排回正確語序
 import { esc, shuffle } from '../../core/dom.js';
 import { RATING } from '../../core/srs.js';
 import * as speech from '../../core/speech.js';
+import { lang } from '../../core/lang.js';
+const L = lang();
 
 // 句末標點要剝掉再切塊：帶著「.」或「?」的詞塊一眼就能看出是最後一塊，
 // 等於白送答案，練不到語序判斷。標點只在對答案時顯示。
@@ -28,8 +30,8 @@ export function scrambleSource(item) {
 export default {
   id: 'scramble',
   label: '詞序重組',
-  hint: '看中文，把打散的韓文詞塊排回正確語序。方向固定為「中 → 韓」。',
-  direction: 'zh2ko',        // 產出韓文，方向固定
+  hint: `看中文，把打散的${L.termLabel}詞塊排回正確語序。方向固定為「中 → ${L.termShort}」。`,
+  direction: 'zh2ko',        // 產出目標語言，方向固定
   needsPool: false,
   canUse: (item) => !!scrambleSource(item),
 

@@ -1,12 +1,14 @@
 // 聽音選義：只給發音不給字，選出對應的中文
 import choice from './choice.js';
 import * as speech from '../../core/speech.js';
+import { lang } from '../../core/lang.js';
+const L = lang();
 
 export default {
   id: 'listen',
   label: '聽音選義',
-  hint: '只聽發音，選出對應的中文。答完會顯示韓文拼寫。方向固定為「韓 → 中」。',
-  direction: 'ko2zh',        // 聽韓文選中文，方向固定
+  hint: `只聽發音，選出對應的中文。答完會顯示${L.termLabel}拼寫。方向固定為「${L.termShort} → 中」。`,
+  direction: 'ko2zh',        // 聽目標語言選中文，方向固定
   needsPool: true,
   canUse: (item, ctx) => ctx.pool.length >= 4,
 
@@ -22,8 +24,8 @@ export default {
     play();                                // 進卡自動播一次
 
     /**
-     * ★ 揭曉時把韓文補回正面。
-     *   原本從頭到尾都不顯示韓文 —— 聽不清就只能猜，答完仍不知道
+     * ★ 揭曉時把目標語言補回正面。
+     *   原本從頭到尾都不顯示 —— 聽不清就只能猜，答完仍不知道
      *   那個詞怎麼拼，聲音與拼寫連不起來，等於白練。
      */
     const revealWithText = () => {

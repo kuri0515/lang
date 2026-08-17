@@ -1,6 +1,6 @@
 // 學習記錄：逐筆時間線 + 近 30 天曲線
 import { $, esc, msg, skeleton, emptyState, qs, qsa, debounce, createPager } from '../core/dom.js';
-import { DIR_SHORT, DIR_LABEL, RATE_LABEL } from '../data/client.js';
+import { dirShort, dirLabel, RATE_LABEL } from '../data/client.js';
 import * as progress from '../data/progress.js';
 import { summarize, funnel, byDirection } from '../core/stats.js';
 
@@ -104,7 +104,7 @@ function renderSession(se) {
       <span class="sess-main">
         ${se.activity ? `<span class="act ${ACT[se.activity]?.cls || ''}">${ACT[se.activity]?.label || se.activity}</span>` : ''}
         <b>${esc(MODE_LABEL[se.mode] || '學習')}</b>
-        <span class="muted"> · ${DIR_SHORT[se.direction] || ''}</span>
+        <span class="muted"> · ${dirShort()[se.direction] || ''}</span>
         <small>${fmtTime(se.started_at)}–${fmtTime(se.ended_at)} · ${fmtDur(se.duration_sec)}</small>
       </span>
       <span class="sess-stat">
@@ -369,7 +369,7 @@ function renderWordDetail(w, atts) {
   }
   if (w.practicedOnly) {
     const ds = Object.entries(w.dirs).map(([dir, d]) =>
-      `<div class="dir-block"><h4><span>${DIR_SHORT[dir]}</span>
+      `<div class="dir-block"><h4><span>${dirShort()[dir]}</span>
         <span class="stage practiced">練習過</span></h4>
         <div class="dir-facts">
           <span>作答 <b>${d.attempts} 次</b></span>
@@ -382,11 +382,11 @@ function renderWordDetail(w, atts) {
   }
   const dirBlock = (dir) => {
     const d = w.dirs[dir];
-    if (!d) return `<div class="dir-block"><h4>${DIR_SHORT[dir]}</h4>
+    if (!d) return `<div class="dir-block"><h4>${dirShort()[dir]}</h4>
       <div class="dir-facts"><span>還沒練過這個方向</span></div></div>`;
     const st = d.mastered ? STAGE.mastered : (STAGE[d.state] || STAGE.new);
     return `<div class="dir-block">
-      <h4><span>${DIR_SHORT[dir]}</span><span class="stage ${st.cls}">${st.label}</span></h4>
+      <h4><span>${dirShort()[dir]}</span><span class="stage ${st.cls}">${st.label}</span></h4>
       <div class="dir-facts">
         <span>首次學習 <b>${fmtStamp(d.first_learned_at)}</b></span>
         <span>最近複習 <b>${d.last_reviewed_at ? fmtStamp(d.last_reviewed_at) : '–'}</b></span>
@@ -403,7 +403,7 @@ function renderWordDetail(w, atts) {
       <span class="t">${fmtStamp(a.reviewed_at)}</span>
       <span>${a.is_correct ? '✅' : '❌'}</span>
       <span class="m">${a.mode ? (MODE_SHORT[a.mode] || a.mode) : '—'}</span>
-      <span>${DIR_SHORT[a.direction]}</span>
+      <span>${dirShort()[a.direction]}</span>
       <span>${RATE_LABEL[a.rating] || ''}</span>
       ${a.elapsed_ms ? `<span>${(a.elapsed_ms / 1000).toFixed(1)}s</span>` : ''}
       ${a.activity ? `<span class="act ${ACT[a.activity]?.cls || ''}">${ACT[a.activity]?.label || ''}</span>` : ''}
@@ -446,8 +446,8 @@ function renderOverview(daily) {
   $('dir-compare').innerHTML = ['ko2zh', 'zh2ko'].map((dir) => {
     const d = bd[dir];
     const acc = d.accuracy;
-    return `<div class="dc-row" title="${DIR_LABEL[dir]}">
-      <span class="dc-name">${DIR_SHORT[dir]}</span>
+    return `<div class="dc-row" title="${dirLabel()[dir]}">
+      <span class="dc-name">${dirShort()[dir]}</span>
       <span class="dc-bar"><i style="width:${acc != null ? acc * 100 : 0}%"></i></span>
       <span class="dc-val">${acc != null ? `<b>${Math.round(acc * 100)}%</b> ${d.correct}/${d.total}` : '尚未練過'}</span>
     </div>`;

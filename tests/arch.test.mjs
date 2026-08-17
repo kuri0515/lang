@@ -10,8 +10,11 @@
 // =====================================================================
 import fs from 'fs';
 import path from 'path';
+import { SITE, SHARED, SITE_DIR } from './_site.mjs';
 
-const ROOT = new URL('../js', import.meta.url).pathname;
+// 程式碼只有一份（shared/js），但 DOM 契約每站一份 ——
+// 所以掃描的原始碼固定，index.html 隨 SITE 走。
+const ROOT = `${SHARED}/js`;
 const LAYER = { core: 0, data: 1, study: 2, views: 3 };
 const layerOf = (rel) => {
   const parts = rel.split(path.sep);
@@ -36,6 +39,7 @@ const rel = (f) => path.relative(ROOT, f);
 const read = (f) => fs.readFileSync(f, 'utf8');
 const imports = (f) => [...read(f).matchAll(/from\s+'([^']+)'/g)].map((m) => m[1]);
 
+console.log(`（站台：${SITE}）`);
 console.log('【依賴方向】core ← data ← study ← views ← app');
 const wrongWay = [];
 const dangling = [];
@@ -91,7 +95,7 @@ chk('條目欄位清單集中一處',
 console.log('\n【DOM 契約】');
 // JS 取用了 HTML 裡不存在的元素 —— 這類 bug 不會在語法檢查時暴露，
 // 只會在使用者點到那個功能時才炸。已經咬過兩次（listen-box、h-filter）。
-const html = fs.readFileSync(new URL('../index.html', import.meta.url).pathname, 'utf8');
+const html = fs.readFileSync(`${SITE_DIR}/index.html`, 'utf8');
 const htmlIds = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]));
 const DYNAMIC = new Set(['bulk-bar', 'peek-note', 'bulk-clear', 'bulk-del']);
 const missingIds = [];
@@ -113,7 +117,7 @@ chk('JS 取用的 DOM id 都存在於 index.html', missingIds);
 // 課程導言的不變量：begin() 每輪都必須重設，否則下一輪會掛著上一課的說明。
 // 這條在 jsdom 測不到（study.js 會連帶載入 CDN 上的 supabase-js），改用原始碼層檢查。
 {
-  const app = fs.readFileSync(new URL('../js/app.js', import.meta.url).pathname, 'utf8');
+  const app = fs.readFileSync(`${ROOT}/app.js`, 'utf8');
   const body = app.slice(app.indexOf('async function begin('));
   const head = body.slice(0, body.indexOf('\n}'));
   const setIdx = head.indexOf('study.setLesson');

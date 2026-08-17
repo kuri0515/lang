@@ -10,6 +10,7 @@ import { $, esc, msg } from '../core/dom.js';
 import { emit, EVENTS } from '../core/bus.js';
 import * as admin from '../data/admin.js';
 import * as content from '../data/content.js';
+import { lang } from '../core/lang.js';
 
 let editing = null;
 let decksCache = [];
@@ -65,7 +66,7 @@ async function save() {
   const ko = $('e-ko').value.trim();
   const zh = $('e-zh').value.trim();
   const say = (t, cls = '') => { $('e-msg').textContent = t; $('e-msg').className = 'editor-msg ' + cls; };
-  if (!ko || !zh) return say('韓文與中文為必填', 'err');
+  if (!ko || !zh) return say(`${lang().termLabel}與中文為必填`, 'err');
 
   const patch = {
     ko, zh,

@@ -3,9 +3,13 @@
 //     node tests/modes.test.mjs <pool.json>
 // =====================================================================
 import fs from 'fs';
-import { MODES, getMode, forcedDirection, needsPool } from '../js/study/modes/index.js';
-import { buildChoices } from '../js/study/modes/choice.js';
-import { scrambleSource } from '../js/study/modes/scramble.js';
+import { SHARED, siteReady } from './_site.mjs';
+
+// 先裝語言設定再載入題型 —— 題型的 hint 是模板字串，載入當下就要 lang()
+await siteReady();
+const { MODES, getMode, forcedDirection, needsPool } = await import(`${SHARED}/js/study/modes/index.js`);
+const { buildChoices } = await import(`${SHARED}/js/study/modes/choice.js`);
+const { scrambleSource } = await import(`${SHARED}/js/study/modes/scramble.js`);
 
 const pool = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
 let fails = 0;

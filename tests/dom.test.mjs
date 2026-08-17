@@ -7,22 +7,25 @@
 // =====================================================================
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
-const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
-const dom=new JSDOM(fs.readFileSync(ROOT+'/index.html','utf8'),{pretendToBeVisual:true, url:'https://x.test/'});
+import { SHARED, SITE_DIR, siteReady } from './_site.mjs';
+const dom=new JSDOM(fs.readFileSync(SITE_DIR+'/index.html','utf8'),{pretendToBeVisual:true, url:'https://x.test/'});
 global.window=dom.window; global.document=dom.window.document;
 global.localStorage=dom.window.localStorage; global.getComputedStyle=dom.window.getComputedStyle;
 global.confirm=()=>true; global.prompt=()=>null;
 
+// 共用模組載入當下就會用到 lang()，所以先裝配站台
+const LANG = await siteReady();
+
 let f=0; const chk=(n,c,e='')=>{console.log(`  ${c?'✅':'❌'} ${n}${e?' — '+e:''}`); if(!c)f++;};
 
 // 真實模組（不碰網路的那些）
-const { show, initTabs, onEnter, viewFromHash } = await import(ROOT+'/js/views/router.js');
-const { initTheme, applyTheme } = await import(ROOT+'/js/views/theme.js');
-const { createSession } = await import(ROOT+'/js/study/session.js');
-const { RATING } = await import(ROOT+'/js/core/srs.js');
-const { getMode } = await import(ROOT+'/js/study/modes/index.js');
-const { $, esc, skeleton, emptyState, msg } = await import(ROOT+'/js/core/dom.js');
-const { on, emit, EVENTS } = await import(ROOT+'/js/core/bus.js');
+const { show, initTabs, onEnter, viewFromHash } = await import(SHARED+'/js/views/router.js');
+const { initTheme, applyTheme } = await import(SHARED+'/js/views/theme.js');
+const { createSession } = await import(SHARED+'/js/study/session.js');
+const { RATING } = await import(SHARED+'/js/core/srs.js');
+const { getMode } = await import(SHARED+'/js/study/modes/index.js');
+const { $, esc, skeleton, emptyState, msg } = await import(SHARED+'/js/core/dom.js');
+const { on, emit, EVENTS } = await import(SHARED+'/js/core/bus.js');
 
 console.log('【router】');
 initTabs();
@@ -114,7 +117,8 @@ chk('teardown 收起', $('scramble').classList.contains('hidden'));
 // 標籤分類：發音組必須依教學順序，不能被數量排序帶跑
 // ---------------------------------------------------------------------
 console.log('\n【標籤分類】');
-const { groupTags, PRON_ORDER } = await import(ROOT+'/js/core/taxonomy.js');
+const { groupTags, pronOrder } = await import(SHARED+'/js/core/taxonomy.js');
+const PRON_ORDER = pronOrder();
 {
   const pairs = [['食物',80],['動詞',41],['收音ㄽ',1],['連音練習',8],['問候',18],
                  ['收音ㄱ',4],['收音ㄼ',3],['激音化',14],['句型',39],['家庭',22]];
@@ -146,7 +150,7 @@ const { groupTags, PRON_ORDER } = await import(ROOT+'/js/core/taxonomy.js');
 // ---------------------------------------------------------------------
 console.log('\n【發音課程進度】');
 {
-  const { nextLesson, LESSON_DONE } = await import(ROOT+'/js/core/taxonomy.js');
+  const { nextLesson, LESSON_DONE } = await import(SHARED+'/js/core/taxonomy.js');
   const r = (tag, total, mastered) => ({ tag, total, mastered, started: mastered });
 
   // 第一課碰過但沒掌握 → 下一課仍是它，不能往前跳
@@ -185,7 +189,8 @@ console.log('\n【課程導言】');
 {
   // 不 import study.js —— 它會連帶載入 supabase-js（CDN 網址），Node 無法解析。
   // 這裡驗資料完整性，「每輪必重設」的不變量在 arch 測試用原始碼層檢查。
-  const { LESSON_INTRO, PRON_ORDER, lessonOutro } = await import(ROOT+'/js/core/taxonomy.js');
+  const { lessonIntro, lessonOutro } = await import(SHARED+'/js/core/taxonomy.js');
+  const LESSON_INTRO = lessonIntro();
 
   chk('每一課都有導言', PRON_ORDER.every((t) => LESSON_INTRO[t]),
       '路徑解決「學什麼」，導言解決「為什麼」，缺一課就斷一節');
@@ -198,7 +203,7 @@ console.log('\n【課程導言】');
         .filter(Boolean).every((v) => v.length <= 35),
       '收尾是一句話的事，說完就讓人走');
   chk('導言都給了具體例子',
-      Object.values(LESSON_INTRO).every((v) => /[가-힣]/.test(v)),
+      Object.values(LESSON_INTRO).every((v) => LANG.scriptRe.test(v)),
       '只講規則不給實例，等於還是要學習者自己想像');
   chk('導言的 DOM 錨點存在',
       !!$('lesson-intro') && !!$('lesson-title') && !!$('lesson-body'));
@@ -260,8 +265,9 @@ console.log('\n【專注模式】');
 // ---------------------------------------------------------------------
 console.log('\n【生活場景】');
 {
-  const { LIFE_SCENES, LIFE_TAGS, pickScene } =
-    await import(ROOT+'/js/core/taxonomy.js');
+  const { lifeScenes, lifeTags, pickScene } =
+    await import(SHARED+'/js/core/taxonomy.js');
+  const LIFE_SCENES = lifeScenes(), LIFE_TAGS = lifeTags();
   const sc = (key, total, started, mastered) => ({ key, label: key, total, started, mastered });
 
   chk('場景都有標籤與說明',
@@ -292,7 +298,7 @@ console.log('\n【生活場景】');
 console.log('\n【情境對話】');
 {
   const { parseLine, groupDialogues, shuffleLines, checkOrder } =
-    await import(ROOT+'/js/core/dialogue.js');
+    await import(SHARED+'/js/core/dialogue.js');
 
   chk('解析出說話者與情境',
       parseLine('對話 A｜咖啡廳點餐｜口語常縮成 아아')?.speaker === 'A'

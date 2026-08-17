@@ -4,7 +4,7 @@
 // =====================================================================
 import { $, esc, pct, msg } from '../core/dom.js';
 import { on, EVENTS } from '../core/bus.js';
-import { DIR_LABEL, TYPE_LABEL } from '../data/client.js';
+import { dirLabel, TYPE_LABEL } from '../data/client.js';
 import { previewIntervals } from '../core/srs.js';
 import { getMode } from '../study/modes/index.js';
 import * as content from '../data/content.js';
@@ -125,7 +125,7 @@ export function render(state) {
   // ---- 靜態內容 ----
   els.prog.style.width = `${(idx / total) * 100}%`;
   els.pos_.textContent = `${idx + 1} / ${total}`;
-  els.dir.textContent = DIR_LABEL[direction];
+  els.dir.textContent = dirLabel()[direction];
   els.type.textContent = TYPE_LABEL[item.item_type] || '單字';
 
   const ko2zh = direction === 'ko2zh';

@@ -5,20 +5,41 @@
 // 網頁貼上與命令列匯入的行為必須一致 —— 改一邊記得改另一邊。
 // =====================================================================
 
-const ALIASES = {
-  ko: ['ko', 'korean', 'hangul', '한국어', '한글', '韓文', '韓語', '韩文', '韩语', '單字', '单词', 'word'],
+import { lang } from './lang.js';
+
+/**
+ * 與語言無關的欄位別名。
+ *
+ * 目標語言那兩欄（ko／example_ko）叫什麼，各站自己在
+ * lang.config.js 的 columnAliases 補上 —— 韓文站要認「韓文」「한국어」，
+ * 日文站要認「日文」「日本語」，其餘欄位兩站完全一樣。
+ */
+const BASE_ALIASES = {
   zh: ['zh', 'chinese', 'meaning', 'meaning_zh', '中文', '繁體', '繁体', '釋義', '释义', '意思', '翻譯', '翻译'],
   romanization: ['romanization', 'roman', '羅馬音', '罗马音', '發音', '发音', '讀音', '读音'],
-  hanja: ['hanja', '漢字', '汉字', '漢字詞', '汉字词', '한자'],
+  hanja: ['hanja', '漢字', '汉字', '漢字詞', '汉字词'],
   item_type: ['type', 'item_type', '類型', '类型', '分類', '分类'],
   pos: ['pos', '詞性', '词性', 'part_of_speech'],
-  example_ko: ['example_ko', '例句', '韓文例句', '韩文例句', 'example'],
+  example_ko: ['example_ko', '例句', 'example'],
   example_zh: ['example_zh', '例句翻譯', '例句翻译', '例句中文'],
   note: ['note', '備註', '备注', '說明', '说明'],
   tags: ['tags', '標籤', '标签', '主題', '主题'],
 };
-const CANON = {};
-for (const [k, list] of Object.entries(ALIASES)) for (const a of list) CANON[a.toLowerCase()] = k;
+
+/**
+ * 每次呼叫重算而不是模組載入時算一次 ——
+ * 模組載入的時機早於 setLang()，那時要不到設定。
+ */
+function canon() {
+  const extra = lang().columnAliases || {};
+  const merged = { ...BASE_ALIASES };
+  for (const [k, list] of Object.entries(extra)) {
+    merged[k] = [...(merged[k] || []), ...list];
+  }
+  const out = {};
+  for (const [k, list] of Object.entries(merged)) for (const a of list) out[a.toLowerCase()] = k;
+  return out;
+}
 
 const TYPE_MAP = {
   word: 'word', 單字: 'word', 单词: 'word', 單詞: 'word', 詞: 'word', 词: 'word',
@@ -50,11 +71,6 @@ function splitLine(line, sep) {
   return out.map((x) => x.trim());
 }
 
-// 韓文（諺文）字元範圍。用來提示「這欄看起來不像韓文」——
-// 認不出表頭時會退回按欄位順序解析，若第一欄其實不是韓文就會導入垃圾。
-// 不直接拒絕（可能有外來語寫法），只標記讓人在預覽時看到。
-const HANGUL = /[\u1100-\u11FF\u3130-\u318F\uA960-\uA97F\uAC00-\uD7AF]/;
-
 function guessType(raw, ko) {
   const t = TYPE_MAP[String(raw || '').trim().toLowerCase()];
   if (t) return t;
@@ -64,6 +80,10 @@ function guessType(raw, ko) {
   return spaces <= 2 ? 'phrase' : 'sentence';
 }
 
+// 目標語言的字元範圍由 lang().scriptRe 提供。提示「這欄看起來不像目標語言」——
+// 認不出表頭時會退回按欄位順序解析，若第一欄其實不是目標語言就會導入垃圾。
+// 不直接拒絕（可能有外來語寫法），只標記讓人在預覽時看到。
+//
 /**
  * @returns {{rows: object[], headers: object, sep: string, skipped: number, error: string|null}}
  */
@@ -71,8 +91,10 @@ export function parseTable(text) {
   const lines = text.split(/\r?\n/).filter((l) => l.trim());
   if (!lines.length) return { rows: [], headers: {}, sep: ',', skipped: 0, error: '沒有內容' };
 
+  const L = lang();
   const sep = sniff(text);
   const first = splitLine(lines[0], sep);
+  const CANON = canon();
   const mapped = first.map((c) => CANON[c.toLowerCase()]);
   const hasHeader = mapped.filter(Boolean).length >= 2;
 
@@ -81,7 +103,7 @@ export function parseTable(text) {
     cols = mapped;
     body = lines.slice(1);
   } else {
-    // 沒表頭 → 按最常見的兩欄／三欄慣例：韓文, 中文[, 羅馬音]
+    // 沒表頭 → 按最常見的兩欄／三欄慣例：目標語言, 中文[, 羅馬音]
     cols = ['ko', 'zh', 'romanization', 'item_type', 'pos', 'example_ko', 'example_zh', 'note', 'tags']
       .slice(0, Math.max(2, first.length));
     body = lines;
@@ -89,7 +111,7 @@ export function parseTable(text) {
 
   if (!cols.includes('ko') || !cols.includes('zh')) {
     return { rows: [], headers: {}, sep, skipped: 0,
-             error: '認不出韓文與中文欄位。請確保有表頭（ko／zh 或 韓文／中文），或直接用「韓文,中文」兩欄格式。' };
+             error: `認不出${L.termLabel}與中文欄位。請確保有表頭（ko／zh 或 ${L.termLabel}／中文），或直接用「${L.termLabel},中文」兩欄格式。` };
   }
 
   const rows = [];
@@ -101,7 +123,7 @@ export function parseTable(text) {
     if (!r.ko || !r.zh) { skipped++; continue; }
     r.item_type = guessType(r.item_type, r.ko);
     r.tags = String(r.tags || '').split(/[,，;；]/).map((t) => t.trim()).filter(Boolean);
-    r.warn = HANGUL.test(r.ko) ? null : '韓文欄裡沒有諺文字元';
+    r.warn = L.scriptRe.test(r.ko) ? null : `${L.termLabel}欄裡沒有${L.scriptLabel}`;
     rows.push(r);
   }
 

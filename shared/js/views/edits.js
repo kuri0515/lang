@@ -7,6 +7,7 @@
 import { $, esc, skeleton, emptyState, qs } from '../core/dom.js';
 import { on, EVENTS } from '../core/bus.js';
 import * as admin from '../data/admin.js';
+import { lang } from '../core/lang.js';
 
 const ACTION = {
   create:     { label: '新增', },
@@ -15,7 +16,7 @@ const ACTION = {
   restore:    { label: '恢復', },
 };
 const FIELD = {
-  ko: '韓文', zh: '中文', romanization: '羅馬音', hanja: '漢字',
+  ko: lang().termLabel, zh: '中文', romanization: lang().readingLabel, hanja: lang().hanjaLabel,
   pos: '詞性', item_type: '類型', example_ko: '例句(韓)',
   example_zh: '例句(中)', note: '備註', tags: '標籤', is_active: '上架狀態',
 };

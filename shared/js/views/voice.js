@@ -1,13 +1,14 @@
 // 朗讀語音設定（語音選擇 + 語速）
 import { $, esc } from '../core/dom.js';
 import * as speech from '../core/speech.js';
+import { lang } from '../core/lang.js';
 
 export function initVoiceUI() {
   speech.onVoicesReady((list) => {
     const sel = $('voice-pick');
     if (!sel) return;
     if (!list.length) {
-      sel.innerHTML = '<option>（系統沒有韓語語音）</option>';
+      sel.innerHTML = `<option>（系統沒有${lang().langLabel}語音）</option>`;
       sel.disabled = true;
       $('voice-test').disabled = true;
       return;

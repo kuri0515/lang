@@ -5,6 +5,7 @@ import { TYPE_LABEL } from '../data/client.js';
 import { parseTable } from '../core/parse-table.js';
 import * as admin from '../data/admin.js';
 import { loadDecksInto, resolveDeck, invalidateDecks } from './editor.js';
+import { lang } from '../core/lang.js';
 
 let parsed = null;
 
@@ -33,7 +34,7 @@ function preview() {
   $('i-summary').innerHTML =
     `解析出 <b>${res.rows.length}</b> 列（跳過 ${res.skipped} 列缺欄位的）· `
     + `分隔符 ${res.sep === '\t' ? 'Tab' : '逗號'} · 欄位對應：${esc(JSON.stringify(res.headers))}`
-    + (warns ? `<br><span style="color:var(--hard)">⚠️ ${warns} 列的韓文欄裡沒有諺文字元，請確認欄位沒錯位</span>` : '');
+    + (warns ? `<br><span style="color:var(--hard)">⚠️ ${warns} 列的${lang().termLabel}欄裡沒有${lang().scriptLabel}，請確認欄位沒錯位</span>` : '');
 
   $('i-preview').innerHTML = res.rows.slice(0, 30).map((r) =>
     `<div class="i-row${r.warn ? ' warn' : ''}">

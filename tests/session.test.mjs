@@ -6,8 +6,8 @@
 //
 //     node tests/session.test.mjs
 // =====================================================================
-import { createSession } from '../js/study/session.js';
-import { RATING } from '../js/core/srs.js';
+import { createSession } from '../shared/js/study/session.js';
+import { RATING } from '../shared/js/core/srs.js';
 
 let fails = 0;
 const chk = (n, c, e = '') => {

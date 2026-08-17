@@ -1,10 +1,10 @@
 // 學習首頁：今日統計、連續天數、練習方式、詞庫、弱項
 import { $, esc, pct, msg, emptyState, qs, qsa } from '../core/dom.js';
 import { on, EVENTS } from '../core/bus.js';
-import { DIR_SHORT } from '../data/client.js';
+import { dirShort } from '../data/client.js';
 import * as content from '../data/content.js';
-import { PRON_ORDER, nextLesson, LESSON_DONE,
-         LIFE_SCENES, pickScene } from '../core/taxonomy.js';
+import { pronOrder, nextLesson, LESSON_DONE,
+         lifeScenes, pickScene } from '../core/taxonomy.js';
 import * as progress from '../data/progress.js';
 import { MODES, getMode, forcedDirection } from '../study/modes/index.js';
 import { computeStreak } from '../core/stats.js';
@@ -22,7 +22,7 @@ export const effectiveDir = () => forcedDirection(studyMode()) || selectedDir();
 export function syncModeUI() {
   const m = getMode(studyMode());
   $('mode-hint').textContent = m.hint || '';
-  $('opt-summary').textContent = `${m.label} · ${DIR_SHORT[effectiveDir()]}`;
+  $('opt-summary').textContent = `${m.label} · ${dirShort()[effectiveDir()]}`;
   qsa('#dir-pick input').forEach((i) => {
     i.disabled = !!m.direction;
     if (m.direction) i.checked = i.value === m.direction;
@@ -78,8 +78,8 @@ export async function load() {
       progress.weakItems(user.id, 8).catch(() => []),
       progress.dailyStats(user.id, 30).catch(() => []),
       // 發音課程進度失敗不該拖垮整個首頁 —— 它是加值資訊，不是主線
-      content.pronProgress(user.id, PRON_ORDER).catch(() => []),
-      lifeDeck ? content.tagProgress(user.id, LIFE_SCENES, lifeDeck).catch(() => [])
+      content.pronProgress(user.id, pronOrder()).catch(() => []),
+      lifeDeck ? content.tagProgress(user.id, lifeScenes(), lifeDeck).catch(() => [])
                : Promise.resolve([]),
     ]);
 
@@ -284,7 +284,7 @@ function renderWeak(weak) {
         const cls = a == null ? '' : a < 0.5 ? 'low' : a < 0.8 ? 'mid' : '';
         return `<div class="weak-row">
           <div>${esc(w.ko)} <span class="muted">${esc(w.zh)}</span>
-            <span class="muted">· ${DIR_SHORT[w.direction]}</span></div>
+            <span class="muted">· ${dirShort()[w.direction]}</span></div>
           <div class="pct ${cls}">${pct(a)} <span class="muted">(${w.total_reviews})</span></div>
         </div>`;
       }).join('')
