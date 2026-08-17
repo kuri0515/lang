@@ -12,3 +12,5 @@
 | た | ありがとう。 | `a ri ga tō u` | 用了長音符號（書上多數地方是拆成兩拍寫，如 to u）；「tō」不像單一個拍 |
 | て | てんとうむし | `ten tō mu shi` | 用了長音符號（書上多數地方是拆成兩拍寫，如 to u）；「tō」不像單一個拍 |
 | て | 手伝いましょうか。 | `te tsu da i ma shō u ka` | 用了長音符號（書上多數地方是拆成兩拍寫，如 to u）；「shō」不像單一個拍 |
+| む | 日本語の勉強はどうですか。 | `ni hon go no ben kyou wa dou de su ka` | 「kyou」不像單一個拍 |
+| も | 日本料理が好きですか。 | `ni hon ryou ri ga su ki de su ka` | 「ryou」不像單一個拍 |

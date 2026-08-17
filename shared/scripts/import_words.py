@@ -84,6 +84,13 @@ def rest(url, key, method, path, payload=None, params=""):
         sys.exit(f"❌ {method} {path} → HTTP {e.code}\n{detail}")
 
 
+def make_slug_key(scope):
+    """回傳「一條資料的身分」怎麼算。身分算錯的後果不是報錯，是靜默合併。"""
+    if scope == "note":
+        return lambda r: r["ko"] + "\x1f" + (r.get("note") or "")
+    return lambda r: r["ko"]
+
+
 def guess_type(raw, ko):
     """未標註類型時，用空白數粗判：無空白=單字，1-2 空白=詞組，其餘=句子。"""
     if raw:
@@ -130,6 +137,8 @@ def main():
     ap.add_argument("--level", default=None, help="如 topik1")
     ap.add_argument("--allow-dup", action="store_true",
                     help="即使該詞已存在於其他詞庫也照樣收錄（預設會略過）")
+    ap.add_argument("--slug-scope", choices=["ko", "note"], default="ko",
+                    help="--append 時 slug 雜湊的依據：ko（預設）或 ko+note")
     ap.add_argument("--append", action="store_true",
                     help="累積模式：slug 由詞條內容產生，同一詞庫可分多次匯入不互相覆蓋")
     ap.add_argument("--deactivate-missing", action="store_true",
@@ -169,11 +178,20 @@ def main():
     url, key = load_env()
     # 不設 limit 上限：分頁撈完。寫死上限會在詞庫長大後靜默漏判，
     # 那時查重報「乾淨」其實只是沒看到後面的資料。
+    # ★「已存在」的判斷必須與 slug 用同一套身分定義。
+    #   兩套定義並存 = 資料會被靜默丟掉：實際踩過 ——
+    #   slug 算 ko+note（同句不同情境算兩條），這裡卻只比 ko，
+    #   於是「ありがとう。」在第二、三段對話被判為重複而略過，
+    #   那兩段各只剩一行，情境對話功能裡整組消失。
+    #   匯入沒報錯、資料庫看起來也有東西，只有從畫面才看得出來。
+    slug_key = make_slug_key(args.slug_scope)
     existing = {}
+    fetched = 0
     while True:
         page = rest(url, key, "GET", "items", None,
-                    f"?select=ko,deck_id,is_active&order=id&offset={len(existing)}&limit=1000")
-        existing.update({x["ko"]: x for x in page})
+                    f"?select=ko,note,deck_id,is_active&order=id&offset={fetched}&limit=1000")
+        fetched += len(page)
+        existing.update({slug_key({"ko": x["ko"], "note": x.get("note")}): x for x in page})
         if len(page) < 1000:
             break
     decks_by_id = {d["id"]: d["slug"] for d in
@@ -184,9 +202,10 @@ def main():
     #   別的詞庫已有 → 真正要人判斷的跨庫重複，會變成兩張卡。
     same, clash = [], []
     for r in rows:
-        if r["ko"] not in existing:
+        k = slug_key(r)
+        if k not in existing:
             continue
-        slug = decks_by_id.get(existing[r["ko"]]["deck_id"], "?")
+        slug = decks_by_id.get(existing[k]["deck_id"], "?")
         (same if slug in groups else clash).append((r["ko"], slug))
 
     if same:
@@ -203,7 +222,9 @@ def main():
             print(f"        …另有 {len(clash)-10} 條")
     if same or (clash and not args.allow_dup):
         skip = {ko for ko, _ in same} | (set() if args.allow_dup else {ko for ko, _ in clash})
-        rows = [r for r in rows if r["ko"] not in skip]
+        # 用 slug_key 反查要略過哪些列 —— 同樣不能退回只比 ko
+        rows = [r for r in rows
+                if not (r["ko"] in skip and slug_key(r) in existing)]
         groups = {}
         for r in rows:
             groups.setdefault(r.get("deck") or args.deck, []).append(r)
@@ -232,7 +253,12 @@ def main():
                 # --append 用內容雜湊 —— 否則多批匯入同一詞庫時，
                 # 每批都從 0001 編起，後一批會直接覆蓋前一批。
                 # 這個坑實際踩過：六批 46 條最後只剩 10 條。
-                "slug": (f"{deck_slug}-{hashlib.sha1(r['ko'].encode()).hexdigest()[:10]}"
+                # --append 的雜湊預設只吃 ko。但同一句話出現在不同情境時
+                # （ありがとう 在三段對話裡都有），只吃 ko 會讓它們併成一條，
+                # 於是後兩段對話各只剩一行 —— groupDialogues 要求 ≥2 行才成組，
+                # 那兩段會從情境對話裡整組消失。資料看起來都在，畫面上卻沒有。
+                # --slug-scope note 把 note 一起算進雜湊，同句不同情境就是不同條目。
+                "slug": (f"{deck_slug}-{hashlib.sha1(slug_key(r).encode()).hexdigest()[:10]}"
                          if args.append else f"{deck_slug}-{i:04d}"),
                 "item_type": guess_type(r.get("type"), r["ko"]),
                 "ko": r["ko"],

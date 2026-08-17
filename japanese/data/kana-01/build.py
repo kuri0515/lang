@@ -116,7 +116,11 @@ def merge_duplicates(all_rows):
     order = []
     merges = []
     for r in all_rows:
-        k = r['ko']
+        # ★ 對話句不合併。同一句話出現在不同情境時，各段對話都要有自己那一行 ——
+        #   併掉的話，後面幾段各只剩一行，而 groupDialogues 要求 ≥2 行才成組，
+        #   那幾段會從情境對話裡整組消失。它們的唯一性靠匯入時的
+        #   --slug-scope note 保證（ko+note 一起算雜湊），不是靠這裡合併。
+        k = r['ko'] + '\x1f' + r['note'] if r['type'] == 'sentence' else r['ko']
         if k not in by_ko:
             by_ko[k] = dict(r)
             order.append(k)
@@ -155,6 +159,10 @@ def main():
                 review.append((L['kana'], r['ko'], r['romanization'], why))
 
     merged, merges = merge_duplicates(all_rows)
+    merged_by_key = {
+        (m['ko'] + '\x1f' + m['note'] if m['type'] == 'sentence' else m['ko']): m
+        for m in merged
+    }
 
     # 每課一個檔，但只寫「這一課第一次出現」的那些 ko，
     # 重複的統一由第一次出現的那一課帶走（標籤已經合併齊了）。
@@ -163,10 +171,12 @@ def main():
     for L, rows in per_lesson:
         mine = []
         for r in rows:
-            if r['ko'] in assigned:
+            key = r['ko'] + '\x1f' + r['note'] if r['type'] == 'sentence' else r['ko']
+            if key in assigned:
                 continue
-            assigned.add(r['ko'])
-            mine.append(next(m for m in merged if m['ko'] == r['ko']))
+            assigned.add(key)
+            key = r['ko'] + '\x1f' + r['note'] if r['type'] == 'sentence' else r['ko']
+            mine.append(merged_by_key[key])
         path = os.path.join(HERE, f"{L['romaji']}.csv")
         with open(path, 'w', encoding='utf-8', newline='') as f:
             w = csv.DictWriter(f, fieldnames=HEADER)
