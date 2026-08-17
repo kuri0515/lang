@@ -89,8 +89,22 @@ export function createSession({ save, onChange, onFinish, onError }) {
       graded.add(idx);
       stats = { n: stats.n + 1, correct: stats.correct + (rating >= 3 ? 1 : 0) };
       idx += 1;
-      // 「忘了」的卡當輪末尾再出現一次
-      if (rating === RATING.AGAIN) queue.push({ ...entry, card: { ...(entry.card || {}), ...next } });
+      // ★ 還在學習階段的卡，當輪末尾再出現一次 —— 直到它畢業為止。
+      //
+      //   學習步驟（1 分鐘、10 分鐘）本來就存在排程資料裡，
+      //   但先前只有「忘了」會重排，於是按「記得」的新卡當輪就消失了，
+      //   要等下次開複習才再見到 —— 「今天學到會為止」根本做不到。
+      //   現在讓步驟真的在同一輪內跑完：
+      //     忘了     → 回到第一步，再來
+      //     有點難／記得 → 前進一步，還沒畢業就再來一次
+      //     很簡單   → 直接畢業，不再出現
+      //   8 條的一課，一次坐下來就能走到「今天都會了」。
+      //
+      //   卡在同一張出不去是使用者自己的選擇（他一直按「忘了」），
+      //   而且重排是加到隊尾，中間隔著其他題，不會變成連續轟炸。
+      if (next.state === 'learning') {
+        queue.push({ ...entry, card: { ...(entry.card || {}), ...next } });
+      }
 
       pending = {
         payload: {

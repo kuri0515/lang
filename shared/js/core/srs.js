@@ -10,6 +10,20 @@ export const RATING = { AGAIN: 1, HARD: 2, GOOD: 3, EASY: 4 };
 // 学习阶段的分钟级步长（新卡在毕业前反复出现）
 const LEARNING_STEPS_MIN = [1, 10];
 const GRADUATING_INTERVAL_DAYS = 1;
+// 畢業後的前三次固定間隔（天）。之後交給 ease。
+const REVIEW_STEPS = [1, 3, 7];
+
+/**
+ * 間隔上限。
+ *
+ * ease 每次「很簡單」都 +0.15，再乘 1.3 —— 複利之下，
+ * 連按五次「很簡單」會排到 3275 天（九年）後，等於這張卡永遠不再出現。
+ * 而九年沒複習還記得，本來就不是這套系統該預測的事。
+ *
+ * 一年是「久到不打擾、又還在人生範圍內」的界線：
+ * 學語言的人寧可一年見它一次，也不要它悄悄消失。
+ */
+const MAX_INTERVAL_DAYS = 365;
 const EASY_INTERVAL_DAYS = 4;
 const MIN_EASE = 1.3;
 
@@ -66,15 +80,25 @@ export function schedule(card, rating, now = new Date()) {
   repetitions += 1;
   if (rating === RATING.HARD) {
     ease = Math.max(MIN_EASE, ease - 0.15);
-    interval = Math.max(1, interval * 1.2);
+    // ×1.2 幾乎不成長：1.2 → 1.44 → 1.73，按了七次還在 2.5 天。
+    // 一張稍難的卡會天天出現、永遠畢不了業，而且只進不出 ——
+    // 複習量堆到後來，人就不想開了。ease 的懲罰保留，但間隔要會長大。
+    interval = Math.max(1, interval * 1.5);
   } else if (rating === RATING.GOOD) {
-    interval = Math.max(1, interval * ease);
+    // ★ 前三次用固定間隔，之後才交給 ease。
+    //   1／3／7 是人記得住的節奏（隔天、三天後、一週後）；
+    //   純 ×ease 會落在 2.5 天、6.25 天這種說不出口的時間點。
+    //   而且對全新的文字系統，頭一週決定成敗 ——
+    //   個人差異要到第四次之後才顯現，那時 ease 才有意義。
+    interval = interval <= 1 ? REVIEW_STEPS[1]
+             : interval <= REVIEW_STEPS[1] ? REVIEW_STEPS[2]
+             : Math.max(1, interval * ease);
   } else {
     // EASY
     ease = ease + 0.15;
     interval = Math.max(1, interval * ease * 1.3);
   }
-  interval = Math.round(interval * 100) / 100;
+  interval = Math.min(MAX_INTERVAL_DAYS, Math.round(interval * 100) / 100);
   return commit('review', days(interval));
 
   // -------------------------------------------------------------------

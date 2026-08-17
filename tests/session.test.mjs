@@ -7,7 +7,7 @@
 //     node tests/session.test.mjs
 // =====================================================================
 import { createSession, matchesType, orderForDiscrimination } from '../shared/js/study/session.js';
-import { RATING, scheduleRecall } from '../shared/js/core/srs.js';
+import { RATING, scheduleRecall, schedule } from '../shared/js/core/srs.js';
 
 let fails = 0;
 const chk = (n, c, e = '') => {
@@ -70,8 +70,10 @@ chk('開新一輪也會定案未寫的那題', saved.length === 2, '換一輪不
 
 console.log('【自由練習標記】');
 saved.length = 0;
+// 用「很簡單」讓卡直接畢業 —— 新卡按「記得」還在學習階段，
+// 會被排回隊尾（見下方【今日畢業】），那一輪不會結束。
 S.start(mk(1), { freeMode: true });
-S.grade(RATING.GOOD);
+S.grade(RATING.EASY);
 chk('payload 帶 free=true', last()?.free === true, '資料層據此決定要不要動排程');
 chk('完成回呼帶 free', finished?.free === true);
 
@@ -89,7 +91,7 @@ chk('第一題不可上一個', !S.state().canPrev);
 chk('唯一一題不可下一個', !S.state().canNext);
 chk('越界導覽回 false', S.go(-1) === false && S.go(99) === false);
 finished = null;
-S.grade(RATING.GOOD);
+S.grade(RATING.EASY);          // 直接畢業，才會走到「這一輪結束」
 chk('答完最後一題觸發完成', finished !== null);
 
 console.log('\n【內容類型過濾】');
@@ -178,6 +180,55 @@ console.log('\n【辨別優先的佇列編排】');
     .map((e) => e.item.ko).join();
   chk('組與組之間會隨機（不同亂數給出不同順序）', a !== b,
       '固定順序會讓人靠位置記答案 —— 那是記順序不是記字', a + '  vs  ' + b);
+}
+
+console.log('\n【今日畢業：新卡在本輪內循環到會為止】');
+{
+  const seen = [];
+  const T = createSession({
+    save: async () => {}, onChange: () => {}, onFinish: () => seen.push('done'),
+  });
+  const one = () => [{ item: { id: 'x', ko: 'あ', zh: 'a' }, direction: 'ko2zh', card: null }];
+
+  T.start(one(), { mode: 'flip', kind: 'new' });
+  T.grade(RATING.GOOD);
+  chk('★ 新卡按「記得」會排回本輪隊尾', T.state().total === 2,
+      '學習步驟本來就在排程資料裡，先前只有「忘了」會重排 —— '
+      + '於是「今天學到會為止」根本做不到');
+  T.grade(RATING.GOOD);
+  chk('第二次「記得」就畢業，不再排回', T.state().total === 2);
+
+  const T2 = createSession({ save: async () => {}, onChange: () => {}, onFinish: () => {} });
+  T2.start(one(), { mode: 'flip', kind: 'new' });
+  T2.grade(RATING.EASY);
+  chk('「很簡單」直接畢業', T2.state().total === 1,
+      '本來就會的不該被逼著再看一次');
+
+  const T3 = createSession({ save: async () => {}, onChange: () => {}, onFinish: () => {} });
+  T3.start(one(), { mode: 'flip', kind: 'new' });
+  T3.grade(RATING.AGAIN);
+  T3.grade(RATING.AGAIN);
+  chk('「忘了」每次都排回，不會提早結束', T3.state().total === 3,
+      '卡在同一張是使用者自己的選擇，而重排在隊尾，不會變成連續轟炸');
+}
+
+console.log('\n【複習曲線】');
+{
+  const step = (card, r) => schedule(card, r, new Date('2026-01-01T00:00:00Z'));
+  let c = { state: 'review', interval_days: 1, ease_factor: 2.5, repetitions: 2, lapses: 0 };
+  chk('畢業後前三次是 1 → 3 → 7 天',
+      step(c, RATING.GOOD).interval_days === 3 &&
+      step({ ...c, interval_days: 3 }, RATING.GOOD).interval_days === 7,
+      '1／3／7 是人記得住的節奏；純 ×ease 會落在 2.5 天、6.25 天這種說不出口的時間點');
+  chk('第四次之後才交給 ease',
+      step({ ...c, interval_days: 7 }, RATING.GOOD).interval_days === 17.5,
+      '個人差異要到這時才顯現，那之前 ease 沒有意義');
+  chk('「有點難」的間隔會長大（×1.5）',
+      step({ ...c, interval_days: 4 }, RATING.HARD).interval_days === 6,
+      '×1.2 幾乎不成長，難卡會天天出現、永遠畢不了業，複習量只進不出');
+  chk('★ 間隔封頂 365 天',
+      step({ ...c, interval_days: 300, ease_factor: 3.5 }, RATING.EASY).interval_days === 365,
+      '不封頂的話連按幾次「很簡單」會排到九年後，等於這張卡永遠消失');
 }
 
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
