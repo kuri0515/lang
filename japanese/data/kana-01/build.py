@@ -42,7 +42,11 @@ for f in sorted(glob.glob(os.path.join(HERE, '_source_*.py'))):
         LESSONS.extend(lst)
 
 # 教學順序：五十音表的順序，不是檔名的字母順序
-GOJUON = 'あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん'
+GOJUON = ('あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほ'
+          'まみむめもやゆよらりるれろわをん')
+# 片假名接在平假名之後 —— 課程順序是「先學完平假名再學片假名」，
+# 而不是 あ/ア 交錯。書就是這樣編的。
+GOJUON += ''.join(chr(ord(c) + 0x60) for c in GOJUON)
 LESSONS.sort(key=lambda L: GOJUON.index(L['kana']) if L['kana'] in GOJUON else 999)
 
 from _furigana import FURIGANA   # noqa: E402
@@ -86,13 +90,17 @@ def rows_for(L):
     rows = []
     # ① 假名卡。zh 帶「·平假名」不是裝飾 —— 之後片假名 ア 讀音同樣是 a，
     #    中→日 方向只給 a 的話學習者不知道該寫哪個，會答對卻被判錯。
+    # 平假名／片假名共用同一套結構，差別只在標籤與 zh 的後綴。
+    # ★ zh 一定要帶書寫系統：あ 與 ア 讀音都是 a，
+    #   中→日 方向只給 a 的話學習者不知道該寫哪個，會答對卻被判錯。
+    script = L.get('script', '平假名')
     rows.append({
         'ko': L['kana'],
-        'zh': f"{L['romaji']} ·平假名",
+        'zh': f"{L['romaji']} ·{script}",
         'romanization': L['romaji'],
         'type': 'word',
         'note': compose_note(L)[0],
-        'tags': f"清音,平假名,{L['row']},{L['kana']}",
+        'tags': f"清音,{script},{L['row']},{L['kana']}",
         'hanja': '',
     })
     # ② 單字
@@ -141,7 +149,18 @@ for c in _YOON:
     for v in ('a', 'u', 'o'):
         MORA.add(c + v)
 MORA |= {'shi', 'chi', 'tsu', 'fu', 'ji'}          # 不規則但合法
-MORA -= {'si', 'ti', 'tu', 'hu', 'zi', 'yi', 'ye', 'wi', 'wu', 'we'}  # 日語沒有
+MORA -= {'si', 'ti', 'tu', 'hu', 'zi', 'yi', 'ye', 'wi', 'wu', 'we'}  # 平假名沒有
+
+# 片假名專用的外來音拍：ファ・フィ・ティ・ディ・ウィ・ヴ…
+# 這些在平假名裡不存在，是為了寫外語才有的 —— 片假名課開始後必須認得，
+# 否則整批外來語都會被判成拍寫錯。
+MORA |= {'fa', 'fi', 'fe', 'fo', 'ti', 'di', 'du', 'tu',
+         'wi', 'we', 'va', 'vi', 'vu', 've', 'vo',
+         'she', 'che', 'je', 'tsa', 'tsi', 'tse', 'tso'}
+# ★ 順序有意義：上面那行清掉的是「平假名沒有的拍」，
+#   但片假名為了寫外語就是有 ティ・ファ・ウィ ——
+#   先加後減的話 ti 會被清掉，於是 ロマンティック 被判成拍寫錯。
+#   實際踩過：片假名課一開始就報了兩條假的。
 
 
 def suspicious(ro):
@@ -322,7 +341,12 @@ def main():
             assigned.add(key)
             key = r['ko'] + '\x1f' + r['note'] if r['type'] == 'sentence' else r['ko']
             mine.append(merged_by_key[key])
-        path = os.path.join(HERE, f"{L['romaji']}.csv")
+        # ★ 檔名一定要帶書寫系統：あ 與 ア 的 romaji 都是 'a'，
+        #   只用 romaji 當檔名會讓片假名把平假名整個蓋掉 ——
+        #   實際踩過：92 課只寫出 46 個檔，而且不會報錯，
+        #   因為每個檔案自己都是完整的。
+        suffix = '' if L.get('script', '平假名') == '平假名' else '-k'
+        path = os.path.join(HERE, f"{L['romaji']}{suffix}.csv")
         with open(path, 'w', encoding='utf-8', newline='') as f:
             w = csv.DictWriter(f, fieldnames=HEADER)
             w.writeheader()
@@ -340,6 +364,11 @@ def main():
         for k, a, b in merges:
             print(f"   「{k}」  {a}  ＋  {b}")
     assert total == len(merged), f"對帳不符：寫出 {total} 條，去重後應為 {len(merged)} 條"
+    # 檔案數必須等於課數 —— 檔名撞了不會報錯，只會靜靜少掉一半
+    n_csv = len([f for f in os.listdir(HERE) if f.endswith('.csv')])
+    if n_csv != len(LESSONS):
+        sys.exit(f"❌ CSV 檔數 {n_csv} ≠ 課數 {len(LESSONS)}：檔名可能相撞")
+    print(f"  ✅ {n_csv} 個 CSV 對上 {len(LESSONS)} 課")
 
     # ★ 這裡曾經產生 kana-lessons.js（課程清單 + 導言）給前端用。
     #   已移除：課程清單改成程式碼裡的完整教學序列（含還沒開課的片假名），
