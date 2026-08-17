@@ -47,7 +47,17 @@ GOJUON = ('あいうえおかきくけこさしすせそたちつてとなにぬ
 # 片假名接在平假名之後 —— 課程順序是「先學完平假名再學片假名」，
 # 而不是 あ/ア 交錯。書就是這樣編的。
 GOJUON += ''.join(chr(ord(c) + 0x60) for c in GOJUON)
-LESSONS.sort(key=lambda L: GOJUON.index(L['kana']) if L['kana'] in GOJUON else 999)
+RULE_ORDER = ['濁音', '半濁音', '拗音', '長音', '促音', '撥音']
+
+
+def _order(L):
+    if L.get('rule_only'):
+        # 規則課排在所有假名之後，順序照教學序列
+        return 1000 + (RULE_ORDER.index(L['rule']) if L['rule'] in RULE_ORDER else 99)
+    return GOJUON.index(L['kana']) if L['kana'] in GOJUON else 999
+
+
+LESSONS.sort(key=_order)
 
 from _furigana import FURIGANA   # noqa: E402
 from _grammar import GRAMMAR     # noqa: E402
@@ -86,8 +96,24 @@ def compose_note(L):
 
 
 def rows_for(L):
-    """一課 → 一串列。順序即 sort_order：假名卡 → 單字 → 對話。"""
+    """一課 → 一串列。順序即 sort_order：假名卡 → 單字 → 對話。
+
+    規則課（濁音、長音、促音…）的結構不同：書上沒有口訣也沒有對話，
+    只有規則說明加一批示範詞。硬套假名課的結構會產生空的假名卡與空對話，
+    所以用 rule_only 走另一條路 —— 那些課的導言寫在 taxonomy.js。
+    """
     rows = []
+    if L.get('rule_only'):
+        for ja, ro, zh, topic in L['words']:
+            rows.append({
+                'ko': ja, 'zh': zh, 'romanization': ro, 'type': 'word',
+                'note': '',
+                # 規則名（長音／促音…）就是課程標籤；再帶一個書寫系統與主題
+                'tags': f"{L['rule']},{L.get('script', '平假名')},{topic}",
+                'hanja': FURIGANA.get(ja, ''),
+            })
+        return rows
+
     # ① 假名卡。zh 帶「·平假名」不是裝飾 —— 之後片假名 ア 讀音同樣是 a，
     #    中→日 方向只給 a 的話學習者不知道該寫哪個，會答對卻被判錯。
     # 平假名／片假名共用同一套結構，差別只在標籤與 zh 的後綴。
@@ -265,7 +291,7 @@ NEEDS_READING = re.compile(r'[一-鿿0-9０-９]')
 
 def check_furigana():
     """標註寫錯不會報錯，只會讓學習者背下一個錯的音 —— 所以這裡硬擋。"""
-    all_lines = ([ja for L in LESSONS for ja, _, _ in L['dialogue']]
+    all_lines = ([ja for L in LESSONS for ja, _, _ in L.get('dialogue', [])]
                  + [ja for L in LESSONS for ja, _, _, _ in L['words']])
     plain = [x for x in all_lines if NEEDS_READING.search(x)]
     missing = [x for x in plain if x not in FURIGANA]
@@ -290,7 +316,7 @@ def check_furigana():
 
 def check_grammar():
     """語法說明的鍵必須對得上真的句子 —— 打錯字就是靜靜地不顯示。"""
-    lines = set([ja for L in LESSONS for ja, _, _ in L['dialogue']]
+    lines = set([ja for L in LESSONS for ja, _, _ in L.get('dialogue', [])]
                 + [ja for L in LESSONS for ja, _, _, _ in L['words']])
     orphan = [k for k in GRAMMAR if k not in lines]
     if orphan:
@@ -316,7 +342,8 @@ def main():
             if why:
                 review.append((L['kana'], r['ko'], r['romanization'], why))
 
-    trimmed = [(L['kana'], d) for L in LESSONS for d in compose_note(L)[1]]
+    trimmed = [(L['kana'], d) for L in LESSONS if not L.get('rule_only')
+               for d in compose_note(L)[1]]
     if trimmed:
         print(f"\n【口訣去重：砍掉 {len(trimmed)} 句重述】原始來源檔未更動")
         for k, d in trimmed:
@@ -353,12 +380,14 @@ def main():
             w.writerows(mine)
         dropped = len(rows) - len(mine)
         note = f"（{dropped} 條與前面的課重複，已併入前面）" if dropped else ''
-        print(f"  {L['kana']} ({L['row']})  展開 {len(rows)} → 寫入 {len(mine)} 條 {note}")
+        label = L['rule'] if L.get('rule_only') else f"{L['kana']} ({L['row']})"
+        print(f"  {label}  展開 {len(rows)} → 寫入 {len(mine)} 條 {note}")
         total += len(mine)
 
     print(f"\n  共 {len(LESSONS)} 課，展開 {len(all_rows)} 條，合併重複後 {total} 條")
-    print(f"  展開明細：假名 {len(LESSONS)} + 單字 {sum(len(L['words']) for L in LESSONS)}"
-          f" + 對話 {sum(len(L['dialogue']) for L in LESSONS)} = {len(all_rows)}")
+    n_kana = sum(1 for L in LESSONS if not L.get('rule_only'))
+    print(f"  展開明細：假名 {n_kana} + 單字 {sum(len(L['words']) for L in LESSONS)}"
+          f" + 對話 {sum(len(L.get('dialogue', [])) for L in LESSONS)} = {len(all_rows)}")
     if merges:
         print(f"\n【合併了 {len(merges)} 處重複】—— 沒有丟掉任何一課的標籤")
         for k, a, b in merges:
