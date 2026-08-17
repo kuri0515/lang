@@ -74,6 +74,20 @@ export const LANG = {
   // 而誤報多了整支稽核就沒人看了（あ 與 あ行 曾被報成同一概念被拆開寫）。
   structuralTagRe: /^收音|^(連音練習|硬音化|鼻音化|流音化|激音化|顎化|의的發音|會話)$/,
 
+  // ── 頁面上的字（index.html 由 shared/index.template.html 產生）──
+  // 只放「無法從上面的欄位推導」的那些；能推導的（termLabel 之類）
+  // 直接在樣板裡引用，避免同一件事寫兩次。
+  html: {
+    native: '한국어',          // 用該語言自己的文字寫的站名
+    heroIcon: '한',
+    siteName: '韓語單字卡',
+    importSample: '사랑,愛,sarang,單字,명사,,,,情感',
+    posSample: '명사 / 동사 …',
+    readingSample: '',
+    hanjaLabel: '漢字詞（如 學校；固有語留空）',
+    hanjaSample: '',
+  },
+
   // ── localStorage 前綴：兩站同網域，不隔開會互相蓋掉語音與語速設定 ──
   storagePrefix: 'kr',
 

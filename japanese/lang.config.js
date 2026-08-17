@@ -82,6 +82,18 @@ export const LANG = {
   // 而誤報多了整支稽核就沒人看了（あ 與 あ行 曾被報成同一概念被拆開寫）。
   structuralTagRe: /^[ぁ-ゖァ-ヺ]$|行$|^(清音|濁音|半濁音|拗音|長音|促音|撥音|高低重音|連濁|音讀|訓讀|母音無聲化|平假名|片假名|會話)$/,
 
+  // ── 頁面上的字（index.html 由 shared/index.template.html 產生）──
+  html: {
+    native: '日本語',
+    heroIcon: 'あ',
+    siteName: '日語單字卡',
+    importSample: 'ねこ,貓,ne ko,單字,名詞,,,,動物',
+    posSample: '名詞 / 動詞 …',
+    readingSample: 'ha wo mi ga ki',
+    hanjaLabel: '注音（漢字[かな]，沒有漢字就留空）',
+    hanjaSample: '歯[は]を磨[みが]きましょう。',
+  },
+
   // ── localStorage 前綴：兩站同網域，不隔開會互相蓋掉語音與語速設定 ──
   storagePrefix: 'ja',
 

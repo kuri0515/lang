@@ -3,20 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>日本語 · 日語單字卡</title>
+  <title>{{html.native}} · {{html.siteName}}</title>
   <meta name="theme-color" content="#4c6ef5">
-  <meta name="description" content="日文 ↔ 中文（繁體）雙向間隔重複學習">
+  <meta name="description" content="{{termLabel}} ↔ 中文（繁體）雙向間隔重複學習">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="日語單字卡">
+  <meta name="apple-mobile-web-app-title" content="{{html.siteName}}">
   <link rel="stylesheet" href="../shared/css/style.css">
 </head>
 <body>
 
 <header class="top">
-  <div class="brand">日本語 <span>單字卡</span></div>
+  <div class="brand">{{html.native}} <span>單字卡</span></div>
   <div class="who">
     <span id="whoami"></span>
     <span id="admin-tag" class="admin-tag hidden">管理員</span>
@@ -30,9 +30,9 @@
   <!-- ══════════════ 登入 / 註冊 ══════════════ -->
   <section id="view-auth" class="hidden">
     <div class="hero-auth">
-      <div class="hero-icon">あ</div>
-      <h1>日語單字卡</h1>
-      <p class="muted nomargin">日文 ↔ 中文（繁體）雙向間隔重複</p>
+      <div class="hero-icon">{{html.heroIcon}}</div>
+      <h1>{{html.siteName}}</h1>
+      <p class="muted nomargin">{{termLabel}} ↔ 中文（繁體）雙向間隔重複</p>
     </div>
     <div class="card">
       <h2 id="auth-title">登入</h2>
@@ -71,12 +71,14 @@
 
     <section class="card" id="pron-card">
       <h2>發音課程</h2>
+{{#grid}}
       <details id="grid-box" class="grid-box hidden">
         <summary><span>五十音表</span><span id="grid-sub" class="muted"></span></summary>
         <p class="hint">橫是「行」、縱是「段」。這不只是排版 ——
           動詞活用就是在同一行上移動（書く → 書きます → 書いた）。</p>
         <div id="gojuon"></div>
       </details>
+{{/grid}}
       <div id="pron-next"></div>
       <details class="pron-all">
         <summary>看完整課程（<span id="pron-count">–</span> 課）</summary>
@@ -115,8 +117,8 @@
 
         <label class="field-label">方向</label>
         <div class="seg" id="dir-pick">
-          <label><input type="radio" name="dir" value="ko2zh" checked><span>日 → 中</span></label>
-          <label><input type="radio" name="dir" value="zh2ko"><span>中 → 日</span></label>
+          <label><input type="radio" name="dir" value="ko2zh" checked><span>{{termShort}} → 中</span></label>
+          <label><input type="radio" name="dir" value="zh2ko"><span>中 → {{termShort}}</span></label>
         </div>
       </div>
     </details>
@@ -173,7 +175,7 @@
           </div>
           <div class="dlg-tools">
             <button id="dlg-play" class="small">▶ 整段朗讀</button>
-            <button id="dlg-side" class="small hidden">看日文想中文</button>
+            <button id="dlg-side" class="small hidden">看{{termLabel}}想中文</button>
             <button id="dlg-reset" class="small hidden">重新練</button>
           </div>
           <div class="dlg-tools">
@@ -190,7 +192,7 @@
 
     <div id="b-pane-words">
     <div class="card sticky-search">
-      <input id="b-search" type="search" placeholder="搜尋日文／中文／羅馬音…" class="nomargin">
+      <input id="b-search" type="search" placeholder="搜尋{{termLabel}}／中文／{{readingLabel}}…" class="nomargin">
       <details class="filter-box" id="b-filter">
         <summary><span>篩選</span><b id="b-filter-now">全部</b></summary>
         <div id="b-tags"></div>
@@ -325,7 +327,7 @@
       <button id="btn-signout" class="block ghost" style="margin-top:14px">登出</button>
     </div>
 
-    <p class="hint center">日本語 單字卡 · 資料存於 Supabase，多裝置同步</p>
+    <p class="hint center">{{html.native}} 單字卡 · 資料存於 Supabase，多裝置同步</p>
   </section>
 
   <!-- ══════════════ 批次匯入 ══════════════ -->
@@ -335,12 +337,12 @@
       <p class="hint">
         直接從 Excel／Google 試算表複製貼上，或貼 CSV。
         第一列可以是表頭（<code>ko,zh,romanization,type,pos,example_ko,example_zh,note,tags</code>，
-        中文欄名也認）；沒有表頭則按「日文,中文,羅馬音…」的順序解讀。
+        中文欄名也認）；沒有表頭則按「{{termLabel}},中文,{{readingLabel}}…」的順序解讀。
       </p>
       <label>目標詞庫</label>
       <select id="i-deck"></select>
       <label>貼上內容</label>
-      <textarea id="i-text" rows="8" placeholder="ねこ,貓,ne ko,單字,名詞,,,,動物"></textarea>
+      <textarea id="i-text" rows="8" placeholder="{{html.importSample}}"></textarea>
       <div class="row2">
         <button id="i-parse">解析預覽</button>
         <button id="i-apply" class="primary" disabled>確認匯入</button>
@@ -454,11 +456,11 @@
         <label>詞庫</label>
         <select id="e-deck"></select>
       </div>
-      <label>日文 *</label>       <input id="e-ko" type="text">
+      <label>{{termLabel}} *</label>       <input id="e-ko" type="text">
       <label>中文（繁體）*</label> <input id="e-zh" type="text">
       <div class="row2">
-        <div><label>羅馬音</label><input id="e-roman" type="text" placeholder="ha wo mi ga ki"></div>
-        <div><label>詞性</label><input id="e-pos" type="text" placeholder="名詞 / 動詞 …"></div>
+        <div><label>{{readingLabel}}</label><input id="e-roman" type="text"{{attr readingSample placeholder}}></div>
+        <div><label>詞性</label><input id="e-pos" type="text" placeholder="{{html.posSample}}"></div>
       </div>
       <label>類型</label>
       <select id="e-type">
@@ -466,8 +468,8 @@
         <option value="phrase">詞組</option>
         <option value="sentence">句子</option>
       </select>
-      <label>注音（漢字[かな]，沒有漢字就留空）</label> <input id="e-hanja" type="text" placeholder="歯[は]を磨[みが]きましょう。">
-      <label>例句（日）</label> <input id="e-ex-ko" type="text">
+      <label>{{html.hanjaLabel}}</label> <input id="e-hanja" type="text"{{attr hanjaSample placeholder}}>
+      <label>例句（{{termShort}}）</label> <input id="e-ex-ko" type="text">
       <label>例句（中）</label> <input id="e-ex-zh" type="text">
       <label>備註</label>       <input id="e-note" type="text">
       <label>標籤（逗號分隔）</label> <input id="e-tags" type="text">
