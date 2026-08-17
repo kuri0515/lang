@@ -326,24 +326,11 @@ def main():
             print(f"   「{k}」  {a}  ＋  {b}")
     assert total == len(merged), f"對帳不符：寫出 {total} 條，去重後應為 {len(merged)} 條"
 
-    # ── 產生課程定義給前端 ──
-    # 口訣同時是「卡片上的記憶法」與「這一課的導言」。
-    # 它只能有一份 —— 抄到 taxonomy.js 去，兩邊遲早會漂移，
-    # 而漂移的症狀是「卡片上寫的和開始上課時看到的不一樣」。
-    lessons_js = os.path.join(os.path.dirname(os.path.dirname(HERE)), 'kana-lessons.js')
-    with open(lessons_js, 'w', encoding='utf-8') as f:
-        f.write('// ⚠️ 本檔由 japanese/data/kana-01/build.py 產生，不要手改。\n')
-        f.write('// 改口訣請改 _source_*.py，再重跑 build.py。\n')
-        f.write('//\n')
-        f.write('// 課程單位是「一個音」，與書的模組一致（一個音＝口訣＋單字＋對話）。\n')
-        f.write('// 一行一課（40 條）對初學者太大塊，進度條幾乎不動；\n')
-        f.write('// 一個音 8 條，走得完，也看得到自己在前進。\n\n')
-        f.write('export const KANA_LESSONS = [\n')
-        for L in LESSONS:
-            intro = L['mnemonic'].replace('\\', '\\\\').replace("'", "\\'")
-            f.write(f"  {{ kana: '{L['kana']}', row: '{L['row']}', intro: '{intro}' }},\n")
-        f.write('];\n')
-    print(f"\n  ✅ 課程定義 → kana-lessons.js（{len(LESSONS)} 課，導言即口訣）")
+    # ★ 這裡曾經產生 kana-lessons.js（課程清單 + 導言）給前端用。
+    #   已移除：課程清單改成程式碼裡的完整教學序列（含還沒開課的片假名），
+    #   導言改成直接讀雲端的假名卡 note。
+    #   原本的做法要「重新部署程式碼」才能反映新加的內容，
+    #   而內容是天天在加的 —— 實際踩過：資料 46 課、畫面停在 38。
 
     rv = os.path.join(HERE, '_romaji_review.md')
     with open(rv, 'w', encoding='utf-8') as f:

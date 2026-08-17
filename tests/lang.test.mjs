@@ -116,17 +116,27 @@ for (const site of SITES) {
 
   // ── 課程內容 ──
   const t = L.taxonomy;
-  chk('每一課都有導言',
-    t.pronOrder.every((x) => t.lessonIntro[x]),
-    t.pronOrder.filter((x) => !t.lessonIntro[x]).join('／'));
+  // 導言有兩個來源，判準是「這一課在不在字母表上」：
+  //   在表上（あ、ア…）→ 導言就是那張假名卡的口訣，存在雲端 items.note
+  //   不在表上（濁音、長音…）→ 沒有對應的卡，只能寫在設定裡
+  // 資料側的檢查在 dom.test.mjs（那裡才有真實的 pool）。
+  const fromData = (x) => !!t.introFromData && t.introFromData.test(x);
+  const needStatic = t.pronOrder.filter((x) => !fromData(x));
+  chk('導言不來自資料的課都有靜態導言',
+    needStatic.every((x) => t.lessonIntro[x]),
+    needStatic.filter((x) => !t.lessonIntro[x]).join('／'));
   chk('沒有多餘的導言（對不上任何一課）',
     Object.keys(t.lessonIntro).every((x) => t.pronOrder.includes(x)),
     Object.keys(t.lessonIntro).filter((x) => !t.pronOrder.includes(x)).join('／'));
+  chk('導言來自資料的課不重複寫靜態導言',
+    t.pronOrder.filter(fromData).every((x) => !t.lessonIntro[x]),
+    t.pronOrder.filter(fromData).filter((x) => t.lessonIntro[x]).join('／') ||
+      '抄第二份的代價是加一課要改兩個地方，而且要重新部署才看得到');
   chk('教學序列無重複', new Set(t.pronOrder).size === t.pronOrder.length);
-  chk('導言夠短（≤60 字）',
+  chk('靜態導言夠短（≤60 字）',
     Object.values(t.lessonIntro).every((v) => v.length <= 60),
     Object.entries(t.lessonIntro).filter(([, v]) => v.length > 60).map(([k]) => k).join('／'));
-  chk('導言都帶該語言的實例',
+  chk('靜態導言都帶該語言的實例',
     Object.values(t.lessonIntro).every((v) => L.scriptRe.test(v)),
     '規則講完要有一個看得到的例子，否則只是抽象敘述');
   chk('收尾話刻意留白（不是每課都有）',

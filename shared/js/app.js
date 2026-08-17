@@ -21,7 +21,7 @@ import { initEditor, openEditor, loadDecksInto } from './views/editor.js';
 import { initEdits } from './views/edits.js';
 import * as home from './views/home.js';
 import * as study from './views/study.js';
-import { lessonIntro, confusableOf } from './core/taxonomy.js';
+import { introFor, confusableOf } from './core/taxonomy.js';
 
 let currentLesson = '';   // 本輪練的是哪一課，結束畫面要用
 import * as browse from './views/browse.js';
@@ -69,7 +69,8 @@ async function ensurePool() {
 async function begin(entries, { freeMode = false, kind = 'review', note = '', lesson = '' } = {}) {
   // 導言與收尾話每輪都要重設 —— 不清掉的話，下一輪會掛著上一課的內容
   currentLesson = lesson;
-  study.setLesson(lesson, lesson ? lessonIntro()[lesson] : '');
+  // 導言優先取自本輪的假名卡（雲端資料），沒有才回設定查（規則課）
+  study.setLesson(lesson, introFor(lesson, entries));
   const modeId = home.studyMode();
   if (needsPool(modeId)) await ensurePool();
 

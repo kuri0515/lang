@@ -398,6 +398,38 @@ console.log('\n【情境對話】');
 // ---------------------------------------------------------------------
 // 內容類型選擇器（單字／句子／全部）
 // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
+// 導言的資料側：宣告「導言來自資料」的課，資料裡真的要有那張卡
+// ---------------------------------------------------------------------
+console.log('\n【課程導言的資料來源】');
+{
+  const t = LANG.taxonomy;
+  const { introFor } = await import(SHARED + '/js/core/taxonomy.js');
+  if (!t.introFromData) {
+    console.log('  ⏭  本站的導言全部寫在設定裡');
+  } else {
+    // 有內容的課（total>0）才要求 —— 還沒開課的片假名不算漏
+    const haveContent = [...new Set(items.flatMap((x) => x.tags))]
+      .filter((tag) => t.introFromData.test(tag));
+    chk(`有內容的假名課：${haveContent.length} 課`, haveContent.length > 0);
+
+    const noCard = haveContent.filter((tag) => {
+      const ent = items.filter((x) => x.tags.includes(tag)).map((item) => ({ item }));
+      return !introFor(tag, ent);
+    });
+    chk('每一課都拿得到導言（來自該課假名卡的 note）', noCard.length === 0,
+        noCard.join('／') || '導言就是卡片上的口訣，不必在程式碼裡再抄一份');
+
+    // ★ 反面樣本：把卡片的 note 清掉，導言就該取不到
+    const probeTag = haveContent[0];
+    const probe = items.filter((x) => x.tags.includes(probeTag))
+      .map((item) => ({ item: { ...item, note: '' } }));
+    chk('反面樣本：卡片沒有 note 時取不到導言',
+        !introFor(probeTag, probe) || !!t.lessonIntro[probeTag],
+        '否則這條檢查等於沒有作用');
+  }
+}
+
 console.log('\n【五十音表】');
 {
   const grid = LANG.taxonomy.grid;
@@ -425,10 +457,14 @@ console.log('\n【五十音表】');
         pending.every((k) => !inPool.has(k)),
         pending.filter((k) => inPool.has(k)).join('／') || pending.join('／'));
 
-    // 反過來：課程裡的假名也都要在表上，否則有課但表上找不到
-    const gridSet = new Set(kana);
-    const missing = LANG.taxonomy.pronOrder.filter((t) => t.length === 1 && !gridSet.has(t));
-    chk('課程裡的假名都在表上', missing.length === 0, missing.join('／'));
+    // 反過來：課程裡的假名也都要在表上。
+    // 表上一格放兩種寫法（あ／ア 是同一個音），片假名由平假名推得，
+    // 所以比對時要把兩種都算進去。
+    const gridSet = new Set(kana.flatMap(
+      (k) => [k, String.fromCodePoint(k.codePointAt(0) + 0x60)]));
+    const missing = LANG.taxonomy.pronOrder
+      .filter((t) => LANG.taxonomy.introFromData?.test(t) && !gridSet.has(t));
+    chk('課程裡的假名都在表上（含片假名）', missing.length === 0, missing.join('／'));
   }
 }
 

@@ -938,6 +938,8 @@ ruby rt {
 }
 .g-col { flex: 1; min-width: 34px; text-align: center; font-size: 10.5px; color: var(--faint); }
 .g-head { margin-bottom: 2px; }
+.g-cell-pair { flex: 1; min-width: 34px; display: flex; flex-direction: column; gap: 2px; }
+.g-cell-pair .g-cell { flex: none; height: 26px; font-size: 14px; }
 .g-cell {
   flex: 1; min-width: 34px; height: 34px; border-radius: 8px;
   display: flex; align-items: center; justify-content: center;

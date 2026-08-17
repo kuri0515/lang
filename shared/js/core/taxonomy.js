@@ -36,8 +36,52 @@ export const starterTopics = () => tx().starterTopics;
 export const grammarTags = () => tx().grammarTags;
 /** 篩選列的三個分組（label / hint 由站台寫，語氣要對得上該語言的學習者） */
 export const groups = () => tx().groups;
-/** 每一課的導言 */
+/** 規則課的導言（寫在站台設定裡的那些） */
 export const lessonIntro = () => tx().lessonIntro;
+
+/**
+ * 一堂課的導言，優先問資料要。
+ *
+ * 【為什麼要優先問資料】
+ *   清音課的導言就是那張假名卡上的口訣，而口訣已經在雲端的 items.note。
+ *   若程式碼裡再抄一份，加一課就要改兩個地方，而且要重新部署才看得到 ——
+ *   內容是天天在加的，那個成本會一直付。
+ *   實際發生過：內容已經 46 課，畫面還停在 38，因為清單編在程式碼裡。
+ *
+ * 【為什麼還留著靜態的一份】
+ *   規則課（濁音、長音…）沒有對應的假名卡，導言無處可放，只能寫在設定裡。
+ *   所以是「先問資料，沒有才回設定查」，不是二選一。
+ *
+ * @param {string} tag      課程標籤
+ * @param {Array}  entries  本輪的佇列（含 item），可不給
+ */
+export function introFor(tag, entries = []) {
+  if (!tag) return '';
+  // 這一課的假名卡：ko 就是這個音，且帶著口訣
+  const card = entries.find((e) => e.item?.ko === tag && e.item?.note)?.item;
+  const fromData = card?.note || '';
+  const rowNote = tx().rowNote?.[rowOf(tag)] || '';
+  const base = fromData || tx().lessonIntro[tag] || '';
+  if (!base) return '';
+  // 該行的難點提示只接在「這一行的第一課」後面
+  return rowNote && isFirstOfRow(tag) ? `${base}\n${rowNote}` : base;
+}
+
+/** 這個假名屬於哪一行（靠 grid 反查，沒有 grid 就沒有行的概念） */
+function rowOf(kana) {
+  for (const r of tx().grid?.rows || []) {
+    if (r.kana.includes(kana)) return r.row;
+  }
+  return '';
+}
+
+function isFirstOfRow(kana) {
+  for (const r of tx().grid?.rows || []) {
+    const first = r.kana.find(Boolean);
+    if (first === kana) return true;
+  }
+  return false;
+}
 /** 生活 · 興趣模組的場景 */
 export const lifeScenes = () => tx().lifeScenes;
 /** 所有場景用到的標籤（去重）—— 查詢時一次撈完 */
