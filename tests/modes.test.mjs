@@ -105,5 +105,29 @@ console.log('\n【形近字辨別】');
   }
 }
 
+console.log('\n【干擾項池的最小欄位】');
+{
+  // ★ 池子只該帶 buildChoices 真正會讀的欄位。
+  //   多帶的代價不是一次，是每個使用者每次開四選一都付一次
+  //   （hanja 裝注音字串，佔了整包的四分之一）。
+  //   這條測「砍掉沒用的欄位之後行為不變」——
+  //   哪天有人為了別的功能把欄位加回來，這裡不會擋，
+  //   但至少證明目前這幾個欄位是夠的。
+  const KEEP = ['id', 'ko', 'zh', 'pos', 'tags', 'item_type'];
+  const slim = pool.map((x) => Object.fromEntries(KEEP.map((k) => [k, x[k]])));
+  const sample = pool.filter((x) => x.item_type === 'word').slice(0, 120);
+  const bad = sample.filter((it) => {
+    for (const dir of ['ko2zh', 'zh2ko']) {
+      const a = buildChoices(it, dir, pool);
+      const b = buildChoices(it, dir, slim);
+      if (a.options.length !== b.options.length) return true;
+      if (!!a.hint !== !!b.hint) return true;
+    }
+    return false;
+  });
+  chk(`瘦身後的池子行為不變（抽 ${sample.length} 題 × 兩方向）`, bad.length === 0,
+      bad.slice(0, 3).map((x) => x.ko).join('／'));
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);
