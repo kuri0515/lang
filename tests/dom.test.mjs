@@ -376,6 +376,38 @@ console.log('\n【情境對話】');
 // ---------------------------------------------------------------------
 // 詞庫篩選：近百個標籤必須收得起來
 // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
+// 多行 note 的呈現
+//
+// 日文站的假名卡是「第一行口訣、第二行字源」。CSS 少一句 white-space,
+// 換行就被壓成空白，兩段擠成一段 —— 資料完全正確，畫面是壞的。
+// 實際發生過：靠 API 驗了好幾輪都是綠的，直到真的去看畫面才發現。
+// ---------------------------------------------------------------------
+console.log('\n【多行 note 的呈現】');
+{
+  // ★ 一定要先剝掉註解再比對。
+  //   第一版沒剝，而我寫的註解裡正好有「white-space: pre-line」這串字 ——
+  //   於是把 CSS 宣告刪掉之後測試照樣綠。檢查被自己的註解騙過去，
+  //   這比沒有檢查更糟：它會讓人以為這條防線在。
+  const css = fs.readFileSync(SHARED + '/css/style.css', 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  const rule = css.split('}').find((b) => /^\s*\.note\s*{/m.test(b)) || '';
+  chk('.note 保留換行（white-space: pre-line）',
+      /white-space:\s*pre-(line|wrap)\s*;/.test(rule),
+      '否則多行 note 會擠成一段');
+
+  const multi = items.filter((x) => (x.note || '').includes('\n'));
+  if (multi.length) {
+    chk(`資料裡有多行 note（${multi.length} 條）`, true);
+    // textContent 不會把 \n 變成 <br>，所以呈現完全靠 CSS —— 上面那條就是唯一防線
+    chk('多行 note 的每一行都不是空的',
+        multi.every((x) => x.note.split('\n').every((l) => l.trim())),
+        '空行會在畫面上留下突兀的空隙');
+  } else {
+    console.log('  ⏭  本站沒有多行 note');
+  }
+}
+
 console.log('\n【詞庫篩選收合】');
 {
   const box = $('b-filter');

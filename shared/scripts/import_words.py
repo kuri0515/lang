@@ -3,7 +3,12 @@
 詞表匯入腳本 —— CSV → Supabase (decks / items)
 
 設計：
-  * 冪等：靠 slug upsert，同一份 CSV 反覆跑結果一致；詞表更新直接重跑即可。
+  * 冪等：靠 slug upsert，同一份 CSV 反覆跑結果一致。
+  * ★ 預設「已在目標詞庫的條目一律略過」，所以重跑不會覆蓋線上內容 ——
+    站上的快速編輯改過的東西不會被一份舊 CSV 悄悄還原。
+    要讓 CSV 的修改生效，得明講：加 --update。
+    （這行原本寫「詞表更新直接重跑即可」，那是錯的：實際上重跑什麼都不會變，
+      改了標籤卻沒生效，而且沒有任何訊息告訴你。）
   * 零依賴：只用標準庫（csv + urllib），不需要 pip install。
   * 預設 --dry-run：先看要寫什麼，確認無誤再加 --apply。
   * 軟下架：CSV 裡消失的條目，加 --deactivate-missing 時標 is_active=false，
@@ -137,6 +142,8 @@ def main():
     ap.add_argument("--level", default=None, help="如 topik1")
     ap.add_argument("--allow-dup", action="store_true",
                     help="即使該詞已存在於其他詞庫也照樣收錄（預設會略過）")
+    ap.add_argument("--update", action="store_true",
+                    help="讓 CSV 覆蓋已存在的條目（預設略過，以免舊 CSV 還原掉線上的編輯）")
     ap.add_argument("--slug-scope", choices=["ko", "note"], default="ko",
                     help="--append 時 slug 雜湊的依據：ko（預設）或 ko+note")
     ap.add_argument("--append", action="store_true",
@@ -208,8 +215,10 @@ def main():
         slug = decks_by_id.get(existing[k]["deck_id"], "?")
         (same if slug in groups else clash).append((r["ko"], slug))
 
-    if same:
-        print(f"\n   ℹ️  {len(same)} 條在目標詞庫已存在（重複匯入／還原備份時屬正常），將被略過")
+    if same and args.update:
+        print(f"\n   ✏️  {len(same)} 條在目標詞庫已存在，依 --update 覆蓋（線上若有手動編輯會被還原）")
+    elif same:
+        print(f"\n   ℹ️  {len(same)} 條在目標詞庫已存在，將被略過（要覆蓋請加 --update）")
     if clash and args.allow_dup:
         print(f"\n   ℹ️  {len(clash)} 條已存在於其他詞庫，依 --allow-dup 照樣收錄：")
         for ko, dk in clash[:10]:
@@ -220,8 +229,9 @@ def main():
             print(f"        {ko}  （已在 {dk}）")
         if len(clash) > 10:
             print(f"        …另有 {len(clash)-10} 條")
-    if same or (clash and not args.allow_dup):
-        skip = {ko for ko, _ in same} | (set() if args.allow_dup else {ko for ko, _ in clash})
+    if (same and not args.update) or (clash and not args.allow_dup):
+        skip = (set() if args.update else {ko for ko, _ in same}) \
+             | (set() if args.allow_dup else {ko for ko, _ in clash})
         # 用 slug_key 反查要略過哪些列 —— 同樣不能退回只比 ko
         rows = [r for r in rows
                 if not (r["ko"] in skip and slug_key(r) in existing)]

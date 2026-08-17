@@ -272,7 +272,11 @@ label { font-size: 12.5px; color: var(--muted); }
   padding-top: 13px; border-top: 1px dashed var(--border);
 }
 .example b { display: block; color: var(--text); font-weight: 500; margin-bottom: 3px; }
-.note { font-size: 12.5px; color: var(--faint); margin-top: 9px; font-style: italic; }
+/* white-space: pre-line —— note 是多行的（日文站的假名卡：第一行口訣、
+   第二行字源）。少了它換行會被壓成空白，兩段擠成一段，
+   口訣的節奏感全沒了。韓文站的 note 多為單行，加了不受影響。 */
+.note { white-space: pre-line;
+  font-size: 12.5px; color: var(--faint); margin-top: 9px; font-style: italic; }
 .acc { margin-top: 10px; }
 .card-tools {
   display: flex; justify-content: center; gap: 4px; margin-top: 14px;
