@@ -169,3 +169,15 @@ export function pickScene(scenes) {
   const fresh = scenes.find((s) => s.started === 0 && s.total > 0);
   return fresh ? { scene: fresh, reason: 'start' } : { scene: null, reason: 'done' };
 }
+
+/**
+ * 這個詞屬於哪一組形近／易混？沒有就回 null。
+ *
+ * 【為什麼要在共用碼提供】
+ *   四選一挑干擾項時要用到 —— 那才是這份資料真正的用處。
+ *   否則所有假名都共享「清音／平假名」標籤，干擾項會是隨機的假名，
+ *   看到 ぬ 時選項是 ぬ/か/せ/ほ，根本不必分辨 ぬ 和 め 就能答對。
+ *   練了很多次，卻沒練到真正會錯的地方。
+ */
+export const confusableOf = (text) =>
+  (tx().confusable || []).find((g) => g.keys.includes(text)) || null;

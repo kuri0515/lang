@@ -64,5 +64,46 @@ chk('詞塊不帶句末標點', leak.length === 0,
 chk('單字類拆不開時正確回 null',
     pool.filter((i) => !i.ko.includes(' ') && !i.example_ko).every((i) => !scrambleSource(i)));
 
+console.log('\n【形近字辨別】');
+{
+  const { confusableOf } = await import(`${SHARED}/js/core/taxonomy.js`);
+  const groups = LANG.taxonomy.confusable || [];
+  if (!groups.length) {
+    console.log('  ⏭  本站沒有整理形近組');
+  } else {
+    // 每組至少要有兩個成員在資料裡，否則這組練不起來
+    const present = (k) => pool.some((x) => x.ko === k);
+    const usable = groups.filter((g) => g.keys.filter(present).length >= 2);
+    chk(`${usable.length}/${groups.length} 組的成員已在資料庫裡`, usable.length > 0,
+        '其餘的等該課內容進來就會自動生效');
+
+    // ★ 核心：同組的成員必須真的成為彼此的干擾項
+    const bad = [];
+    for (const g of usable) {
+      for (const dir of ['ko2zh', 'zh2ko']) {
+        for (const k of g.keys.filter(present)) {
+          const item = pool.find((x) => x.ko === k);
+          const key = dir === 'ko2zh' ? 'zh' : 'ko';
+          const { options } = buildChoices(item, dir, pool);
+          const mates = g.keys.filter((x) => x !== k && present(x))
+            .map((x) => pool.find((p) => p.ko === x)[key]);
+          if (!mates.some((m) => options.includes(m))) {
+            bad.push(`${k} [${dir}] → ${options.join('/')}`);
+          }
+        }
+      }
+    }
+    chk('形近組的成員互為干擾項（兩個方向都是）', bad.length === 0, bad.slice(0, 3).join('  '));
+
+    // 反面樣本：沒有形近組的詞不該被硬塞
+    const plain = pool.find((x) => x.item_type === 'word' && !confusableOf(x.ko));
+    chk('沒有形近組的詞照常隨機取干擾項', !!plain && buildChoices(plain, 'zh2ko', pool).options.length === 4,
+        plain?.ko || '');
+
+    chk('每組都有「怎麼分」的說明', groups.every((g) => g.hint && g.hint.length > 5),
+        '說「這兩個很像」沒有用，要給抓得住的差別');
+  }
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);

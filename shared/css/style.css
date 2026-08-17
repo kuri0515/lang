@@ -912,3 +912,12 @@ ruby rt {
   font-size: 15px; padding: 0 4px; flex-shrink: 0;
 }
 .recall-row .r-del:hover { color: var(--hard); }
+
+/* 辨別提示：答錯形近字時，在選項下方給「怎麼分」的那一句。
+   用強調色而非警告色 —— 這是在教東西，不是在罵人。 */
+.discern-tip {
+  margin: 10px 2px 0; padding: 9px 12px; border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-left: 3px solid var(--accent);
+  font-size: 13px; line-height: 1.6; color: var(--text);
+}

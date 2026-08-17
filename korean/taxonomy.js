@@ -167,4 +167,7 @@ export const TAXONOMY = {
     { match: isComplexFinal, ok: OUTRO_COMPLEX_OK, low: OUTRO_COMPLEX_LOW },
   ],
   lifeScenes: LIFE_SCENES,
+  // 韓文站目前沒有整理形近組。空陣列不是佔位 ——
+  // 它讓「還沒做」與「這個語言不需要」有機會被分辨出來（見 japanese/taxonomy.js）。
+  confusable: [],
 };

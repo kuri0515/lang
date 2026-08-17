@@ -141,6 +141,23 @@ for (const site of SITES) {
     t.lifeScenes.every((x) => !('order' in x) && !('requires' in x)),
     '興趣驅動的東西一旦排順序就變成作業');
 
+  // ── 形近組 ──
+  const groups = t.confusable || [];
+  const seen = new Map();
+  const dup = [];
+  for (const g of groups) for (const k of g.keys) {
+    if (seen.has(k)) dup.push(`${k}（在「${seen.get(k).join('/')}」與「${g.keys.join('/')}」兩組）`);
+    seen.set(k, g.keys);
+  }
+  // ★ 一個字只能屬於一組。屬於兩組時 confusableOf 只會回第一組，
+  //   於是另一組的成員永遠不會成為干擾項 —— 那一組等於沒有作用，
+  //   而且不會報錯。實際踩過：さ 同時在 さ/ち 與 き/さ 兩組裡。
+  chk('每個字只屬於一組形近組', dup.length === 0, dup.join('；'));
+  chk('每組至少兩個成員', groups.every((g) => g.keys.length >= 2));
+  chk('每組都有「怎麼分」的說明',
+      groups.every((g) => g.hint && g.hint.length > 5),
+      '說「這兩個很像」沒有用，要給抓得住的差別');
+
   // 裝得上共用碼才算真的可用 —— 只驗欄位不驗裝配，等於沒驗
   _resetLang();
   setLang(L);
