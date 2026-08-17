@@ -7,7 +7,7 @@
 // =====================================================================
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
-import { SHARED, SITE_DIR, siteReady } from './_site.mjs';
+import { SHARED, SITE, SITE_DIR, siteReady } from './_site.mjs';
 const dom=new JSDOM(fs.readFileSync(SITE_DIR+'/index.html','utf8'),{pretendToBeVisual:true, url:'https://x.test/'});
 global.window=dom.window; global.document=dom.window.document;
 global.localStorage=dom.window.localStorage; global.getComputedStyle=dom.window.getComputedStyle;
@@ -98,6 +98,11 @@ chk('選項區已顯示', !$('choices').classList.contains('hidden'));
 inst.teardown();
 chk('teardown 後收起且清空', $('choices').classList.contains('hidden') && $('choices').innerHTML==='');
 
+// 詞序重組不是每站都有 —— 日文站關掉了（日文不用空格分詞）。
+// 站台關掉的題型 getMode() 會退回 flip，硬掛就會炸在一個看不出原因的地方。
+if ((LANG.disabledModes||[]).includes('scramble')) {
+  console.log('  ⏭  本站關閉詞序重組，跳過該段（不是失敗）');
+} else {
 const sm=getMode('scramble');
 const target=items.find(i=>sm.canUse(i,{pool:items}));
 const si=sm.mount({item:target,direction:'zh2ko',
@@ -112,7 +117,19 @@ $('s-answer').querySelector('.tok').click();
 chk('點答案區詞塊可退回', $('s-answer').querySelectorAll('.tok').length===0);
 si.teardown();
 chk('teardown 收起', $('scramble').classList.contains('hidden'));
+}
 
+// ---------------------------------------------------------------------
+// 以下三段斷言的是「韓語的教學法」：連音必須排在複合收音之前、
+// 導言要帶諺文實例等等。那是韓語特有的知識，不是通用規則，
+// 所以寫死韓文標籤是對的，只在韓文站跑。
+//
+// 其他站台的 taxonomy 由 tests/lang.test.mjs 泛用地驗
+// （每課都有導言、發音組照教學序排、收尾話刻意留白…）。
+// ---------------------------------------------------------------------
+if (SITE !== 'korean') {
+  console.log('\n  ⏭  以下三段是韓語教學法的斷言，非韓文站跳過（由 lang.test.mjs 涵蓋）');
+} else {
 // ---------------------------------------------------------------------
 // 標籤分類：發音組必須依教學順序，不能被數量排序帶跑
 // ---------------------------------------------------------------------
@@ -225,6 +242,7 @@ console.log('\n【課程導言】');
   chk('非課程內容沒有收尾話', lessonOutro('', 0.9) === '' && lessonOutro('食物', 0.9) === '');
 }
 
+}
 // ---------------------------------------------------------------------
 // 專注模式：收起導言的選擇要被記住
 // ---------------------------------------------------------------------

@@ -59,6 +59,11 @@ export const LANG = {
   // 短密碼補位到 Supabase 要求的 6 位。★ 不能改 —— 改了等於改掉所有既有帳號的密碼
   authPasswordPad: '-k0515',
 
+  // ── 這個語言用不了的題型 ──
+  // 詞序重組靠空格切詞塊，日文不用空格分詞：實測 301 條只有 1 條有素材。
+  // 留著只會讓學生點進一個永遠沒題目的模式。
+  disabledModes: ['scramble'],
+
   // ── localStorage 前綴：兩站同網域，不隔開會互相蓋掉語音與語速設定 ──
   storagePrefix: 'ja',
 

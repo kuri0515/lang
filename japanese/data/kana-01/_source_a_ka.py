@@ -164,7 +164,7 @@ LESSONS_A_KA = [
         ],
         scene='請人擦黑板',
         dialogue=[
-            ('黒板を消してください。', 'koku ban wo ke shi te ku da sa i', '請幫我擦黑板。'),
+            ('黒板を消してください。', 'ko ku ba n wo ke shi te ku da sa i', '請幫我擦黑板。'),
             ('はい。', 'ha i', '好的。'),
         ],
     ),
@@ -182,7 +182,7 @@ LESSONS_A_KA = [
         ],
         scene='問這是什麼',
         dialogue=[
-            ('これは何ですか。', 'ko re wa nan de su ka', '這是什麼？'),
+            ('これは何ですか。', 'ko re wa na n de su ka', '這是什麼？'),
             ('こいのぼりです。', 'ko i no bo ri de su', '是鯉魚旗。'),
         ],
     ),

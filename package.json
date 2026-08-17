@@ -4,7 +4,7 @@
   "type": "module",
   "description": "韓語／日語單字卡 —— 前端為純靜態，npm 僅用於跑測試",
   "scripts": {
-    "test": "npm run test:lang && npm run test:boot && npm run test:arch && npm run test:arch:ja && npm run test:session && npm run test:modes && npm run test:dom",
+    "test": "npm run test:lang && npm run test:boot && npm run test:arch && npm run test:arch:ja && npm run test:session && npm run test:modes && npm run test:modes:ja && npm run test:dom && npm run test:dom:ja",
     "test:lang": "node tests/lang.test.mjs",
     "test:arch": "node tests/arch.test.mjs",
     "test:arch:ja": "SITE=japanese node tests/arch.test.mjs",
@@ -16,7 +16,9 @@
     "backup:ja": "SITE=japanese python3 shared/scripts/backup.py",
     "audit": "python3 shared/scripts/audit_content.py",
     "audit:ja": "SITE=japanese python3 shared/scripts/audit_content.py",
-    "test:boot": "node tests/boot.test.mjs"
+    "test:boot": "node tests/boot.test.mjs",
+    "test:modes:ja": "SITE=japanese node tests/modes.test.mjs tests/fixtures/pool-ja.json",
+    "test:dom:ja": "SITE=japanese node tests/dom.test.mjs tests/fixtures/pool-ja.json"
   },
   "devDependencies": {
     "jsdom": "^25.0.0"

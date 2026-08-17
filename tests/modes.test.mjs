@@ -3,10 +3,10 @@
 //     node tests/modes.test.mjs <pool.json>
 // =====================================================================
 import fs from 'fs';
-import { SHARED, siteReady } from './_site.mjs';
+import { SHARED, SITE, siteReady } from './_site.mjs';
 
 // 先裝語言設定再載入題型 —— 題型的 hint 是模板字串，載入當下就要 lang()
-await siteReady();
+const LANG = await siteReady();
 const { MODES, getMode, forcedDirection, needsPool } = await import(`${SHARED}/js/study/modes/index.js`);
 const { buildChoices } = await import(`${SHARED}/js/study/modes/choice.js`);
 const { scrambleSource } = await import(`${SHARED}/js/study/modes/scramble.js`);
@@ -15,15 +15,24 @@ const pool = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
 let fails = 0;
 const chk = (n, c, e = '') => { console.log(`  ${c ? '✅' : '❌'} ${n}${e ? ' — ' + e : ''}`); if (!c) fails++; };
 
-console.log('【註冊表】');
-chk('註冊 4 種題型', MODES.length === 4, MODES.map((m) => m.id).join('/'));
+console.log(`【註冊表】（站台：${SITE}）`);
+// 題型數量隨站台設定變動 —— 日文站關掉了詞序重組（日文不用空格分詞）。
+// 所以斷言的是「設定說幾種就幾種」，而不是寫死 4。
+const off = LANG.disabledModes || [];
+chk(`註冊 ${4 - off.length} 種題型`, MODES.length === 4 - off.length,
+    MODES.map((m) => m.id).join('/') + (off.length ? `（本站關閉：${off.join('/')}）` : ''));
 chk('每種都有 id/label/hint', MODES.every((m) => m.id && m.label && m.hint));
 chk('未知 id 退回 flip', getMode('nope').id === 'flip');
-chk('詞序重組鎖定 zh2ko', forcedDirection('scramble') === 'zh2ko');
+chk('被本站關掉的題型也退回 flip',
+    off.every((id) => getMode(id).id === 'flip'),
+    off.length ? '否則畫面會掛上一個學不到東西的題型' : '本站沒關任何題型');
+if (!off.includes('scramble')) {
+  chk('詞序重組鎖定 zh2ko', forcedDirection('scramble') === 'zh2ko');
+}
 chk('聽音選義鎖定 ko2zh', forcedDirection('listen') === 'ko2zh');
 chk('翻卡與四選一不鎖方向', !forcedDirection('flip') && !forcedDirection('choice'));
 chk('需要干擾項池的是 choice/listen',
-    needsPool('choice') && needsPool('listen') && !needsPool('flip') && !needsPool('scramble'));
+    needsPool('choice') && needsPool('listen') && !needsPool('flip'));
 
 console.log('\n【四選一 · 對真實資料】');
 let short = 0, ambiguous = 0;

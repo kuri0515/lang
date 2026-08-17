@@ -6,11 +6,3 @@
 
 | 課 | 詞條 | 目前的羅馬音 | 可疑之處 |
 |---|---|---|---|
-| け | 黒板を消してください。 | `koku ban wo ke shi te ku da sa i` | 「koku」不像單一個拍 |
-| す | 少々お待ちください。 | `shou shou o ma chi ku da sa i` | 「shou」不像單一個拍 |
-| た | 誕生日おめでとう。 | `tan jō bi o me de tō u` | 用了長音符號（書上多數地方是拆成兩拍寫，如 to u）；「jō」不像單一個拍；「tō」不像單一個拍 |
-| た | ありがとう。 | `a ri ga tō u` | 用了長音符號（書上多數地方是拆成兩拍寫，如 to u）；「tō」不像單一個拍 |
-| て | てんとうむし | `ten tō mu shi` | 用了長音符號（書上多數地方是拆成兩拍寫，如 to u）；「tō」不像單一個拍 |
-| て | 手伝いましょうか。 | `te tsu da i ma shō u ka` | 用了長音符號（書上多數地方是拆成兩拍寫，如 to u）；「shō」不像單一個拍 |
-| む | 日本語の勉強はどうですか。 | `ni hon go no ben kyou wa dou de su ka` | 「kyou」不像單一個拍 |
-| も | 日本料理が好きですか。 | `ni hon ryou ri ga su ki de su ka` | 「ryou」不像單一個拍 |

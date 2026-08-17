@@ -107,7 +107,7 @@ LESSONS_NA_HA = [
         scene='參觀房間',
         dialogue=[
             ('ここが私の部屋です。', 'ko ko ga wa ta shi no he ya de su', '這裡是我的房間。'),
-            ('広いですね。', 'hi roi de su ne', '很大間耶。'),
+            ('広いですね。', 'hi ro i de su ne', '很大間耶。'),
         ],
     ),
     dict(
@@ -214,7 +214,7 @@ LESSONS_NA_HA = [
         ],
         scene='聊學日文',
         dialogue=[
-            ('日本語の勉強はどうですか。', 'ni hon go no ben kyou wa dou de su ka', '學習日文，覺得如何？'),
+            ('日本語の勉強はどうですか。', 'ni ho n go no be n kyo u wa do u de su ka', '學習日文，覺得如何？'),
             ('難しいです。', 'mu zu ka shi i de su', '很難。'),
         ],
     ),
@@ -251,7 +251,7 @@ LESSONS_NA_HA = [
         ],
         scene='聊日本料理',
         dialogue=[
-            ('日本料理が好きですか。', 'ni hon ryou ri ga su ki de su ka', '喜歡日本料理嗎？'),
+            ('日本料理が好きですか。', 'ni ho n ryo u ri ga su ki de su ka', '喜歡日本料理嗎？'),
             ('もちろん。', 'mo chi ro n', '當然！'),
         ],
     ),
@@ -271,6 +271,43 @@ LESSONS_NA_HA = [
         dialogue=[
             ('約束だよ。', 'ya ku so ku da yo', '我們約定好囉！'),
             ('指切りしよう。', 'yu bi ki ri shi yo u', '打勾勾喔！'),
+        ],
+    ),
+    dict(
+        kana='ゆ', romaji='yu', row='や行',
+        mnemonic='ゆ･ゆ･ゆ！中･中･中，由於中間有淤泥，大家都摔倒了！',
+        origin='字源來自漢字「由」，外形長得很像「中間」的「中」。'
+               '熟記口訣，可同時記住長相、發音 yu 與字源。',
+        words=[
+            ('ゆめ', 'yu me', '夢', '生活'),
+            ('ゆき', 'yu ki', '雪', '自然'),
+            ('ゆず', 'yu zu', '柚子', '食物'),
+            ('ゆのみ', 'yu no mi', '茶杯', '物品'),
+            ('ゆかた', 'yu ka ta', '浴衣', '服裝'),
+        ],
+        scene='下雪了',
+        dialogue=[
+            ('雪だ。', 'yu ki da', '下雪了。'),
+            ('雪が降っている。', 'yu ki ga fu tte i ru', '雪正在下著。'),
+        ],
+    ),
+    dict(
+        kana='よ', romaji='yo', row='や行',
+        mnemonic='よ･よ･よ！優･優･優，優秀的學生愛上音樂課！',
+        origin='字源來自漢字「與」，外形像「上」，也很像音樂的音符。'
+               '熟記口訣，可同時記住長相、發音 yo。',
+        words=[
+            ('ようかい', 'yo u ka i', '妖怪', '文化'),
+            ('ようせい', 'yo u se i', '精靈', '文化'),
+            ('よこ', 'yo ko', '旁邊', '方位'),
+            ('よかん', 'yo ka n', '預感', '情緒'),
+            ('ようかん', 'yo u ka n', '羊羹', '食物'),
+        ],
+        scene='約明天',
+        dialogue=[
+            ('明日、暇ですか。', 'a shi ta, hi ma de su ka', '明天有空嗎？'),
+            ('すみません、明日は用事があります。',
+             'su mi ma se n, a shi ta wa yo u ji ga a ri ma su', '不好意思，明天我已有事情。'),
         ],
     ),
 ]

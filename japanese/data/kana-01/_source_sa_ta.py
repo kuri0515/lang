@@ -52,14 +52,14 @@ LESSONS_SA_TA = [
         words=[
             ('すし', 'su shi', '壽司', '食物'),
             ('すいえい', 'su i e i', '游泳', '運動'),
-            ('すいせん', 'su i sen', '水仙花', '植物'),
+            ('すいせん', 'su i se n', '水仙花', '植物'),
             ('すな', 'su na', '沙子', '自然'),
             ('すいか', 'su i ka', '西瓜', '食物'),
         ],
         scene='餐廳要水',
         dialogue=[
             ('すみません、水をください。', 'su mi ma se n, mi zu wo ku da sa i', '麻煩您，給我一杯水。'),
-            ('少々お待ちください。', 'shou shou o ma chi ku da sa i', '請稍等。'),
+            ('少々お待ちください。', 'sho u sho u o ma chi ku da sa i', '請稍等。'),
         ],
     ),
     dict(
@@ -93,7 +93,7 @@ LESSONS_SA_TA = [
         ],
         scene='聊天氣',
         dialogue=[
-            ('いい天気ですね。', 'i i ten ki de su ne', '天氣很好耶。'),
+            ('いい天気ですね。', 'i i te n ki de su ne', '天氣很好耶。'),
             ('そうですね。', 'so u de su ne', '對呀。'),
         ],
     ),
@@ -110,8 +110,8 @@ LESSONS_SA_TA = [
         ],
         scene='生日祝賀',
         dialogue=[
-            ('誕生日おめでとう。', 'tan jō bi o me de tō u', '生日快樂。'),
-            ('ありがとう。', 'a ri ga tō u', '謝謝。'),
+            ('誕生日おめでとう。', 'ta n jo u bi o me de to u', '生日快樂。'),
+            ('ありがとう。', 'a ri ga to u', '謝謝。'),
         ],
     ),
     dict(
@@ -156,15 +156,15 @@ LESSONS_SA_TA = [
         origin='字源來自漢字「天」，字形像手彎曲拿東西，'
                '先寫一橫再往下寫C，記住長相與發音 te。',
         words=[
-            ('てんし', 'ten shi', '天使', '文化'),
+            ('てんし', 'te n shi', '天使', '文化'),
             ('て', 'te', '手', '身體'),
-            ('てんき', 'ten ki', '天氣', '自然'),
+            ('てんき', 'te n ki', '天氣', '自然'),
             ('てぶくろ', 'te bu ku ro', '手套', '服裝'),
-            ('てんとうむし', 'ten tō mu shi', '瓢蟲', '動物'),
+            ('てんとうむし', 'te n to u mu shi', '瓢蟲', '動物'),
         ],
         scene='主動幫忙',
         dialogue=[
-            ('手伝いましょうか。', 'te tsu da i ma shō u ka', '需要幫忙嗎？'),
+            ('手伝いましょうか。', 'te tsu da i ma sho u ka', '需要幫忙嗎？'),
             ('お願いします。', 'o ne ga i shi ma su', '麻煩了。'),
         ],
     ),

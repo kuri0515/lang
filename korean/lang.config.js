@@ -52,6 +52,12 @@ export const LANG = {
   // 短密碼補位到 Supabase 要求的 6 位。★ 不能改 —— 改了等於改掉所有既有帳號的密碼
   authPasswordPad: '-k0515',
 
+  // ── 這個語言用不了的題型 ──
+  // 韓文站四種都能用。空陣列不是佔位 —— 它讓「本站不關任何題型」
+  // 成為一個明確的宣告，而不是「欄位剛好沒寫」。
+  // tests/lang.test.mjs 會比對兩站欄位，少寫一個就報錯。
+  disabledModes: [],
+
   // ── localStorage 前綴：兩站同網域，不隔開會互相蓋掉語音與語速設定 ──
   storagePrefix: 'kr',
 

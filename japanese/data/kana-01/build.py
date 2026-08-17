@@ -78,7 +78,25 @@ def rows_for(L):
 
 
 # 書上的慣例：羅馬音按「拍」分寫。不合這個慣例的挑出來給人看。
-MORA_OK = re.compile(r'^[a-zA-Z]{1,3}$')
+#
+# ★ 為什麼要列出完整的拍表，而不是用「長度 ≤3」粗篩
+#   粗篩會把 nan / hon / ten 放行 —— 它們長度和合法的 kya / sho 一樣，
+#   但前者該拆成 na n、ho n、te n。用長度當判準，等於這個檢查
+#   對最常見的一種錯誤完全沒作用，卻回報「全部通過」。
+#   判準要對著真正的違規案例驗過，否則綠燈只是沒看到。
+_BASE = 'a i u e o'.split()
+_CONS = ['k', 's', 'sh', 't', 'ch', 'ts', 'n', 'h', 'f', 'm', 'y', 'r', 'w',
+         'g', 'z', 'j', 'd', 'b', 'p']
+_YOON = ['ky', 'sh', 'ch', 'ny', 'hy', 'my', 'ry', 'gy', 'j', 'by', 'py']
+MORA = set(_BASE) | {'n'}
+for c in _CONS:
+    for v in _BASE:
+        MORA.add(c + v)
+for c in _YOON:
+    for v in ('a', 'u', 'o'):
+        MORA.add(c + v)
+MORA |= {'shi', 'chi', 'tsu', 'fu', 'ji'}          # 不規則但合法
+MORA -= {'si', 'ti', 'tu', 'hu', 'zi', 'yi', 'ye', 'wi', 'wu', 'we'}  # 日語沒有
 
 
 def suspicious(ro):
@@ -89,9 +107,31 @@ def suspicious(ro):
     for tok in re.split(r'[\s,.。、？?！!]+', ro):
         if not tok:
             continue
-        if not MORA_OK.match(tok):
-            reasons.append(f'「{tok}」不像單一個拍')
+        t = tok.lower()
+        if t in MORA:
+            continue
+        # っ 的促音在羅馬音是子音重複（ki tte / ma tte），書上就是這樣寫
+        if len(t) > 1 and t[0] == t[1] and t[1:] in MORA:
+            continue
+        if len(t) > 1 and t.endswith('n') and t[:-1] in MORA:
+            reasons.append(f'「{tok}」的 ん 沒有獨立成一拍（應為 {t[:-1]} n）')
+        else:
+            reasons.append(f'「{tok}」不是一個合法的拍')
     return '；'.join(dict.fromkeys(reasons)) or None
+
+
+def _selftest():
+    """★ 檢查本身要先對著已知的違規案例驗過，才敢相信它的綠燈。"""
+    must_flag = ['nan de su ka', 'ten ki', 'ni hon go', 'a ri ga tō u', 'hi roi']
+    must_pass = ['a ki', 'i chi go', 'kyo u', 'cho tto ma tte', 'sho u sho u',
+                 'ha i', 'ko re, a ge ru', 'go hya ku e n de su', 'shi tte i ma su ka']
+    bad = [x for x in must_flag if not suspicious(x)]
+    wrong = [(x, suspicious(x)) for x in must_pass if suspicious(x)]
+    if bad:
+        sys.exit(f'❌ 檢查失效：這些違規沒被抓到 {bad}')
+    if wrong:
+        sys.exit(f'❌ 誤報：這些合法的被抓了 {wrong}')
+    print('  ✅ 羅馬音檢查自我測試通過（會抓真違規，不誤報合法寫法）')
 
 
 def merge_duplicates(all_rows):
@@ -145,6 +185,7 @@ def merge_duplicates(all_rows):
 
 
 def main():
+    _selftest()
     review = []
     print('【展開對帳】')
     all_rows = []
