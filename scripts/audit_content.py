@@ -172,7 +172,9 @@ OK_BOTH = {("台", "臺"), ("祕", "秘"), ("秘", "祕"),
            ("占", "佔"),
            # 内→內  說明日語來源時本來就該寫日文字形（内訳），
            #        OpenCC 會把它轉成中文的 內，那反而失去了「這是日語詞」的訊息
-           ("内", "內")}
+           ("内", "內"),
+           # 伙→夥  台灣寫「開伙」「伙食」；夥是夥伴，兩個字不同義
+           ("伙", "夥")}
 
 
 def check_simplified(items):
@@ -207,6 +209,9 @@ def check_simplified(items):
 
 def check_hanja(items):
     """漢字欄位格式；句子不該標漢字（那是詞源標註，不是國漢文混寫）"""
+    # hanja 欄至少要有一個漢字。混合詞可以含韓文（工夫하다、熱情pay），
+    # 但整欄都是韓文就是填錯了 —— 實際踩過：집밥 的 hanja 被填成「집밥」，
+    # 那是韓文複合詞，本來就沒有漢字詞源。
     issue("error", "hanja 欄不含任何漢字",
           [f"{x['ko']}: {x['hanja']}" for x in items if x.get("hanja") and not HANJA.search(x["hanja"])])
     issue("error", "句子被標了漢字",
