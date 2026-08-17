@@ -73,10 +73,22 @@ function render(lang, site) {
     ...moduleGraph(`${ROOT}/${site}/main.js`),
     ...moduleGraph(`${ROOT}/shared/js/app.js`),
   ];
-  const links = [...new Set(files)]
-    .map((f) => f.replace(`${ROOT}/${site}/`, '').replace(`${ROOT}/`, '../'))
-    .map((href) => `  <link rel="modulepreload" href="${href}">`)
-    .join('\n');
+  // ★ 連 CDN 上那一個也要預載。
+  //   supabase-js 是瀑布的第 4 層 —— 要先載 main → app → client 才輪到它，
+  //   而它自己還要再帶 5 個子套件（實測 187 KB）。
+  //   網址是靜態的 import 字串，所以能在 HTML 一到手就開始抓，
+  //   把它從第 4 層搬到第 0 層。
+  //   ★ 從原始碼掃出來而不是寫死 —— 版本號哪天升級，這裡要跟著動，
+  //     而預載一個舊版網址不會報錯，只會白抓一份沒人用的東西。
+  const clientSrc = fs.readFileSync(`${ROOT}/shared/js/data/client.js`, 'utf8');
+  const cdn = clientSrc.match(/from\s+'(https:\/\/[^']+)'/)?.[1];
+
+  const links = [
+    ...(cdn ? [`  <link rel="modulepreload" href="${cdn}" crossorigin>`] : []),
+    ...[...new Set(files)]
+      .map((f) => f.replace(`${ROOT}/${site}/`, '').replace(`${ROOT}/`, '../'))
+      .map((href) => `  <link rel="modulepreload" href="${href}">`),
+  ].join('\n');
   out = out.replace('{{modulepreload}}', links);
 
   // ① 條件區塊：{{#grid}}…{{/grid}} —— 只有宣告了字母表的站台才留

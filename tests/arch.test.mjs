@@ -237,9 +237,18 @@ console.log('\n【模組預載】');
   const hrefs = [...html.matchAll(/<link rel="modulepreload" href="([^"]+)"/g)].map((m) => m[1]);
   chk(`有預載清單（${hrefs.length} 條）`,
       hrefs.length ? [] : ['沒有任何預載 —— ES module 逐層發現，深度會乘以延遲']);
-  chk('每一條預載都指到存在的檔案',
-      hrefs.filter((h) => !fs.existsSync(path.resolve(SITE_DIR, h))),
+  // 跨網域的那條（CDN）不在本機檔案系統上，另外驗
+  chk('每一條本地預載都指到存在的檔案',
+      hrefs.filter((h) => !h.startsWith('http'))
+           .filter((h) => !fs.existsSync(path.resolve(SITE_DIR, h))),
       '404 的預載浪費往返又不報錯');
+
+  // ★ CDN 那條必須與 client.js 裡真正 import 的網址一字不差 ——
+  //   版本號升級時若沒跟著動，會白抓一份沒人用的舊版，而且不報錯。
+  const clientSrc = fs.readFileSync(`${SHARED}/js/data/client.js`, 'utf8');
+  const cdn = clientSrc.match(/from\s+'(https:\/\/[^']+)'/)?.[1];
+  chk('CDN 預載的網址與程式碼裡的一致',
+      !cdn || hrefs.includes(cdn) ? [] : [`程式碼用 ${cdn}，預載清單裡沒有`]);
 
   const entry = html.match(/<script type="module" src="([^"]+)"/)?.[1];
   chk('入口模組也在預載清單裡',
