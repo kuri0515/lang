@@ -3,6 +3,7 @@
 // 換 SRS 演算法只改 srs.js，換詞表只動 content.js，兩者互不影響。
 // =====================================================================
 import { sb, ITEM_FIELDS, DIRECTIONS, fetchAll } from './client.js';
+import { scheduleRecall } from '../core/srs.js';
 
 // ---------- 佇列 ----------
 /** 到期的複習卡 */
@@ -367,4 +368,80 @@ export async function itemAttempts(userId, itemId, limit = 30) {
     .order('reviewed_at', { ascending: false }).limit(limit);
   if (error) throw error;
   return data ?? [];
+}
+
+// ---------- 回顧清單 ----------
+
+/**
+ * 加入回顧清單。冪等 —— 重複按不報錯，也不會產生第二列。
+ * note 選填：「跟 ぬ 搞混」這種備註，下次回顧看到會很有用，
+ * 但強制填就變成負擔，多數人會因此乾脆不標。
+ */
+export async function addToReviewList(itemId, note = null) {
+  const { error } = await sb.rpc('review_list_add', { p_item_id: itemId, p_note: note });
+  if (error) throw error;
+}
+
+export async function removeFromReviewList(itemId) {
+  const { error } = await sb.rpc('review_list_remove', { p_item_id: itemId });
+  if (error) throw error;
+}
+
+/** 目前在清單上的條目（含內容），最近加入的排前面 */
+export async function fetchReviewList(userId) {
+  const rows = await fetchAll(() => sb.from('review_list')
+    .select(`item_id, note, added_at, items!inner(${ITEM_FIELDS})`)
+    .eq('user_id', userId).is('removed_at', null)
+    .order('added_at', { ascending: false }));
+  return rows.map((r) => ({ ...r, item: r.items }));
+}
+
+/** 只取 id，用來在詞庫與卡片上標出「已在清單」*/
+export async function fetchReviewListIds(userId) {
+  const rows = await fetchAll(() => sb.from('review_list')
+    .select('item_id').eq('user_id', userId).is('removed_at', null));
+  return new Set(rows.map((r) => r.item_id));
+}
+
+/**
+ * 回顧作答：記錄照記，排程走「只縮不放」（見 core/srs.js 的 scheduleRecall）。
+ *
+ * ★ 為什麼不重用 logReview：那支會無條件把新排程寫回卡片。
+ *   在回顧情境下，答得好卻把下次複習日推遠，正好破壞間隔重複的節奏。
+ */
+export async function logRecall({ userId, item, direction, rating, elapsedMs,
+                                 mode, sessionId, prevCard }) {
+  const next = scheduleRecall(prevCard || {}, rating);
+  if (!next) {
+    // 排程不動，只記答題 —— 走與自由練習相同的路徑
+    return logPractice({ item, direction, rating, elapsedMs, mode, sessionId, activity: 'drill' });
+  }
+  return saveReview({
+    userId, item, direction, rating, elapsedMs, mode, sessionId,
+    prevCard: prevCard || {}, next, activity: 'drill',
+  });
+}
+
+/**
+ * 回顧清單的作答佇列：條目 + 該方向的完整卡片。
+ *
+ * ★ 一定要帶完整的卡（interval_days／ease_factor／due_at…），
+ *   因為「只縮不放」要拿現有的到期日去比。
+ *   cardsByItem 只取統計欄位，用它算會把 interval 當成 0，
+ *   於是每張卡都被當成「還在學習階段」而不動排程 ——
+ *   功能看起來能用，實際上永遠沒作用。
+ */
+export async function fetchRecallEntries(userId, direction) {
+  const rows = await fetchReviewList(userId);
+  if (!rows.length) return [];
+  const ids = rows.map((r) => r.item_id);
+  const cards = {};
+  for (let i = 0; i < ids.length; i += 80) {
+    const { data, error } = await sb.from('user_cards')
+      .select('*').eq('user_id', userId).eq('direction', direction)
+      .in('item_id', ids.slice(i, i + 80));
+    if (error) throw error;
+    for (const c of data ?? []) cards[c.item_id] = c;
+  }
+  return rows.map((r) => ({ item: r.item, direction, card: cards[r.item_id] ?? null }));
 }

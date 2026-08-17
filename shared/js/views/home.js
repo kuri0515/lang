@@ -66,6 +66,7 @@ export function initHome(d) {
   // 類型只影響「這輪抽什麼」，不影響到期張數的計算，所以不必 refreshDue()。
   // 但摘要要跟著變 —— 選項收合起來時，摘要是唯一看得到目前設定的地方。
   $('type-pick').addEventListener('change', syncModeUI);
+  $('btn-recall').onclick = () => deps.onRecall?.();
   on(EVENTS.ITEMS_CHANGED, () => { deckCounts = null; load(); });
   on(EVENTS.PROGRESS_WRITTEN, () => load());
   syncModeUI();
@@ -324,4 +325,33 @@ function renderWeak(weak) {
         </div>`;
       }).join('')
     : emptyState('🎯', '同一條答滿 3 次後<br>這裡會列出最需要加強的');
+}
+
+/**
+ * 回顧清單。
+ *
+ * 【為什麼要顯示標記的理由與所屬課】
+ *   清單放久了會忘記「當初為什麼標它」。只列詞的話，
+ *   過兩週看到一排字，人會不知道從何練起，然後乾脆不練。
+ */
+export function renderRecall(rows) {
+  const card = $('recall-card');
+  if (!rows.length) { card.classList.add('hidden'); return; }
+  card.classList.remove('hidden');
+  $('recall-n').textContent = `${rows.length} 條`;
+  $('recall-list').innerHTML = rows.slice(0, 8).map((r) => {
+    const it = r.item;
+    const lesson = (it.tags || []).find((t) => t.length === 1) || '';
+    return `<div class="recall-row">
+      <span class="r-ko">${esc(it.ko)}</span>
+      <span class="r-zh muted">${esc(it.zh)}</span>
+      ${lesson ? `<span class="r-tag">${esc(lesson)}</span>` : ''}
+      ${r.note ? `<span class="r-note">${esc(r.note)}</span>` : ''}
+      <button class="r-del" data-recall-del="${esc(it.id)}" title="移出清單">×</button>
+    </div>`;
+  }).join('') + (rows.length > 8 ? `<p class="hint nomargin">…另有 ${rows.length - 8} 條</p>` : '');
+
+  qsa('[data-recall-del]').forEach((b) => {
+    b.onclick = () => deps.onRemoveRecall?.(b.dataset.recallDel);
+  });
 }

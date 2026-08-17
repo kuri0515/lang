@@ -120,6 +120,15 @@
       <div id="deck-list"><p class="muted nomargin">載入中…</p></div>
     </div>
 
+    <div class="card hidden" id="recall-card">
+      <div class="card-head">
+        <h2>回顧清單 <span id="recall-n" class="muted"></span></h2>
+        <button id="btn-recall" class="small primary">開始回顧</button>
+      </div>
+      <p class="hint nomargin">自己標起來的。答得好不會把複習日推遠，答不好才拉近。</p>
+      <div id="recall-list"></div>
+    </div>
+
     <div class="card" id="weak-card">
       <div class="card-head">
         <h2>我的弱項</h2>
@@ -368,6 +377,7 @@
         <div class="divider"></div>
         <div class="back" id="c-back-text"></div>
         <div class="pos hidden" id="c-pos"></div>
+        <button id="c-flag" class="flag-btn" title="加入回顧清單">☆</button>
         <div class="hanja hidden" id="c-hanja"></div>
         <div class="hanja-rel hidden" id="c-hanja-rel"></div>
         <div class="example hidden" id="c-example">

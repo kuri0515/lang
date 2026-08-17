@@ -882,3 +882,33 @@ ruby rt {
 }
 /* 正面大字時假名別擠在一起 */
 .c-front ruby, #c-front ruby { line-height: 1.9; }
+
+/* 回顧標記：卡片右上角的星號。
+   不做成大按鈕 —— 它是「順手標一下」的動作，不該搶走答題的注意力。 */
+.flag-btn {
+  position: absolute; top: 10px; right: 12px;
+  background: none; border: 0; padding: 4px 6px;
+  font-size: 17px; line-height: 1; color: var(--faint);
+  cursor: pointer; transition: .15s;
+}
+.flag-btn:hover { color: var(--accent); transform: scale(1.12); }
+.flag-btn.on { color: #f0a020; }
+
+/* 回顧清單的每一列 */
+.recall-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13.5px;
+}
+.recall-row:last-child { border-bottom: 0; }
+.recall-row .r-ko { font-weight: 600; }
+.recall-row .r-zh { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recall-row .r-tag {
+  font-size: 11px; padding: 1px 7px; border-radius: 999px;
+  background: var(--surface); color: var(--muted); flex-shrink: 0;
+}
+.recall-row .r-note { font-size: 11.5px; color: var(--faint); font-style: italic; }
+.recall-row .r-del {
+  background: none; border: 0; color: var(--faint); cursor: pointer;
+  font-size: 15px; padding: 0 4px; flex-shrink: 0;
+}
+.recall-row .r-del:hover { color: var(--hard); }

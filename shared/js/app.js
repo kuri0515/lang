@@ -45,7 +45,11 @@ const studyCtx = () => ({ pool, isAdmin: isAdmin(), modeId: home.studyMode() });
 const session = createSession({
   save: (p) => {
     const args = { userId: user.id, ...p };
-    // 自由練習只記錄不動排程；正規複習兩者都寫。
+    // 三種寫法，差別在「要不要動排程」：
+    //   回顧清單 → 只縮不放（答得好不動、答不好才拉近）
+    //   自由練習 → 完全不動
+    //   正規複習 → 照 SRS 算出來的寫
+    if (p.activity === 'drill') return progress.logRecall(args);
     return p.free ? progress.logPractice(args) : progress.saveReview(args);
   },
   onChange: (state) => study.render(state),
@@ -177,6 +181,26 @@ async function startFree({ ids = null, tag = '', deckId = null,
   } catch (e) { msg(e.message || e); }
 }
 
+/**
+ * 回顧清單練習。
+ *
+ * ★ 不是 freeMode。free 的語意是「完全不動排程」，
+ *   而回顧要的是「答得好不動、答不好拉近」—— 那是第三種語意，
+ *   由 activity='drill' 分派到 progress.logRecall。
+ *   混用 free 的話，答不好的訊號會被整個丟掉。
+ */
+async function startRecall() {
+  try {
+    const dir = home.effectiveDir();
+    const entries = await progress.fetchRecallEntries(user.id, dir);
+    if (!entries.length) return msg('回顧清單是空的。在卡片上點 ☆ 就會加進來。');
+    await begin(shuffle(entries), {
+      kind: 'drill',
+      note: '回顧清單 · 答得好不會把複習日推遠，答不好才拉近',
+    });
+  } catch (e) { msg(e.message || e); }
+}
+
 // ---------------------------------------------------------------------
 // 裝配
 // ---------------------------------------------------------------------
@@ -201,8 +225,44 @@ home.initHome({
   onStudyTag: (t) => startNew(null, t),
   // 場景由多個標籤組成，且只在 life-01 之內取材
   onStudyScene: (s) => startScene(s),
+  onRecall: startRecall,
+  onRemoveRecall: async (itemId) => {
+    try {
+      await progress.removeFromReviewList(itemId);
+      recallIds.delete(itemId);
+      refreshRecall();
+    } catch (e) { msg(e.message || e); }
+  },
 });
-study.initStudy({ session, getCtx: studyCtx, onQuit: () => show('view-done') });
+// 回顧清單的 id 集合在記憶體裡維護 —— 每翻一張卡查一次 API 的話，
+// 卡片會等在那裡，而這只是一個星號。
+let recallIds = new Set();
+
+async function refreshRecall() {
+  if (!user) return;
+  try {
+    recallIds = await progress.fetchReviewListIds(user.id);
+    home.renderRecall(await progress.fetchReviewList(user.id));
+  } catch { /* 清單載不到不該擋住整個首頁 */ }
+}
+
+async function toggleRecall(item) {
+  if (!user) return;
+  const on = recallIds.has(item.id);
+  try {
+    if (on) { await progress.removeFromReviewList(item.id); recallIds.delete(item.id); }
+    else { await progress.addToReviewList(item.id); recallIds.add(item.id); }
+    study.render(session.state());
+    msg(on ? '已從回顧清單移除' : '已加入回顧清單', 'ok');
+    refreshRecall();
+  } catch (e) { msg(e.message || e); }
+}
+
+study.initStudy({
+  session, getCtx: studyCtx, onQuit: () => show('view-done'),
+  inRecallList: (id) => recallIds.has(id),
+  onToggleRecall: toggleRecall,
+});
 browse.initBrowse({ ...deps,
   onPractice: (ids) => startFree({ ids }),
   onStudyTag: (t) => startNew(null, t),
@@ -263,6 +323,7 @@ async function onUser(u) {
     `帳號 <b>${esc(profile?.username)}</b>　角色 ${isAdmin() ? '管理員' : '一般使用者'}<br>`
     + `<span class="hint">${esc(u.email)}</span>`;
   // 重新整理後回到原本那一頁
+  refreshRecall();          // 清單與首頁其他區塊並行載入，不互相擋
   await show(viewFromHash());
 }
 

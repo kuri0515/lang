@@ -35,6 +35,11 @@ let onQuit = null;
  */
 const LS_INTRO = 'lesson-intro-open';
 
+// 外部注入：回顧清單的狀態查詢與切換。
+// 用注入而不是直接 import data 層 —— views 不該自己決定資料怎麼來，
+// 而且這樣測試裡可以塞一個假的進來。
+let deps = {};
+
 export function setLesson(tag, intro) {
   const box = $('lesson-intro');
   if (!box) return;
@@ -47,13 +52,16 @@ export function setLesson(tag, intro) {
   box.ontoggle = () => localStorage.setItem(LS_INTRO, box.open ? '1' : '0');
 }
 
-export function initStudy({ session: s, getCtx, onQuit: quitCb }) {
+export function initStudy({ session: s, getCtx, onQuit: quitCb,
+                            inRecallList, onToggleRecall }) {
+  deps = { inRecallList, onToggleRecall };
   session = s; onQuit = quitCb;
   Object.assign(els, {
     front: $('c-front'), back: $('c-back'), backText: $('c-back-text'),
     roman: $('c-roman'), pos: $('c-pos'), type: $('c-type'), dir: $('c-dir'),
     example: $('c-example'), exKo: $('c-ex-ko'), exZh: $('c-ex-zh'),
     note: $('c-note'), acc: $('c-acc'), hanja: $('c-hanja'), hanjaRel: $('c-hanja-rel'),
+    flag: $('c-flag'),
     same: $('c-same'),
     listen: $('c-listen'), listenSlow: $('c-listen-slow'), listenBox: $('listen-box'),
     choices: $('choices'), grade: $('grade'),
@@ -158,6 +166,15 @@ export function render(state) {
   els.example.classList.toggle('hidden', !item.example_ko);
   els.exKo.textContent = item.example_ko || '';
   els.exZh.textContent = item.example_zh || '';
+  // 回顧標記：★＝已在清單。狀態由呼叫端提供的集合決定，
+  // 不在這裡打 API —— 每翻一張卡就查一次，卡片會等在那裡。
+  if (els.flag) {
+    const on = deps.inRecallList?.(item.id) ?? false;
+    els.flag.textContent = on ? '★' : '☆';
+    els.flag.classList.toggle('on', on);
+    els.flag.title = on ? '已在回顧清單（點一下移除）' : '加入回顧清單';
+    els.flag.onclick = () => deps.onToggleRecall?.(item);
+  }
   els.note.textContent = item.note || '';
   els.note.classList.toggle('hidden', !item.note);
   els.hanja.classList.add('hidden');
