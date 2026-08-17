@@ -34,15 +34,19 @@ from datetime import datetime
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# 表名 → 是否為使用者個人資料（決定要不要另存 CSV）
+# 表名 → (是否為使用者個人資料, 分頁排序欄位)
+#
+# 排序欄位不能一律寫 id：user_cards 是複合主鍵、沒有 id 欄，
+# schema_migrations 的主鍵是 version。分頁不指定排序會在並發寫入時
+# 給出錯誤答案（同一列落進兩頁），所以每張表都要指定得對。
 TABLES = {
-    "decks": False,
-    "items": False,
-    "profiles": True,
-    "user_cards": True,
-    "reviews": True,
-    "item_edits": True,
-    "schema_migrations": True,
+    "decks":             (False, "id"),
+    "items":             (False, "id"),
+    "profiles":          (True,  "id"),
+    "user_cards":        (True,  "user_id,item_id,direction"),
+    "reviews":           (True,  "id"),
+    "item_edits":        (True,  "id"),
+    "schema_migrations": (True,  "version"),
 }
 
 CSV_FIELDS = ["ko", "zh", "romanization", "hanja", "item_type", "pos",
@@ -84,10 +88,10 @@ def rest(url, key, path, tries=3):
     sys.exit(f"❌ {path} 連續 {tries} 次失敗：{last}")
 
 
-def fetch_all(url, key, table, page=300):
+def fetch_all(url, key, table, order, page=300):
     out = []
     while True:
-        rows = rest(url, key, f"{table}?select=*&order=id&offset={len(out)}&limit={page}")
+        rows = rest(url, key, f"{table}?select=*&order={order}&offset={len(out)}&limit={page}")
         if rows is None:
             return None
         out += rows
@@ -104,8 +108,8 @@ def do_backup():
     manifest = {"created_at": datetime.now().isoformat(), "source": url, "tables": {}}
     print(f"備份到 backups/{stamp}/\n")
 
-    for table, is_personal in TABLES.items():
-        rows = fetch_all(url, key, table)
+    for table, (is_personal, order) in TABLES.items():
+        rows = fetch_all(url, key, table, order)
         if rows is None:
             print(f"  ⚠️  {table:<20s} 不存在，略過")
             continue
@@ -200,11 +204,43 @@ def restore_plan(outdir):
     print("       python3 scripts/audit_content.py")
 
 
+def selftest():
+    """
+    每張表都撈得動嗎？
+
+    存在的意義：排序欄位寫錯時（user_cards 沒有 id 欄）備份會整支失敗，
+    而失敗發生在「要動資料之前」那一刻 —— 那正是最不能沒有還原點的時候。
+    實際踩過：修分頁排序時一律寫 id，備份靜靜壞掉，
+    下一次匯入就在沒有還原點的情況下跑完了。
+
+    只撈一列，快，可以在任何寫入動作前先跑。
+    """
+    url, key = load_env()
+    bad = []
+    for table, (_, order) in TABLES.items():
+        try:
+            rest(url, key, f"{table}?select=*&order={order}&limit=1")
+        except SystemExit as e:
+            bad.append(f"{table}（order={order}）：{e}")
+    for table, (_, order) in TABLES.items():
+        print(f"  {'❌' if any(t.startswith(table) for t in bad) else '✅'} {table:<20s} order={order}")
+    if bad:
+        print("\n❌ 備份無法完成 —— 動資料之前請先修好")
+        sys.exit(1)
+    print("\n✅ 每張表都撈得動，備份可用")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--verify", metavar="DIR")
     ap.add_argument("--restore-plan", metavar="DIR")
+    ap.add_argument("--selftest", action="store_true",
+                    help="只確認每張表都撈得動（動資料前先跑）")
     args = ap.parse_args()
+
+    if args.selftest:
+        selftest()
+        return
 
     if args.verify:
         sys.exit(0 if verify(args.verify, quiet=False) else 1)
