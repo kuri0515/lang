@@ -353,7 +353,7 @@ def check_examples(items):
     # 實際踩過：「居然already賣完了」，肉眼掃過去完全沒發現。
     # 專有名詞在中文裡本來就保留原文（NewJeans、Vlog），不算錯。
     # 第一版沒排除，三條全是誤報 —— 誤報會讓整項檢查失去意義。
-    PROPER = re.compile(r"NewJeans|NJZ|Bunnies|Vlog|MBTI|YouTube|Instagram|X\b|K-", re.I)
+    PROPER = re.compile(r"NewJeans|NJZ|Bunnies|Vlog|MBTI|YouTube|Instagram|Wi-?Fi|APP|X\b|K-", re.I)
     issue("warn", "例句譯文混入英文",
           [f"{x['ko']}: {x['example_zh']}" for x in ex
            if re.search(r"[A-Za-z]{2,}", PROPER.sub("", x.get("example_zh") or ""))],
@@ -547,6 +547,8 @@ def check_life_scene_coverage(items):
         ("命理 · 運勢",     {"文化"}),
         ("情緒 · 反應",     {"情緒", "網路用語"}),
         ("口語語感",       {"口語"}),
+        ("穿搭 · 出門",     {"服裝"}),
+        ("約時間 · 聯絡",   {"時間", "溝通"}),
     ]
     life = [x for x in items if x["deck"] == "life-01"]
     if not life:
