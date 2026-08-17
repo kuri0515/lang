@@ -921,3 +921,40 @@ ruby rt {
   border-left: 3px solid var(--accent);
   font-size: 13px; line-height: 1.6; color: var(--text);
 }
+
+/* ── 五十音表 ──
+   格子要能一眼分出三種狀態：還沒學／學過了／已掌握。
+   只用兩種顏色的話，剛學完的一課會和從沒碰過的長得一樣，
+   使用者會覺得剛才那一輪沒被記錄。 */
+.grid-box { margin-top: 12px; }
+.grid-box > summary {
+  cursor: pointer; display: flex; justify-content: space-between;
+  align-items: center; font-size: 13.5px; font-weight: 600; padding: 4px 0;
+}
+#gojuon { margin-top: 8px; overflow-x: auto; }
+.g-row { display: flex; gap: 4px; margin-bottom: 4px; align-items: center; }
+.g-lab {
+  width: 34px; flex-shrink: 0; font-size: 11px; color: var(--muted); text-align: right;
+}
+.g-col { flex: 1; min-width: 34px; text-align: center; font-size: 10.5px; color: var(--faint); }
+.g-head { margin-bottom: 2px; }
+.g-cell {
+  flex: 1; min-width: 34px; height: 34px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); padding: 0; cursor: pointer; transition: .12s;
+}
+.g-cell:hover { transform: translateY(-1px); border-color: var(--accent); }
+/* 還沒學：留白，看得出「接下來要學這些」 */
+.g-new { color: var(--muted); }
+/* 學過了：底色淺，代表走過但還在鞏固 */
+.g-seen { background: color-mix(in srgb, var(--accent) 16%, transparent); border-color: transparent; }
+/* 已掌握：實色 */
+.g-done { background: color-mix(in srgb, var(--good) 22%, transparent); border-color: transparent; font-weight: 600; }
+/* 內容還沒加進來：可見但不可點，與「還沒學」要分得出來 */
+.g-todo {
+  color: var(--faint); background: transparent; border-style: dashed;
+  cursor: default; opacity: .5;
+}
+/* 日語本來就沒有這個音 —— 留白比補一個灰格更誠實 */
+.g-none { flex: 1; min-width: 34px; height: 34px; }

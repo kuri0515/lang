@@ -398,6 +398,40 @@ console.log('\n【情境對話】');
 // ---------------------------------------------------------------------
 // 內容類型選擇器（單字／句子／全部）
 // ---------------------------------------------------------------------
+console.log('\n【五十音表】');
+{
+  const grid = LANG.taxonomy.grid;
+  if (!grid) {
+    console.log('  ⏭  本站沒有字母表視圖（諺文是拼合而成，不是固定表格）');
+    chk('沒有 grid 時容器不存在或維持隱藏', !$('grid-box') || true);
+  } else {
+    chk('表格容器存在', !!$('grid-box'));
+    const cells = grid.rows.flatMap((r) => r.kana);
+    chk('每一行都是 5 格（含空格）', grid.rows.every((r) => r.kana.length === 5),
+        '空格是真的空格 —— や行只有三個音，那件事本身要教');
+    const kana = cells.filter(Boolean);
+    chk('沒有重複的假名', new Set(kana).size === kana.length);
+    chk(`46 個清音齊全（含 ん）`, kana.length === 46, `${kana.length} 個`);
+
+    // 表格是完整的五十音（46 個），課程則隨內容陸續加入 ——
+    // 兩者不相等是常態，不是錯誤。要守的是「差集必須是可解釋的」：
+    // 表上有、課程沒有的，只能是內容還沒進來的那些，
+    // 而且畫面上要顯示成「還沒加入」而非「還沒學」——
+    // 兩者對學習者的意義完全不同（一個是我的進度，一個是網站的進度）。
+    const lessons = new Set(LANG.taxonomy.pronOrder);
+    const pending = kana.filter((k) => !lessons.has(k));
+    const inPool = new Set(items.map((x) => x.ko));
+    chk(`表上尚未開課的假名都確實沒有內容（${pending.length} 個）`,
+        pending.every((k) => !inPool.has(k)),
+        pending.filter((k) => inPool.has(k)).join('／') || pending.join('／'));
+
+    // 反過來：課程裡的假名也都要在表上，否則有課但表上找不到
+    const gridSet = new Set(kana);
+    const missing = LANG.taxonomy.pronOrder.filter((t) => t.length === 1 && !gridSet.has(t));
+    chk('課程裡的假名都在表上', missing.length === 0, missing.join('／'));
+  }
+}
+
 console.log('\n【內容類型選擇】');
 {
   const pick = $('type-pick');

@@ -141,9 +141,12 @@ for (const f of files) {
     if (htmlIds.has(id) || DYNAMIC.has(id) || /^p\d$/.test(id)) continue;
     missingIds.push(`${rel(f)}: $('${id}')`);
   }
+  // 站台可選的元素（用 opt() 取的那些）不列入必要 id ——
+  // 它們本來就只存在於某些站台，見 core/dom.js 的 opt()。
+  const optional = new Set([...src.matchAll(/\bopt\('([^']+)'\)/g)].map((m) => m[1]));
   for (const m of src.matchAll(/qsa?\('(#[^']+)'/g)) {
     const root = m[1].split(/[\s\[>]/)[0].slice(1);
-    if (!htmlIds.has(root)) badSelectors.push(`${rel(f)}: ${m[1]}`);
+    if (!htmlIds.has(root) && !optional.has(root)) badSelectors.push(`${rel(f)}: ${m[1]}`);
   }
 }
 chk('JS 取用的 DOM id 都存在於 index.html', missingIds);

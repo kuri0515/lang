@@ -3,6 +3,18 @@
 // =====================================================================
 
 export const $ = (id) => document.getElementById(id);
+/**
+ * 站台可選的元素。
+ *
+ * $() 取的是「每一站都必須有」的元素，架構檢查會盯著它 ——
+ * 少一個就是 bug，因為那代表 JS 會拿到 null 然後在某個功能上炸掉。
+ *
+ * 但有些元素本來就只有某些站台有（日文站的五十音表；諺文是拼合而成，
+ * 沒有等價的固定表格）。那種情況用 opt()，讓「可以不存在」
+ * 在程式碼裡看得出來，而不是靠讀 render 函式開頭那行 if 才知道。
+ */
+export const opt = (id) => document.getElementById(id);
+
 export const qs = (sel, root = document) => root.querySelector(sel);
 export const qsa = (sel, root = document) => [...root.querySelectorAll(sel)];
 

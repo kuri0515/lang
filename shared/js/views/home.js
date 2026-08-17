@@ -1,5 +1,5 @@
 // 學習首頁：今日統計、連續天數、練習方式、詞庫、弱項
-import { $, esc, pct, msg, emptyState, qs, qsa } from '../core/dom.js';
+import { $, opt, esc, pct, msg, emptyState, qs, qsa } from '../core/dom.js';
 import { on, EVENTS } from '../core/bus.js';
 import { dirShort } from '../data/client.js';
 import * as content from '../data/content.js';
@@ -9,7 +9,10 @@ import * as progress from '../data/progress.js';
 import { MODES, getMode, forcedDirection } from '../study/modes/index.js';
 import { matchesType as matchesTypePure } from '../study/session.js';
 import { computeStreak } from '../core/stats.js';
+import { lang } from '../core/lang.js';
 
+let nextLessonTag = null;   // 給首頁建議區用：課程的下一步
+let nextLessonNo = 0;
 let deps = null;      // { user, profile, onReview, onFree, onNewDeck, onDrillWeak }
 let weakIds = [];
 let primaryAction = null;
@@ -116,10 +119,18 @@ export async function load() {
     $('btn-review').disabled = due.length === 0;
     $('btn-review').textContent = due.length ? `複習 ${due.length}` : '複習已清空';
 
+    // ★ 順序有意義：renderPron 會算出「下一課」，
+    //   而建議區的大按鈕要指向它。反過來的話，第一次載入時
+    //   建議區拿到的是上一輪的值（首次進站是 null），
+    //   於是新手看到的仍是舊的那顆按鈕 —— 而且不會報錯。
+    renderPron(pron);
+    // 五十音表：站台有宣告才畫。available 決定哪些格子可以點 ——
+    // ら行 的內容還沒進來時，格子要看得出「還沒加入」而不是「還沒學」。
+    renderGojuon(lang().taxonomy.grid ?? null, pron,
+                 new Set(pron.filter((r) => r.total > 0).map((r) => r.tag)));
     renderSuggestion(due.length, today, decks);
 
     renderDecks(decks);
-    renderPron(pron);
     renderLife(life);
     renderWeak(weak);
   } catch (e) {
@@ -155,6 +166,23 @@ function renderSuggestion(dueCount, today, decks) {
     btn.textContent = `開始複習（${dueCount}）`;
     btn.disabled = false;
     primaryAction = () => deps.onReview();
+    return;
+  }
+
+  // ★ 有課程就走課程，不要走「整個詞庫抓 20 張」。
+  //   兩條路的差別對初學者很大：
+  //     走課程 → 範圍是一課、開頭會顯示這一課的口訣（書上最有價值的東西）
+  //     走詞庫 → 一次 20 張橫跨兩三課，而且沒有任何導言
+  //   原本的大按鈕指向後者，等於把新手帶到比較差的那條路，
+  //   而他不會知道另一條存在。
+  if (nextLessonTag) {
+    box.classList.add('done');
+    box.innerHTML = today.reviewed
+      ? `✓ 今日複習已清空，答了 <b>${today.reviewed}</b> 題。接著上第 ${nextLessonNo} 課。`
+      : `✓ 今天沒有到期的複習。接著上第 ${nextLessonNo} 課 —— 一課約 8 條，一次坐下來走得完。`;
+    btn.textContent = `開始第 ${nextLessonNo} 課：${nextLessonTag}`;
+    btn.disabled = false;
+    primaryAction = () => deps.onStudyTag(nextLessonTag);
     return;
   }
 
@@ -214,6 +242,8 @@ async function renderDecks(decks) {
  */
 function renderPron(rows) {
   const { next, done: doneCount, mastered: masteredCount, total, ordered } = nextLesson(rows);
+  nextLessonTag = next?.tag ?? null;
+  nextLessonNo = doneCount + 1;
   $('pron-count').textContent = total;
   if (!total) {
     $('pron-card').classList.add('hidden');
@@ -353,5 +383,50 @@ export function renderRecall(rows) {
 
   qsa('[data-recall-del]').forEach((b) => {
     b.onclick = () => deps.onRemoveRecall?.(b.dataset.recallDel);
+  });
+}
+
+/**
+ * 五十音表。只有宣告了 GOJUON_GRID 的站台才畫（韓文站是 null）。
+ *
+ * 三種狀態要一眼分得出來，因為它們對學習者的意義完全不同：
+ *   還沒學  → 「我接下來要學這些」
+ *   學過了  → 「我走過了，但還在鞏固」
+ *   已掌握  → 「這個真的會了」
+ * 只用兩種顏色的話，剛學完的一課會和從沒碰過的長得一樣。
+ */
+export function renderGojuon(grid, rows, available) {
+  const box = opt('grid-box');
+  if (!box) return;   // 這一站沒有字母表視圖
+  if (!grid) { box.classList.add('hidden'); return; }
+  box.classList.remove('hidden');
+
+  const by = Object.fromEntries(rows.map((r) => [r.tag, r]));
+  const all = grid.rows.flatMap((r) => r.kana).filter(Boolean);
+  const walked = all.filter((k) => by[k] && by[k].started >= by[k].total).length;
+  opt('grid-sub').textContent = `${walked} / ${all.length} 個清音`;
+
+  const head = `<div class="g-row g-head"><span class="g-lab"></span>${
+    grid.cols.map((c) => `<span class="g-col">${esc(c[0])}</span>`).join('')}</div>`;
+
+  opt('gojuon').innerHTML = head + grid.rows.map((r) => `
+    <div class="g-row">
+      <span class="g-lab">${esc(r.row)}</span>
+      ${r.kana.map((k) => {
+        if (!k) return '<span class="g-cell g-none"></span>';
+        if (!available.has(k)) {
+          return `<span class="g-cell g-todo" title="這一課的內容還沒加進來">${esc(k)}</span>`;
+        }
+        const p = by[k];
+        const done = p && p.mastered / p.total >= LESSON_DONE;
+        const seen = p && p.started >= p.total;
+        const cls = done ? 'g-done' : seen ? 'g-seen' : 'g-new';
+        const tip = !p ? '' : done ? '已掌握' : seen ? `學過 ${p.started}/${p.total}` : '還沒開始';
+        return `<button class="g-cell ${cls}" data-pron="${esc(k)}" title="${esc(k)}　${tip}">${esc(k)}</button>`;
+      }).join('')}
+    </div>`).join('');
+
+  qsa('#gojuon [data-pron]').forEach((b) => {
+    b.onclick = () => deps.onStudyTag(b.dataset.pron);
   });
 }
