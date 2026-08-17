@@ -21,6 +21,7 @@ import { initEditor, openEditor, loadDecksInto } from './views/editor.js';
 import { initEdits } from './views/edits.js';
 import * as home from './views/home.js';
 import * as study from './views/study.js';
+import { LESSON_INTRO } from './core/taxonomy.js';
 import * as browse from './views/browse.js';
 import * as history from './views/history.js';
 import * as importer from './views/importer.js';
@@ -54,7 +55,9 @@ async function ensurePool() {
 }
 
 /** 開始一輪：依題型過濾佇列，過濾後沒東西就別進去 */
-async function begin(entries, { freeMode = false, kind = 'review', note = '' } = {}) {
+async function begin(entries, { freeMode = false, kind = 'review', note = '', lesson = '' } = {}) {
+  // 導言每輪都要重設 —— 不清掉的話，下一輪學別的內容會掛著上一課的說明
+  study.setLesson(lesson, lesson ? LESSON_INTRO[lesson] : '');
   const modeId = home.studyMode();
   if (needsPool(modeId)) await ensurePool();
 
@@ -106,7 +109,7 @@ async function startNew(deckId, tag = '') {
       }
       return msg('這個詞庫的新內容已經學完了 👍', 'ok');
     }
-    await begin(rows, { kind: 'new' });
+    await begin(rows, { kind: 'new', lesson: tag });
   } catch (e) { msg(e.message || e); }
 }
 
@@ -117,7 +120,7 @@ async function startFree({ ids = null, tag = '', kind = 'free' } = {}) {
     if (!items.length) return msg('沒有符合的內容');
     const dir = home.effectiveDir();
     await begin(shuffle(items.map((item) => ({ item, direction: dir, card: null }))),
-                { freeMode: true, kind,
+                { freeMode: true, kind, lesson: tag,
                   note: kind === 'drill'
                     ? '弱項修復 · 只記錄成績，不影響複習排程'
                     : '自由練習 · 只記錄成績，不影響複習排程' });

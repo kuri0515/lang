@@ -757,3 +757,21 @@ kbd {
 .pron-row.done .p-bar i { background: var(--good); }
 .pron-row .p-num { font-size: 11.5px; color: var(--faint); width: 42px; text-align: right; flex-shrink: 0; }
 .pron-row button { padding: 5px 11px; font-size: 12.5px; border-radius: 8px; }
+
+/* ---------- 課程導言 ----------
+   整堂課常駐，不用 toast —— 學習者練到一半想回頭確認規則是常態。
+   預設展開、可收合；收起後仍留課名，知道自己在練哪一課。 */
+.lesson-intro {
+  background: var(--accent-soft); border: 1px solid var(--accent);
+  border-radius: var(--r-sm); padding: 10px 13px; margin-bottom: 12px;
+}
+.lesson-intro summary {
+  cursor: pointer; font-weight: 600; font-size: 13.5px; color: var(--accent);
+  list-style: none;
+}
+.lesson-intro summary::-webkit-details-marker { display: none; }
+.lesson-intro summary::after { content: ' ▾'; font-weight: 400; opacity: .6; }
+.lesson-intro[open] summary::after { content: ' ▴'; }
+.lesson-intro p {
+  margin: 7px 0 0; font-size: 13px; line-height: 1.65; color: var(--text);
+}

@@ -109,6 +109,19 @@ for (const f of files) {
   }
 }
 chk('JS 取用的 DOM id 都存在於 index.html', missingIds);
+
+// 課程導言的不變量：begin() 每輪都必須重設，否則下一輪會掛著上一課的說明。
+// 這條在 jsdom 測不到（study.js 會連帶載入 CDN 上的 supabase-js），改用原始碼層檢查。
+{
+  const app = fs.readFileSync(new URL('../js/app.js', import.meta.url).pathname, 'utf8');
+  const body = app.slice(app.indexOf('async function begin('));
+  const head = body.slice(0, body.indexOf('\n}'));
+  const setIdx = head.indexOf('study.setLesson');
+  const returnIdx = head.search(/\n\s+(if|return|await)\b/);
+  const ok = setIdx > -1 && (returnIdx === -1 || setIdx < returnIdx);
+  chk('begin() 一開頭就重設課程導言',
+      ok ? [] : ['放在提前 return 之後或根本沒呼叫 —— 換課時會殘留上一課的說明']);
+}
 chk('querySelector 的 id 錨點都存在', badSelectors);
 
 const allIds = [...html.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]);

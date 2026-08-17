@@ -17,6 +17,21 @@ let ctx = null;          // { pool, isAdmin, modeId }
 let active = null;       // 目前題型的 mount 回傳值
 let onQuit = null;
 
+/**
+ * 課程導言。整堂課常駐 —— 練到一半想回頭確認規則是常態，
+ * 用 toast 就等於看一眼之後再也找不到。
+ * 這裡只負責顯示，內容與判準都在 core/taxonomy.js。
+ */
+export function setLesson(tag, intro) {
+  const box = $('lesson-intro');
+  if (!box) return;
+  box.classList.toggle('hidden', !intro);
+  if (!intro) return;
+  $('lesson-title').textContent = `${tag}`;
+  $('lesson-body').textContent = intro;
+  box.open = true;
+}
+
 export function initStudy({ session: s, getCtx, onQuit: quitCb }) {
   session = s; onQuit = quitCb;
   Object.assign(els, {

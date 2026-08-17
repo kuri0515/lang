@@ -178,5 +178,27 @@ console.log('\n【發音課程進度】');
   chk('門檻是 0.8', LESSON_DONE===0.8);
 }
 
+// ---------------------------------------------------------------------
+// 課程導言：開課時出現，離開這一課時必須清掉
+// ---------------------------------------------------------------------
+console.log('\n【課程導言】');
+{
+  // 不 import study.js —— 它會連帶載入 supabase-js（CDN 網址），Node 無法解析。
+  // 這裡驗資料完整性，「每輪必重設」的不變量在 arch 測試用原始碼層檢查。
+  const { LESSON_INTRO, PRON_ORDER } = await import(ROOT+'/js/core/taxonomy.js');
+
+  chk('每一課都有導言', PRON_ORDER.every((t) => LESSON_INTRO[t]),
+      '路徑解決「學什麼」，導言解決「為什麼」，缺一課就斷一節');
+  chk('沒有多餘導言（課程刪掉時要記得跟著刪）',
+      Object.keys(LESSON_INTRO).every((t) => PRON_ORDER.includes(t)));
+  chk('導言夠短', Object.values(LESSON_INTRO).every((v) => v.length <= 80),
+      '學習者是按下「開始」之後才看到，長了直接跳過');
+  chk('導言都給了具體例子',
+      Object.values(LESSON_INTRO).every((v) => /[가-힣]/.test(v)),
+      '只講規則不給實例，等於還是要學習者自己想像');
+  chk('導言的 DOM 錨點存在',
+      !!$('lesson-intro') && !!$('lesson-title') && !!$('lesson-body'));
+}
+
 console.log(f?`\n❌ 失敗 ${f} 項`:'\n✅ 全部通過');
 process.exit(f?1:0);
