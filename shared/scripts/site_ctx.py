@@ -92,3 +92,27 @@ def env_value(name):
             if line.startswith(f"{name}="):
                 return line.split("=", 1)[1].strip().strip('"').strip("'")
     return None
+
+def auth_config():
+    """從 <site>/lang.config.js 讀帳號網域與密碼補位字串。
+
+    【為什麼從 JS 檔讀，而不是在這裡再寫一份】
+        前端與這支腳本必須用完全相同的值 —— 不一致的症狀是
+        「建得出帳號但登不進去」，而且兩邊各自看起來都對。
+        所以只留一個真理源（lang.config.js），Python 這邊用嚴格的
+        正則取值，取不到就直接結束，不猜也不給預設值。
+
+        tests/lang.test.mjs 會把 JS 讀到的值與這裡讀到的值做比對，
+        任一邊改了另一邊沒跟上就會紅。
+    """
+    path = os.path.join(SITE_DIR, "lang.config.js")
+    if not os.path.exists(path):
+        sys.exit(f"❌ 找不到 {SITE}/lang.config.js")
+    src = open(path, encoding="utf-8").read()
+    out = {}
+    for key in ("authEmailDomain", "authPasswordPad"):
+        m = re.search(rf"^\s*{key}:\s*'([^']*)',", src, re.M)
+        if not m:
+            sys.exit(f"❌ {SITE}/lang.config.js 裡找不到 {key}")
+        out[key] = m.group(1)
+    return out["authEmailDomain"], out["authPasswordPad"]

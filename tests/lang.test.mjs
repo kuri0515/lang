@@ -16,6 +16,7 @@
 //   拿兩站互相對照，任何一邊多寫或少寫都會浮出來。
 // =====================================================================
 import { setLang, _resetLang } from '../shared/js/core/lang.js';
+import { execFileSync } from 'child_process';
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
 const SITES = ['korean', 'japanese'];
@@ -45,7 +46,7 @@ chk(`${b} 有而 ${a} 沒有的欄位`, onlyB.length === 0, onlyB.join(', '));
 // ── 每站各自的內容檢查 ──
 const STRINGS = ['code', 'langLabel', 'termLabel', 'termShort',
                  'readingLabel', 'hanjaLabel', 'scriptLabel',
-                 'ttsLang', 'storagePrefix'];
+                 'ttsLang', 'storagePrefix', 'authEmailDomain', 'authPasswordPad'];
 const REGEXES = ['voiceLangRe', 'syllableRe', 'scriptRe'];
 
 // 各語言的實例字：拿真的詞去試正則，而不是相信正則長得對。
@@ -91,6 +92,22 @@ for (const site of SITES) {
     s.syllables.map(([w, n]) => `${w}→${(w.match(L.syllableRe) || []).length}(期望${n})`).join(' '));
   chk('syllableRe 帶 g 旗標', L.syllableRe.flags.includes('g'),
       '沒有 g 的話 match() 只回第一個，短詞放慢會全部失效');
+
+  // ── 帳號網域：前端與 create_user.py 必須讀到同一個值 ──
+  // ★ 不一致的症狀是「建得出帳號但登不進去」，而且兩邊各自看起來都對。
+  //   所以這裡真的去跑 Python，比對它讀到的值，而不是相信註解說它們一致。
+  chk('authEmailDomain 不是 .local 就是有意為之',
+    typeof L.authEmailDomain === 'string' && L.authEmailDomain.includes('.'),
+    L.authEmailDomain);
+  let py = null;
+  try {
+    py = execFileSync('python3', ['-c',
+      `import sys; sys.path.insert(0,'shared/scripts')\nfrom site_ctx import auth_config\nd,p=auth_config(); print(d+'|'+p)`],
+      { cwd: ROOT, env: { ...process.env, SITE: site }, encoding: 'utf8' }).trim();
+  } catch (e) { py = `執行失敗：${e.message.split('\n')[0]}`; }
+  chk('Python 與 JS 讀到同一組帳號設定',
+    py === `${L.authEmailDomain}|${L.authPasswordPad}`,
+    `python=${py}  js=${L.authEmailDomain}|${L.authPasswordPad}`);
 
   // ── localStorage 前綴必須各站不同 ──
   const others = SITES.filter((x) => x !== site).map((x) => configs[x].storagePrefix);

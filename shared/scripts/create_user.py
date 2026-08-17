@@ -21,14 +21,15 @@ import urllib.error
 import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from site_ctx import SITE, SITE_DIR, load_env  # noqa: E402
+from site_ctx import SITE, SITE_DIR, load_env, auth_config  # noqa: E402
 
 # ROOT 現在指「這一站的目錄」而不是倉庫根 —— data/、backups/ 都在站台底下
 ROOT = SITE_DIR
 
 # ★ 與前端 js/auth-map.js 必須完全一致，改一邊等於改壞登入
-EMAIL_DOMAIN = "kuri0515.local"
-PASSWORD_PAD = "-k0515"          # 補位字串：Supabase 要求密碼至少 6 位
+# ★ 不在這裡寫死 —— 與前端共用 <site>/lang.config.js 那一份。
+#   兩邊不一致的症狀是「建得出帳號但登不進去」，而且各自看起來都對。
+EMAIL_DOMAIN, PASSWORD_PAD = auth_config()
 MIN_LEN = 6
 
 

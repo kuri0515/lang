@@ -45,6 +45,13 @@ export const LANG = {
     example_ko: ['韓文例句', '韩文例句'],
   },
 
+  // ── 帳號名 → email 的假網域（Supabase Auth 只認 email）──
+  // 韓文站建立得早，已有帳號用著這個網域 —— 動了等於把人鎖在門外。
+  // 新專案已不接受 .local，所以日文站用別的，見 japanese/lang.config.js。
+  authEmailDomain: 'kuri0515.local',
+  // 短密碼補位到 Supabase 要求的 6 位。★ 不能改 —— 改了等於改掉所有既有帳號的密碼
+  authPasswordPad: '-k0515',
+
   // ── localStorage 前綴：兩站同網域，不隔開會互相蓋掉語音與語速設定 ──
   storagePrefix: 'kr',
 

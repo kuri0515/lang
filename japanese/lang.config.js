@@ -51,6 +51,14 @@ export const LANG = {
     example_ko: ['日文例句', '日语例句', '例文'],
   },
 
+  // ── 帳號名 → email 的假網域（Supabase Auth 只認 email）──
+  // 不能沿用韓文站的 .local —— 新的 Supabase 專案拒絕這個 TLD。
+  // .invalid 是 RFC 2606 保留的，保證永遠不會真的送出信。
+  // 這只是「沒綁真實信箱時」的退路；有真 email 的帳號走 email_for_username()。
+  authEmailDomain: 'kuri0515.invalid',
+  // 短密碼補位到 Supabase 要求的 6 位。★ 不能改 —— 改了等於改掉所有既有帳號的密碼
+  authPasswordPad: '-k0515',
+
   // ── localStorage 前綴：兩站同網域，不隔開會互相蓋掉語音與語速設定 ──
   storagePrefix: 'ja',
 
