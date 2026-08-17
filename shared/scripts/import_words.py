@@ -90,9 +90,24 @@ def rest(url, key, method, path, payload=None, params=""):
 
 
 def make_slug_key(scope):
-    """回傳「一條資料的身分」怎麼算。身分算錯的後果不是報錯，是靜默合併。"""
+    """回傳「一條資料的身分」怎麼算。身分算錯的後果不是報錯，是靜默合併或分裂。
+
+    ★ note 模式只取「前兩段」，不是整個 note。
+      對話行的 note 格式是「對話 A｜情境｜語法說明」，
+      前兩段是身分（哪一段對話的哪一行），第三段是內容。
+      拿整個 note 算身分的後果：改一句語法說明就等於換了一條新資料 ——
+      舊的那筆變成孤兒留在庫裡，同一句同一情境出現兩次。
+      實際踩過：改了 5 句說明，對話行從 92 變成 97。
+
+      身分只能由「不會因為編輯而改變的東西」構成。
+    """
     if scope == "note":
-        return lambda r: r["ko"] + "\x1f" + (r.get("note") or "")
+        def key(r):
+            note = r.get("note") or ""
+            parts = note.split("｜")
+            ident = "｜".join(parts[:2]) if len(parts) >= 2 else note
+            return r["ko"] + "\x1f" + ident
+        return key
     return lambda r: r["ko"]
 
 

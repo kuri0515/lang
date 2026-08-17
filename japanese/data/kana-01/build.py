@@ -46,6 +46,7 @@ GOJUON = 'あいうえおかきくけこさしすせそたちつてとなにぬ�
 LESSONS.sort(key=lambda L: GOJUON.index(L['kana']) if L['kana'] in GOJUON else 999)
 
 from _furigana import FURIGANA   # noqa: E402
+from _grammar import GRAMMAR     # noqa: E402
 
 HEADER = ['ko', 'zh', 'romanization', 'type', 'note', 'tags', 'hanja']
 
@@ -101,7 +102,7 @@ def rows_for(L):
     for ja, ro, zh, topic in L['words']:
         rows.append({
             'ko': ja, 'zh': zh, 'romanization': ro, 'type': wtype,
-            'note': '', 'tags': f"清音,{L['row']},{L['kana']},{topic}",
+            'note': GRAMMAR.get(ja, ''), 'tags': f"清音,{L['row']},{L['kana']},{topic}",
             # 單字也可能含漢字（を 那一課的助詞用法：ごはんを食べる）。
             # 標註的判準是「這行字裡有沒有讀不出來的字」，
             # 與它是單字還是對話句無關。
@@ -111,7 +112,9 @@ def rows_for(L):
     for i, (ja, ro, zh) in enumerate(L['dialogue']):
         rows.append({
             'ko': ja, 'zh': zh, 'romanization': ro, 'type': 'sentence',
-            'note': f"對話 {'AB'[i % 2]}｜{L['scene']}｜",
+            # note 的第三段是語法說明，對話畫面會顯示在該句下方。
+            # 沒有就留空 —— 每句都標等於每句都不算數。
+            'note': f"對話 {'AB'[i % 2]}｜{L['scene']}｜{GRAMMAR.get(ja, '')}",
             'tags': f"清音,{L['row']},{L['kana']},會話",
             # hanja 欄在日文站存「ko 的注音版本」，前端據此把假名標在漢字正上方
             'hanja': FURIGANA.get(ja, ''),
@@ -266,9 +269,21 @@ def check_furigana():
     print(f'  ✅ 振り仮名 {len(FURIGANA)} 條，去標註後與原句一字不差')
 
 
+def check_grammar():
+    """語法說明的鍵必須對得上真的句子 —— 打錯字就是靜靜地不顯示。"""
+    lines = set([ja for L in LESSONS for ja, _, _ in L['dialogue']]
+                + [ja for L in LESSONS for ja, _, _, _ in L['words']])
+    orphan = [k for k in GRAMMAR if k not in lines]
+    if orphan:
+        sys.exit('❌ 語法說明對不上任何句子：\n   ' + '\n   '.join(orphan))
+    n = sum(1 for k in GRAMMAR if k in lines)
+    print(f'  ✅ 語法說明 {n} 條（共 {len(lines)} 句，其餘刻意留白）')
+
+
 def main():
     _selftest()
     check_furigana()
+    check_grammar()
     review = []
     print('【展開對帳】')
     all_rows = []

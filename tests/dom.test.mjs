@@ -401,6 +401,31 @@ console.log('\n【情境對話】');
 // ---------------------------------------------------------------------
 // 導言的資料側：宣告「導言來自資料」的課，資料裡真的要有那張卡
 // ---------------------------------------------------------------------
+console.log('\n【對話的語法說明】');
+{
+  const { groupDialogues } = await import(SHARED + '/js/core/dialogue.js');
+  const groups = groupDialogues(items.filter((x) => (x.note || '').startsWith('對話')));
+  const lines = groups.flatMap((g) => g.lines);
+  const withG = lines.filter((l) => l.grammar);
+  if (!withG.length) {
+    console.log('  ⏭  本站的對話還沒有語法說明');
+  } else {
+    chk(`${withG.length} / ${lines.length} 行帶語法說明`, true);
+    chk('★ 刻意不是每句都標', withG.length < lines.length,
+        '每句都標等於每句都不算數，滿版的說明會被整個略過');
+    chk('說明不含文法術語',
+        withG.every((l) => !/[て]形|活用形|連用形|終止形/.test(l.grammar)),
+        '初學者需要的是「什麼時候用它」，不是它在文法書裡叫什麼');
+    chk('說明夠短（≤45 字）',
+        withG.every((l) => l.grammar.length <= 45),
+        withG.filter((l) => l.grammar.length > 45).map((l) => l.item.ko).join('／'));
+    // ★ note 的三段結構不能被說明裡的分隔號打斷
+    chk('語法說明裡沒有分隔號｜',
+        withG.every((l) => !l.grammar.includes('｜')),
+        '那會把 note 切成第四段，解析出來的情境與說明全部錯位');
+  }
+}
+
 console.log('\n【課程導言的資料來源】');
 {
   const t = LANG.taxonomy;
