@@ -45,7 +45,9 @@ for f in sorted(glob.glob(os.path.join(HERE, '_source_*.py'))):
 GOJUON = 'あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん'
 LESSONS.sort(key=lambda L: GOJUON.index(L['kana']) if L['kana'] in GOJUON else 999)
 
-HEADER = ['ko', 'zh', 'romanization', 'type', 'note', 'tags']
+from _furigana import FURIGANA   # noqa: E402
+
+HEADER = ['ko', 'zh', 'romanization', 'type', 'note', 'tags', 'hanja']
 
 
 def compose_note(L):
@@ -90,12 +92,14 @@ def rows_for(L):
         'type': 'word',
         'note': compose_note(L)[0],
         'tags': f"清音,平假名,{L['row']},{L['kana']}",
+        'hanja': '',
     })
     # ② 單字
     for ja, ro, zh, topic in L['words']:
         rows.append({
             'ko': ja, 'zh': zh, 'romanization': ro, 'type': 'word',
             'note': '', 'tags': f"清音,{L['row']},{L['kana']},{topic}",
+            'hanja': '',
         })
     # ③ 對話。說話者 A/B 交替；情境名稱是我下的標籤，書上只給句子
     for i, (ja, ro, zh) in enumerate(L['dialogue']):
@@ -103,6 +107,8 @@ def rows_for(L):
             'ko': ja, 'zh': zh, 'romanization': ro, 'type': 'sentence',
             'note': f"對話 {'AB'[i % 2]}｜{L['scene']}｜",
             'tags': f"清音,{L['row']},{L['kana']},會話",
+            # hanja 欄在日文站存「ko 的注音版本」，前端據此把假名標在漢字正上方
+            'hanja': FURIGANA.get(ja, ''),
         })
     return rows
 
@@ -214,8 +220,34 @@ def merge_duplicates(all_rows):
     return [by_ko[k] for k in order], merges
 
 
+KANJI = re.compile(r'[一-鿿]')
+
+
+def check_furigana():
+    """標註寫錯不會報錯，只會讓學習者背下一個錯的音 —— 所以這裡硬擋。"""
+    plain = [ja for L in LESSONS for ja, _, _ in L['dialogue'] if KANJI.search(ja)]
+    missing = [x for x in plain if x not in FURIGANA]
+    if missing:
+        sys.exit('❌ 這些含漢字的句子沒有振り仮名標註：\n   ' + '\n   '.join(missing))
+    bad = []
+    for src, ann in FURIGANA.items():
+        stripped = re.sub(r'([^\[\]]+?)\[([^\[\]]+)\]', r'\1', ann)
+        if stripped != src:
+            bad.append(f'{src}\n     去掉標註後變成：{stripped}')
+        for m in re.finditer(r'\[([^\[\]]+)\]', ann):
+            if not re.fullmatch(r'[ぁ-ゖァ-ヺー]+', m.group(1)):
+                bad.append(f'{src} → 讀音「{m.group(1)}」不是純假名')
+    orphan = [k for k in FURIGANA if k not in plain]
+    if orphan:
+        bad.append('標註了但沒有對應句子：' + '／'.join(orphan))
+    if bad:
+        sys.exit('❌ 振り仮名有問題：\n   ' + '\n   '.join(bad))
+    print(f'  ✅ 振り仮名 {len(FURIGANA)} 條，去標註後與原句一字不差')
+
+
 def main():
     _selftest()
+    check_furigana()
     review = []
     print('【展開對帳】')
     all_rows = []

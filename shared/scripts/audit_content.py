@@ -215,8 +215,28 @@ def check_simplified(items):
     issue("warn", "疑似簡體字", found, "自動判定會誤報，請人眼確認再改。")
 
 
+RUBY_RE = re.compile(r"[一-鿿々〆ヶ0-9０-９]+\[[ぁ-ゖァ-ヺー]+\]")
+
+
 def check_hanja(items):
-    """漢字欄位格式；句子不該標漢字（那是詞源標註，不是國漢文混寫）"""
+    """漢字欄位格式；句子不該標漢字（那是詞源標註，不是國漢文混寫）
+
+    ★ hanja 欄的用途每站不同：
+        韓文站 = 漢字詞源（학교 → 學校）
+        日文站 = ko 的注音版本（駅[えき]は…），前端據此把假名標在漢字上方
+      底下的檢查是為前者寫的，套到後者會把 52 條正確的標註全報成 error。
+      判斷依據是「內容長得像不像 ruby 標註」，不是站名 ——
+      站名寫死的話，之後新增語言又要回來改一次。
+    """
+    ruby = [x for x in items if x.get("hanja") and RUBY_RE.search(x["hanja"])]
+    if ruby:
+        bad = [f"{x['ko']}: {x['hanja']}" for x in ruby
+               if re.sub(r"([一-鿿々〆ヶ0-9０-９]+)\[[^\]]+\]", r"\1", x["hanja"]) != x["ko"]]
+        issue("error", "振り仮名去掉標註後與原句不符", bad,
+              "標註的必須是同一句話，否則學習者看到的假名對不上他要唸的字。")
+        issue("info", "振り仮名標註（hanja 欄作注音用）",
+              [f"{len(ruby)} 條"], "此站的 hanja 欄存的是注音版本，不是漢字詞源。")
+        items = [x for x in items if x not in ruby]
     # hanja 欄至少要有一個漢字。混合詞可以含韓文（工夫하다、熱情pay），
     # 但整欄都是韓文就是填錯了 —— 實際踩過：집밥 的 hanja 被填成「집밥」，
     # 那是韓文複合詞，本來就沒有漢字詞源。

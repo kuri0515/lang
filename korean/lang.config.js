@@ -58,6 +58,10 @@ export const LANG = {
   // tests/lang.test.mjs 會比對兩站欄位，少寫一個就報錯。
   disabledModes: [],
 
+  // ── hanja 欄的用途 ──
+  // 韓文站：hanja 欄是漢字詞本身（學校），不是注音來源
+  rubyFromHanja: false,
+
   // ── localStorage 前綴：兩站同網域，不隔開會互相蓋掉語音與語速設定 ──
   storagePrefix: 'kr',
 

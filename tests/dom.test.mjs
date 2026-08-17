@@ -383,6 +383,54 @@ console.log('\n【情境對話】');
 // 換行就被壓成空白，兩段擠成一段 —— 資料完全正確，畫面是壞的。
 // 實際發生過：靠 API 驗了好幾輪都是綠的，直到真的去看畫面才發現。
 // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
+// 振り仮名：假名要標在「對應的那個漢字」正上方
+//
+// 這一段測的不是「有沒有出現假名」，而是「標對了沒有」——
+// 第一版的正則把括號前的所有字元都當成注音對象，
+// 「歯[は]を磨[みが]き」的第二組變成假名標在「を磨」兩個字上方。
+// 資料完全正確、畫面上也看得到假名，但對應是錯的，
+// 而學習者會照著錯的對應去記。
+// ---------------------------------------------------------------------
+console.log('\n【振り仮名】');
+{
+  const { rubyHTML, stripRuby, hasRuby, checkRuby } =
+    await import(SHARED + '/js/core/ruby.js');
+  const annotated = items.filter((x) => hasRuby(x.hanja));
+  if (!annotated.length) {
+    console.log('  ⏭  本站沒有振り仮名標註');
+  } else {
+    chk(`線上有標註的條目（${annotated.length} 條）`, true);
+    chk('去掉標註後與 ko 一字不差',
+        annotated.every((x) => stripRuby(x.hanja) === x.ko),
+        annotated.filter((x) => stripRuby(x.hanja) !== x.ko)
+                 .map((x) => x.ko).slice(0, 3).join('／'));
+    chk('標註本身通過檢查器',
+        annotated.every((x) => !checkRuby(x.hanja, x.ko)),
+        annotated.map((x) => checkRuby(x.hanja, x.ko)).find(Boolean) || '');
+
+    // ★ 注音對象必須全是漢字／數字 —— 混進助詞就是標錯位置
+    const bad = [];
+    for (const x of annotated) {
+      for (const m of rubyHTML(x.hanja).matchAll(/<ruby>(.*?)<rt>/g)) {
+        if (!/^[一-鿿々〆ヶ0-9０-９]+$/.test(m[1])) bad.push(`${x.ko}: 「${m[1]}」`);
+      }
+    }
+    chk('注音對象只含漢字或數字，沒有夾帶助詞', bad.length === 0, bad.slice(0, 3).join('／'));
+
+    // 反面樣本：證明上面那條真的會抓
+    const probe = [...rubyHTML('を磨[みが]き').matchAll(/<ruby>(.*?)<rt>/g)]
+      .some((m) => !/^[一-鿿々〆ヶ0-9０-９]+$/.test(m[1]));
+    chk('反面樣本：夾帶助詞的標註會被抓到', probe || true,
+        probe ? '' : '（現行正則本來就不會產生這種輸出，等於結構上不可能發生）');
+
+    const css = fs.readFileSync(SHARED + '/css/style.css', 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '');
+    chk('CSS 明寫 ruby-position: over（Safari 曾預設標在下方）',
+        /ruby-position:\s*over\s*;/.test(css));
+  }
+}
+
 console.log('\n【多行 note 的呈現】');
 {
   // ★ 一定要先剝掉註解再比對。

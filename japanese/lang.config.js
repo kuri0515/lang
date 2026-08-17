@@ -64,6 +64,10 @@ export const LANG = {
   // 留著只會讓學生點進一個永遠沒題目的模式。
   disabledModes: ['scramble'],
 
+  // ── hanja 欄的用途 ──
+  // 日文站：hanja 欄存「ko 的注音版本」（駅[えき]は…），漢字上方標假名
+  rubyFromHanja: true,
+
   // ── localStorage 前綴：兩站同網域，不隔開會互相蓋掉語音與語速設定 ──
   storagePrefix: 'ja',
 

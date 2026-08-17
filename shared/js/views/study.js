@@ -11,6 +11,10 @@ import * as content from '../data/content.js';
 import * as speech from '../core/speech.js';
 import { openEditor } from './editor.js';
 import { lessonOutro } from '../core/taxonomy.js';
+import { hasRuby, rubyHTML, stripRuby } from '../core/ruby.js';
+import { lang } from '../core/lang.js';
+
+const rubyFromHanja = () => !!lang().rubyFromHanja;
 
 const els = {};
 let session = null;
@@ -105,9 +109,17 @@ function onKey(e) {
   }
 }
 
+/**
+ * 正面文字。有振り仮名標注時走 ruby，否則維持 textContent。
+ *
+ * ★ 只有「確定帶標注」才走 innerHTML。
+ *   rubyHTML() 內部一律 esc()，但把預設留在 textContent 這一側，
+ *   意味著沒有標注的詞條完全碰不到 innerHTML —— 少一條路就少一個風險。
+ */
 const setFront = (text, long) => {
-  els.front.textContent = text;
-  els.front.classList.toggle('long', !!long);
+  if (hasRuby(text)) els.front.innerHTML = rubyHTML(text);
+  else els.front.textContent = text;
+  els.front.classList.toggle('long', stripRuby(text).length > 12 || !!long);
 };
 
 /** session 狀態變了就重畫 */
@@ -129,11 +141,16 @@ export function render(state) {
   els.type.textContent = TYPE_LABEL[item.item_type] || '單字';
 
   const ko2zh = direction === 'ko2zh';
-  const front = ko2zh ? item.ko : item.zh;
-  const back = ko2zh ? item.zh : item.ko;
-  setFront(front, front.length > 12);
-  els.backText.textContent = back;
-  els.backText.classList.toggle('long', back.length > 12);
+  // hanja 欄在日文站存的是「ko 的注音版本」（駅[えき]は…）。
+  // 有標注就用它當顯示文字 —— 漢字上方標假名，比另起一行寫讀音
+  // 更不打斷句子的節奏，而節奏正是日語的重點。
+  const koShown = (rubyFromHanja() && hasRuby(item.hanja)) ? item.hanja : item.ko;
+  const front = ko2zh ? koShown : item.zh;
+  const back = ko2zh ? item.zh : koShown;
+  setFront(front, false);
+  if (hasRuby(back)) els.backText.innerHTML = rubyHTML(back);
+  else els.backText.textContent = back;
+  els.backText.classList.toggle('long', stripRuby(back).length > 12);
 
   els.roman.classList.add('hidden');
   els.pos.textContent = item.pos || '';
@@ -257,6 +274,8 @@ let hanjaToken = 0;
 async function showHanja(item) {
   const token = ++hanjaToken;
   if (!item.hanja) return;
+  // 注音版本已經畫在正面了，不必再開一行「漢字 …」重複一次
+  if (rubyFromHanja() && hasRuby(item.hanja)) return;
 
   els.hanja.innerHTML = `漢字 <b>${esc(item.hanja)}</b>`;
   els.hanja.classList.remove('hidden');

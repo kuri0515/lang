@@ -860,3 +860,14 @@ kbd {
 .filter-box[open] summary::after { content: '▴'; }
 /* 展開時給高度上限，長標籤清單不會把結果擠出畫面 */
 .filter-box[open] #b-tags { max-height: 46vh; overflow-y: auto; padding-right: 2px; }
+
+/* 振り仮名：假名標在漢字正上方。
+   ruby-position 在部分瀏覽器預設是 over，但 Safari 曾經預設 under（標在下方），
+   明寫比較保險。rt 用相對單位，卡片字級變大時假名跟著等比放大。 */
+ruby { ruby-position: over; }
+ruby rt {
+  font-size: .5em; font-weight: 400; letter-spacing: .02em;
+  color: var(--muted); user-select: none;
+}
+/* 正面大字時假名別擠在一起 */
+.c-front ruby, #c-front ruby { line-height: 1.9; }
