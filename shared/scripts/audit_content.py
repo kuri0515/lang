@@ -33,7 +33,7 @@ import urllib.request
 from collections import Counter, defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from site_ctx import SITE, SITE_DIR, load_env  # noqa: E402
+from site_ctx import SITE, SITE_DIR, load_env, structural_tag_re  # noqa: E402
 
 # ROOT 現在指「這一站的目錄」而不是倉庫根 —— data/、backups/ 都在站台底下
 ROOT = SITE_DIR
@@ -293,15 +293,23 @@ def check_tags(items):
     # 其中兩個只用過一次。那是「只用一次」而不是「漂移」——
     # 兩者不能劃等號。已經做過判斷的事就別每次再勸一遍，
     # 否則遲早有人照著建議把教學結構拆掉。
-    singles = sorted(t for t, n in tags.items() if n == 1 and not t.startswith("收音"))
-    issue("info", f"標籤共 {len(tags)} 個，只用過一次的 {len(singles)} 個（收音教學序列不計）",
+    # ★ 只看「內容主題」標籤。教學結構標籤（一課／一章／階段）由站台宣告 ——
+    #   拿 あ 和 あ行 去比「是不是同一個概念被拆開寫」永遠會報假的，
+    #   而 21 條假的會把真的訊號淹掉，整支稽核就沒人看了。
+    struct = structural_tag_re()
+    is_struct = (lambda t: bool(struct.search(t))) if struct else (lambda t: False)
+    topic_tags = {t: n for t, n in tags.items() if not is_struct(t)}
+
+    singles = sorted(t for t, n in topic_tags.items() if n == 1)
+    issue("info", f"主題標籤共 {len(topic_tags)} 個，只用過一次的 {len(singles)} 個"
+                  f"（教學結構標籤 {len(tags) - len(topic_tags)} 個不計）",
           [", ".join(singles)] if singles else [],
           "只用一次的標籤篩選時沒有意義，考慮併入既有標籤。")
     # 近義標籤。原本只比「一個是另一個的子字串」——
     # 那抓不到 家庭／家人、情緒／情感 這種共享首字卻互不包含的，
     # 而那正是最常見的漂移形態。檢查一直顯示通過，其實是看不見。
     near = []
-    ts = list(tags)
+    ts = list(topic_tags)
     for a in ts:
         for b in ts:
             if a != b and (a in b or b in a):
@@ -313,14 +321,19 @@ def check_tags(items):
     # （家庭／家人／家具、情緒／情感）。收音系列是刻意的教學序列，排除。
     by_head = defaultdict(list)
     for t in ts:
-        if t.startswith("收音"):
-            continue
         by_head[t[0]].append(t)
-    head_groups = [f"{head}…：" + "、".join(f"{t}({tags[t]})" for t in sorted(g))
+    head_groups = [f"{head}…：" + "、".join(f"{t}({topic_tags[t]})" for t in sorted(g))
                    for head, g in sorted(by_head.items()) if len(g) > 1]
 
+    # 【試過但撤掉：共享任一個字】
+    #   想抓 食物／飲食 這種「共享的字不在開頭」的漂移。
+    #   實測日文站報 16 條、韓文站 55 條，而其中絕大多數是
+    #   動物／植物／食物／人物 —— 那是一套正當的分類，不是漂移。
+    #   為了抓一條真的而製造五十條假的，等於把這支稽核關掉。
+    #   食物／飲食 這種只能靠人看，或等它真的出現時再說。
+
     issue("warn", "疑似近義標籤（互為子字串）",
-          [f"{a}({tags[a]}) ／ {b}({tags[b]})" for a, b in near])
+          [f"{a}({topic_tags[a]}) ／ {b}({topic_tags[b]})" for a, b in near])
     issue("info", "標籤共享首字（可能是同一概念被拆開，請人眼確認）", head_groups,
           "時間／時刻／時態 這類確實不同，不必合併；家庭／家人 就該併。")
 

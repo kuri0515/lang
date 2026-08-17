@@ -116,3 +116,25 @@ def auth_config():
             sys.exit(f"❌ {SITE}/lang.config.js 裡找不到 {key}")
         out[key] = m.group(1)
     return out["authEmailDomain"], out["authPasswordPad"]
+
+
+def structural_tag_re():
+    """站台宣告的「教學結構標籤」正則。
+
+    這些標籤是課程骨架（一課、一章、階段），不是內容主題。
+    標籤漂移的檢查只該看內容主題 —— 拿 あ 和 あ行 去比
+    「是不是同一個概念被拆開寫」，永遠會報一堆假的，
+    而假的多了真的就沒人看了。
+
+    來源與前端同一份（lang.config.js），兩邊各自維護必然漂移。
+    這裡用到的正則語法（字元類、錨點、選擇、$）JS 與 Python 相同。
+    """
+    path = os.path.join(SITE_DIR, "lang.config.js")
+    src = open(path, encoding="utf-8").read()
+    m = re.search(r"^\s*structuralTagRe:\s*/(.+)/,\s*$", src, re.M)
+    if not m:
+        return None
+    try:
+        return re.compile(m.group(1))
+    except re.error as e:
+        sys.exit(f"❌ {SITE}/lang.config.js 的 structuralTagRe 轉不成 Python 正則：{e}")
