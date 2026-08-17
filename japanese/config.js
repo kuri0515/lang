@@ -1,12 +1,10 @@
 // Supabase 前端配置（日文站）
 //
-// ⚠️ anon key 是設計上公開的：靜態站前端必須攜帶它，Supabase 官方即如此使用。
+// ⚠️ publishable key 是設計上公開的：靜態站前端必須攜帶它，Supabase 官方即如此使用。
 //    真正的門禁邊界是資料庫 RLS（見 shared/supabase/migrations/0001_init.sql）。
-//    service_role key 絕不出現在本檔或任何前端程式碼中。
+//    secret／service_role key 絕不出現在本檔或任何前端程式碼中。
 //
-// ⚠️ 尚未填值 —— 日文站要用「自己的」Supabase 專案，不能沿用韓文站的。
-//    兩站共用一個專案，等於匯入腳本的條件一寫寬就會動到韓文站的線上資料。
-//
-// 建立步驟見 README「新增一個語言站」。填好之後這兩行就是唯一要改的地方。
-export const SUPABASE_URL = '';
-export const SUPABASE_ANON_KEY = '';
+// 這是日文站「自己的」Supabase 專案（Japanese），與韓文站是兩個不同的專案 ——
+// 共用一個的話，匯入或清理腳本的條件一寫寬就會動到韓文站的真實學習記錄。
+export const SUPABASE_URL = 'https://ihkrmcbhzmzlczedswyv.supabase.co';
+export const SUPABASE_ANON_KEY = 'sb_publishable_L95CPuI_rqYK7KYaFiRJIQ_5YjxrTA8';
