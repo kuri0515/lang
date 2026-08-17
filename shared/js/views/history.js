@@ -1,6 +1,7 @@
 // 學習記錄：逐筆時間線 + 近 30 天曲線
 import { $, esc, msg, skeleton, emptyState, qs, qsa, debounce, createPager } from '../core/dom.js';
 import { wordHTML } from '../core/ruby.js';
+import { lang } from '../core/lang.js';
 import { dirShort, dirLabel, RATE_LABEL } from '../data/client.js';
 import * as progress from '../data/progress.js';
 import { summarize, funnel, byDirection } from '../core/stats.js';
@@ -159,7 +160,8 @@ function bindToggles() {
             <span class="h-time">${fmtTime(r.reviewed_at)}</span>
             <span class="h-mark">${r.is_correct ? '✅' : '❌'}</span>
             <span class="h-word">${wordHTML(r.items)} <small>${esc(r.items.zh)}</small>
-              ${r.items.hanja ? `<small class="b-hanja"> · 漢 ${esc(r.items.hanja)}</small>` : ''}</span>
+              ${!lang().rubyFromHanja && r.items.hanja
+              ? `<small class="b-hanja"> · 漢 ${esc(r.items.hanja)}</small>` : ''}</span>
             <span class="h-rate">${RATE_LABEL[r.rating] || ''}${
               r.elapsed_ms ? `<small> ${(r.elapsed_ms / 1000).toFixed(1)}s</small>` : ''
             }${r.source && r.source !== 'live' ? '<span class="h-src" title="事後從複習排程反推補回">補</span>' : ''}</span>
@@ -316,7 +318,12 @@ function renderWords() {
         <span class="w-main">
           <span class="w-ko">${wordHTML(w)}</span>
           <span class="w-zh"> ${esc(w.zh)}</span>
-          ${w.hanja ? `<span class="b-hanja"> · 漢 ${esc(w.hanja)}</span>` : ''}
+          ${!lang().rubyFromHanja && w.hanja
+              // hanja 欄兩站裝的東西不同：韓文站是漢字詞源（학교 → 學校），
+              // 日文站是注音字串（駅[えき]は…）。不分站台就印，
+              // 日文站的詞彙清單會出現「· 漢 駅[えき]は…」這種沒有意義的東西 ——
+              // 而讀音已經標在詞的上方了，這裡再印一次也是重複。
+              ? `<span class="b-hanja"> · 漢 ${esc(w.hanja)}</span>` : ''}
           <span class="w-sub">${esc(sub)}</span>
         </span>
         <span class="w-badges"><span class="stage ${st.cls}">${st.label}</span></span>

@@ -360,5 +360,26 @@ for (const f of files.filter((f) => /\/views\//.test(f) && !/importer\.js$/.test
 chk('清單畫面用 wordHTML() 而不是直接印 ko', rawKo,
   '日文站的漢字要標讀音；韓文站 wordHTML 會原樣回傳，兩站共用同一支');
 
+// 【hanja 欄不可以不分站台就印出來】
+//
+// 這一欄兩站裝的東西根本不同：
+//   韓文站 = 漢字詞源（학교 → 學校），對中文母語者是最大的紅利，該顯眼地印。
+//   日文站 = 注音字串（駅[えき]は…），是渲染 ruby 用的原料，不是給人讀的。
+// 不分站台就印，日文站的詞庫與學習歷史會出現「· 漢 駅[えき]は…」，
+// 而讀音已經標在詞的正上方，再印一次還是重複。
+//
+// 這種錯不會拋例外、不會影響資料，只會在畫面上安靜地顯示一串亂碼似的東西 ——
+// 正是「大架構一致、細則不同」最容易破的地方。
+const HANJA_RAW = /\$\{(?!\s*!lang\(\)\.rubyFromHanja)[^}]*\bhanja\b[^}]*\}/g;
+const hanjaRaw = [];
+for (const f of files.filter((f) => /\/views\//.test(f))) {
+  const src = read(f);
+  for (const m of src.matchAll(HANJA_RAW)) {
+    if (!/漢 |b-hanja/.test(m[0])) continue;
+    hanjaRaw.push(`${rel(f)}: ${m[0].replace(/\s+/g, ' ').slice(0, 70)}`);
+  }
+}
+chk('印出 hanja 前先問站台', hanjaRaw, '韓文站是漢字詞源要印；日文站是注音原料不該印');
+
 console.log(fails ? `\n❌ ${fails} 項約束被違反` : '\n✅ 所有架構約束通過');
 process.exit(fails ? 1 : 0);

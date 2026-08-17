@@ -1,6 +1,7 @@
 // 詞庫瀏覽：搜尋、標籤、雙向學習狀態、批次下架（管理員）
 import { $, esc, msg, qsa, debounce, skeleton, emptyState, createPager } from '../core/dom.js';
 import { wordHTML } from '../core/ruby.js';
+import { lang } from '../core/lang.js';
 import { on, emit, EVENTS } from '../core/bus.js';
 import { STATE_LABEL, TYPE_LABEL, dirShort } from '../data/client.js';
 import * as content from '../data/content.js';
@@ -114,7 +115,12 @@ export async function render() {
           </div>
         </div>
         <div class="b-sub">${[r.romanization, r.pos, TYPE_LABEL[r.item_type]].filter(Boolean).map(esc).join(' · ')}
-          ${r.hanja ? `<span class="b-hanja"> · 漢 ${esc(r.hanja)}</span>` : ''}</div>
+          ${!lang().rubyFromHanja && r.hanja
+              // hanja 欄兩站裝的東西不同：韓文站是漢字詞源（학교 → 學校），
+              // 日文站是注音字串。不分站台就印，日文站會出現
+              // 「· 漢 駅[えき]は…」這種沒有意義的東西，
+              // 而讀音已經標在詞的上方，再印一次也是重複。
+              ? `<span class="b-hanja"> · 漢 ${esc(r.hanja)}</span>` : ''}</div>
         ${r.example_ko ? `<div class="b-ex">${esc(r.example_ko)}<br>${esc(r.example_zh || '')}</div>` : ''}
         ${r.note ? `<div class="b-sub">💡 ${esc(r.note)}</div>` : ''}
       </div>`;
