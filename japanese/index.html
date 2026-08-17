@@ -175,7 +175,7 @@
 
     <div id="b-pane-words">
     <div class="card sticky-search">
-      <input id="b-search" type="search" placeholder="搜尋日文／中文／假名…" class="nomargin">
+      <input id="b-search" type="search" placeholder="搜尋日文／中文／羅馬音…" class="nomargin">
       <details class="filter-box" id="b-filter">
         <summary><span>篩選</span><b id="b-filter-now">全部</b></summary>
         <div id="b-tags"></div>
@@ -441,7 +441,7 @@
       <label>日文 *</label>       <input id="e-ko" type="text">
       <label>中文（繁體）*</label> <input id="e-zh" type="text">
       <div class="row2">
-        <div><label>假名</label><input id="e-roman" type="text"></div>
+        <div><label>羅馬音</label><input id="e-roman" type="text" placeholder="ha wo mi ga ki"></div>
         <div><label>詞性</label><input id="e-pos" type="text" placeholder="名詞 / 動詞 …"></div>
       </div>
       <label>類型</label>
@@ -450,7 +450,7 @@
         <option value="phrase">詞組</option>
         <option value="sentence">句子</option>
       </select>
-      <label>漢字表記（與詞條相同時留空）</label> <input id="e-hanja" type="text">
+      <label>注音（漢字[かな]，沒有漢字就留空）</label> <input id="e-hanja" type="text" placeholder="歯[は]を磨[みが]きましょう。">
       <label>例句（日）</label> <input id="e-ex-ko" type="text">
       <label>例句（中）</label> <input id="e-ex-zh" type="text">
       <label>備註</label>       <input id="e-note" type="text">

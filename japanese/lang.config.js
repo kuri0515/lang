@@ -16,7 +16,9 @@ export const LANG = {
   termLabel: '日文',
   termShort: '日',
   readingLabel: '羅馬音',   // 書上按「拍」分寫（a ki／i chi go），那是節奏的教學裝置，原樣保留
-  hanjaLabel: '漢字',
+  // 這一欄在日文站存的是注音版本（駅[えき]は…），不是漢字詞源，
+  // 所以標籤不能叫「漢字」—— 會讓人以為要填漢字寫法。
+  hanjaLabel: '注音',
   scriptLabel: '假名或漢字',  // 匯入警告：「日文欄裡沒有假名或漢字」
 
   // ── 朗讀 ──

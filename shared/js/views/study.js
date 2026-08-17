@@ -274,8 +274,13 @@ let hanjaToken = 0;
 async function showHanja(item) {
   const token = ++hanjaToken;
   if (!item.hanja) return;
-  // 注音版本已經畫在正面了，不必再開一行「漢字 …」重複一次
-  if (rubyFromHanja() && hasRuby(item.hanja)) return;
+  // ★ 這個站把 hanja 欄當注音用，就整個關掉「漢字詞源」這條路。
+  //   原本的條件是 rubyFromHanja() && hasRuby(...)，但只要有人在編輯器裡
+  //   把純漢字填進注音欄（沒有中括號），hasRuby 就不成立，
+  //   於是會拿一段日文去跑韓語的同漢字詞查詢 —— 查得到才奇怪，
+  //   而查不到不會報錯，只是那一區永遠空白，沒人知道為什麼。
+  //   欄位語意由站台決定，判斷就該在站台層級，不是逐條猜。
+  if (rubyFromHanja()) return;
 
   els.hanja.innerHTML = `漢字 <b>${esc(item.hanja)}</b>`;
   els.hanja.classList.remove('hidden');

@@ -10,7 +10,9 @@
 // =====================================================================
 import fs from 'fs';
 import path from 'path';
-import { SITE, SHARED, SITE_DIR } from './_site.mjs';
+import { SITE, SHARED, SITE_DIR, siteReady } from './_site.mjs';
+
+const LANG = await siteReady();
 
 // 程式碼只有一份（shared/js），但 DOM 契約每站一份 ——
 // 所以掃描的原始碼固定，index.html 隨 SITE 走。
@@ -205,6 +207,39 @@ console.log('\n【站台用字】');
   }
   chk(`${SITE}/index.html 沒有夾帶其他語言的文字`, strays,
       '多半是從另一站複製過來時漏改的 placeholder 或範例');
+}
+
+// ---------------------------------------------------------------------
+// 欄位標籤要與 lang.config 宣告的一致
+//
+// 實際踩過：日文站的編輯畫面把 romanization 欄標成「假名」，
+// 但那一欄存的是羅馬音（ha wo mi ga ki），lang.config 也寫著「羅馬音」。
+// 三個地方各說各話，而使用者看到的是最錯的那一個 ——
+// 他會以為要填假名，填進去之後朗讀與拍數判斷全部失準。
+//
+// 標籤講錯話比用錯語言更容易誤導：用錯語言一眼看得出來，
+// 標籤錯了看起來完全正常，只是填的人被引導填了錯的東西。
+// ---------------------------------------------------------------------
+console.log('\n【欄位標籤一致】');
+{
+  const labelOf = (id) => {
+    const re = new RegExp(`<label>([^<]*)</label>\\s*<input id="${id}"`);
+    const m = html.replace(/\n/g, ' ').match(re);
+    return m ? m[1].trim() : null;
+  };
+  const cases = [
+    ['e-roman', LANG.readingLabel, 'romanization 欄'],
+    ['e-hanja', LANG.hanjaLabel, 'hanja 欄'],
+  ];
+  const bad = [];
+  for (const [id, want, what] of cases) {
+    const got = labelOf(id);
+    if (got === null) { bad.push(`${what}：找不到 <label>（id=${id}）`); continue; }
+    // 標籤可以帶補充說明（「注音（漢字[かな]…）」），但必須以宣告的名稱開頭
+    if (!got.startsWith(want)) bad.push(`${what}：畫面「${got}」 ≠ 設定「${want}」`);
+  }
+  chk('編輯畫面的欄位標籤與 lang.config 一致', bad,
+      '設定改了畫面沒改，使用者會照著錯的標籤填錯的東西');
 }
 
 console.log('\n【語言中立】');
