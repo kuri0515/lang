@@ -1,20 +1,39 @@
-// supabase-js 的最小替身。
+// supabase-js 的替身。
 //
-// 只需要讓 createClient() 回傳一個「怎麼串都不會爆」的物件 ——
-// 卡片渲染不查資料，真正會查的地方（同義詞、漢字詞群）拿到空結果，
-// 而那正是「查詢還沒回來」的狀態，畫面本來就要能正常顯示。
-const chain = () => new Proxy(function () {}, {
-  get(_, prop) {
-    if (prop === 'then') return undefined;          // 別讓它被當成 thenable
-    if (prop === 'data') return [];
-    if (prop === 'error') return null;
-    return chain();
-  },
-  apply() { return chain(); },
-});
+// 【為什麼要能回傳真實資料】
+//   第一版只讓 createClient() 不炸，查詢一律回空 ——
+//   那足以載入模組，但渲染不出東西：對話、詞庫、記錄都是空白，
+//   等於還是看不到畫面。而「看不到畫面」正是這個專案一再吃虧的地方。
+//
+//   現在從 STUB_POOL 指定的檔案讀真實條目，讓 .from('items') 有東西回。
+//   其餘資料表回空陣列 —— 那是「新使用者」的真實狀態，本來就該顯示得出來。
+import fs from 'fs';
+
+const pool = process.env.STUB_POOL && fs.existsSync(process.env.STUB_POOL)
+  ? JSON.parse(fs.readFileSync(process.env.STUB_POOL, 'utf8'))
+  : [];
+
+/** PostgREST 的 builder 是可鏈可 await 的，替身也要同時是這兩者 */
+function query(table) {
+  const rows = () => (table === 'items' ? pool : []);
+  const result = () => ({ data: rows(), error: null });
+  const self = new Proxy(function () {}, {
+    get(_, prop) {
+      if (prop === 'then') return (res) => res(result());
+      if (prop === 'data') return rows();
+      if (prop === 'error') return null;
+      return () => self;                       // select/eq/order/limit… 一律回自己
+    },
+    apply() { return self; },
+  });
+  return self;
+}
 
 export const createClient = () => ({
-  from: chain,
-  rpc: chain,
-  auth: { getUser: async () => ({ data: { user: null } }), onAuthStateChange() {} },
+  from: (t) => query(t),
+  rpc: () => query(null),
+  auth: {
+    getUser: async () => ({ data: { user: null }, error: null }),
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
+  },
 });

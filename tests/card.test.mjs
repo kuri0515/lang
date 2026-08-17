@@ -138,5 +138,39 @@ console.log('\n【五十音表的渲染】');
   }
 }
 
+// ---------------------------------------------------------------------
+// 情境對話：整句才是學生真正在讀的地方，標音不能只有卡片上有
+// ---------------------------------------------------------------------
+console.log('\n【情境對話的渲染】');
+{
+  const dlgView = await import(`${SHARED}/js/views/dialogue.js`);
+  dlgView.initDialogue({ user: () => ({ id: 'u' }), onPractice: () => {} });
+  await dlgView.open();
+
+  const list = $('dlg-list');
+  // 樣本裡沒有對話 ≠ 功能壞了 —— 韓文站的 fixture 是 169 條的子集，本來就不含對話。
+  // 把「沒有資料」報成失敗，會讓人去修一個沒有壞的東西。
+  const annotated = items.filter((x) => /\[/.test(x.hanja || '')
+                                     && (x.note || '').startsWith('對話'));
+  if (!list.children.length) {
+    console.log(`  ⏭  這份樣本裡沒有對話（${items.length} 條），跳過`);
+  } else if (!annotated.length) {
+    chk(`對話清單有內容（${list.children.length} 組）`, true);
+    console.log('  ⏭  本站的對話沒有振り仮名');
+  } else {
+    chk(`對話清單有內容（${list.children.length} 組）`, true);
+    const scene = annotated[0].note.split('｜')[1];
+    const row = [...list.children].find((c) => c.textContent.includes(scene));
+    row.click();
+    const ko = $('dlg-body').querySelector('.dlg-ko');
+    chk(`★ 對話裡的漢字也有標音（${scene}）`,
+        ko.querySelectorAll('ruby').length > 0,
+        '卡片上標了、對話裡沒標，等於在最需要的地方把標音拿掉');
+    chk('沒有把 HTML 當成文字印出來', !ko.textContent.includes('<ruby>'),
+        'shownHTML 回傳的是 HTML，外面再包一層 esc() 就會變成這樣');
+    chk('注音的方括號沒有洩漏', !ko.textContent.includes('['));
+  }
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);

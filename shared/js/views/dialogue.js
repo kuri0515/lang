@@ -15,6 +15,7 @@ import { groupDialogues, shuffleLines, checkOrder } from '../core/dialogue.js';
 import * as speech from '../core/speech.js';
 import * as content from '../data/content.js';
 import { lang } from '../core/lang.js';
+import { hasRuby, rubyHTML } from '../core/ruby.js';
 
 let all = [];          // [{ scene, lines }]
 let cur = null;        // 目前開啟的對話
@@ -96,6 +97,20 @@ function openOne(d) {
   render();
 }
 
+/**
+ * 句子的顯示形式：有振り仮名就用它。
+ *
+ * ★ 對話正是學生讀「整句」的地方 —— 學習卡片上標了音，
+ *   對話裡卻是光禿禿的漢字，等於在最需要的地方把標音拿掉。
+ *   （學生會用中文讀音把漢字帶過去，看起來讀懂了，開口時一個字都出不來。）
+ *
+ * 朗讀與答案比對一律用 item.ko（純文字）—— TTS 唸到 [えき] 會變成雜音。
+ */
+const shownHTML = (item) => {
+  const src = (lang().rubyFromHanja && hasRuby(item.hanja)) ? item.hanja : item.ko;
+  return hasRuby(src) ? rubyHTML(src) : esc(src);
+};
+
 function render() {
   if (!cur) return;
   $('dlg-title').textContent = cur.scene;
@@ -122,7 +137,7 @@ function renderLearn() {
   $('dlg-pool').classList.add('hidden');
   $('dlg-result').textContent = '';
   $('dlg-body').innerHTML = cur.lines.map((l, i) => bubble(l, i, `
-    <div class="dlg-ko">${esc(l.item.ko)}<button data-say="${i}" title="朗讀">🔊</button></div>
+    <div class="dlg-ko">${shownHTML(l.item)}<button data-say="${i}" title="朗讀">🔊</button></div>
     ${l.item.romanization ? `<div class="dlg-roman">${esc(l.item.romanization)}</div>` : ''}
     <div class="dlg-zh">${esc(l.item.zh)}</div>
     ${l.grammar ? `<div class="dlg-gram">${esc(l.grammar)}</div>` : ''}`)).join('');
@@ -137,19 +152,20 @@ function renderLearn() {
  */
 function renderPractice() {
   $('dlg-pool').classList.add('hidden');
-  const shown = (l) => (koFirst ? l.item.ko : l.item.zh);
-  const hidden = (l) => (koFirst ? l.item.zh : l.item.ko);
+  // 練習模式：日文那面要標音，中文那面沒有標音的問題
+  const shown = (l) => (koFirst ? shownHTML(l.item) : esc(l.item.zh));
+  const hidden = (l) => (koFirst ? esc(l.item.zh) : shownHTML(l.item));
 
   $('dlg-body').innerHTML = cur.lines.map((l, i) => {
     const open_ = revealed.has(l);
     const mark = rated.get(l);
     const front = koFirst
-      ? `<div class="dlg-ko">${esc(shown(l))}<button data-say="${i}" title="朗讀">🔊</button></div>`
+      ? `<div class="dlg-ko">${shown(l)}<button data-say="${i}" title="朗讀">🔊</button></div>`
       + (l.item.romanization ? `<div class="dlg-roman">${esc(l.item.romanization)}</div>` : '')
-      : `<div class="dlg-ko">${esc(shown(l))}</div>`;
+      : `<div class="dlg-ko">${shown(l)}</div>`;
     const back = !open_
       ? `<div class="dlg-hide" data-open="${i}">點一下看答案</div>`
-      : `<div class="dlg-zh">${esc(hidden(l))}</div>`
+      : `<div class="dlg-zh">${hidden(l)}</div>`
         + (l.grammar ? `<div class="dlg-gram">${esc(l.grammar)}</div>` : '')
         + (mark === undefined
             ? `<div class="dlg-rate">

@@ -21,8 +21,8 @@
     "test:dom:ja": "SITE=japanese node tests/dom.test.mjs tests/fixtures/pool-ja.json",
     "build:sites": "node shared/scripts/build-sites.mjs",
     "test:sites": "node shared/scripts/build-sites.mjs --check",
-    "test:card": "node --import ./tests/_cdn-stub.mjs tests/card.test.mjs tests/fixtures/pool.json",
-    "test:card:ja": "SITE=japanese node --import ./tests/_cdn-stub.mjs tests/card.test.mjs tests/fixtures/pool-ja.json"
+    "test:card": "STUB_POOL=tests/fixtures/pool.json node --import ./tests/_cdn-stub.mjs tests/card.test.mjs tests/fixtures/pool.json",
+    "test:card:ja": "SITE=japanese STUB_POOL=tests/fixtures/pool-ja.json node --import ./tests/_cdn-stub.mjs tests/card.test.mjs tests/fixtures/pool-ja.json"
   },
   "devDependencies": {
     "jsdom": "^25.0.0"
