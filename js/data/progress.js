@@ -18,6 +18,10 @@ export async function fetchDue(userId, dirs = DIRECTIONS, limit = 200) {
 }
 
 /** 尚未建卡的新條目（對指定方向而言是「新」的） */
+/**
+ * @param {string|string[]} tag 單一標籤，或一組標籤（任一符合即可）。
+ *   生活場景由多個標籤組成（溫暖＋關心），所以要吃陣列。
+ */
 export async function fetchNewItems(userId, deckId, dirs, limit = 20, tag = '') {
   const seen = await fetchAll(() => sb.from('user_cards')
     .select('item_id, direction').eq('user_id', userId));
@@ -28,7 +32,9 @@ export async function fetchNewItems(userId, deckId, dirs, limit = 20, tag = '') 
     let q = sb.from('items').select(ITEM_FIELDS).eq('is_active', true)
       .order('sort_order').order('slug');
     if (deckId) q = q.eq('deck_id', deckId);
-    if (tag) q = q.contains('tags', [tag]);
+    // 陣列用 overlaps（任一符合），單一用 contains —— 場景是多標籤的聯集
+    if (Array.isArray(tag) && tag.length) q = q.overlaps('tags', tag);
+    else if (typeof tag === 'string' && tag) q = q.contains('tags', [tag]);
     return q;
   });
 

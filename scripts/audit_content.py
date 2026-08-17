@@ -423,6 +423,39 @@ def check_note_hanja(items):
           "同一件事存在兩處必然漂移，學生會不知道信哪個。")
 
 
+def check_life_scene_coverage(items):
+    """
+    life-01 的每一條都要至少屬於一個場景。
+
+    場景是首頁的唯一入口 —— 掉出所有場景的詞條不會消失，
+    但學習者永遠不會被帶到它，等於白收。而且這種「靜默消失」
+    最難發現：稽核不報、畫面不缺、只是那幾條再也沒出現過。
+
+    場景定義在 js/core/taxonomy.js（LIFE_SCENES），這裡只複製標籤清單。
+    兩邊都改才會生效 —— 這是刻意的：前端改了而稽核沒改，這條就會報警，
+    提醒人回來對齊。
+    """
+    SCENES = [
+        ("溫暖的話",        {"溫暖", "關心"}),
+        ("追星 · NewJeans", {"追星", "娛樂"}),
+        ("療癒 · 我的日常",  {"療癒", "生活", "場所", "運動"}),
+        ("創作 · 自媒體",    {"學習", "職業"}),
+        ("設計 · 物件",     {"物品", "購物", "個性"}),
+        ("命理 · 運勢",     {"文化"}),
+        ("情緒 · 反應",     {"情緒", "網路用語"}),
+    ]
+    life = [x for x in items if x["deck"] == "life-01"]
+    if not life:
+        return
+    covered = set()
+    for _, tags in SCENES:
+        covered |= {x["ko"] for x in life if tags & set(x.get("tags") or [])}
+    issue("warn", "life-01 有條目不屬於任何場景",
+          [x["ko"] for x in life if x["ko"] not in covered],
+          "場景是首頁的唯一入口，掉出去的詞學習者永遠碰不到。"
+          "改 js/core/taxonomy.js 的 LIFE_SCENES 後要回來對齊這裡。")
+
+
 def check_completeness(items, decks):
     """
     完整度只對「該有這個欄位的條目」計算。
@@ -499,6 +532,7 @@ def main():
     check_examples(items)
     check_note_hanja(items)
     check_hanja_consistency(items)
+    check_life_scene_coverage(items)
     check_tags(items)
     check_counter_sync(url, key)
     check_completeness(items, decks)

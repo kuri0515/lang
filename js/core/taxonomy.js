@@ -233,3 +233,58 @@ export function lessonOutro(tag, accuracy) {
   if (isComplex(tag)) return low ? OUTRO_COMPLEX_LOW : OUTRO_COMPLEX_OK;
   return (low ? OUTRO_LOW[tag] : OUTRO_OK[tag]) || '';
 }
+
+// =====================================================================
+// 生活 · 興趣模組的場景
+//
+// 【與發音課程的根本差別：這裡沒有順序】
+//   發音有前後依賴 —— 不懂連音就講不通複合收音，所以那邊是「下一課」，
+//   跳著學會夾生。生活場景沒有依賴：今天想學咖啡廳就該能直接學，
+//   想先背追星用語也完全沒問題。
+//
+//   所以這裡的介面是「挑一個」而不是「下一課」，也不鎖任何場景。
+//   硬套課程那套順序，等於把興趣驅動的東西變成作業。
+//
+// 【場景由標籤組合定義】
+//   標籤是交叉的（回應、情緒橫跨各場景），一個標籤一個場景會切得破碎。
+//   一個詞同時屬於兩個場景是正常的 —— 응원하다 既是追星也是溫暖的話。
+// =====================================================================
+
+export const LIFE_SCENES = [
+  { key: 'warm',   label: '溫暖的話',      tags: ['溫暖', '關心'],
+    hint: '對朋友家人也講得出口，學起來是雙份的' },
+  { key: 'fan',    label: '追星 · NewJeans', tags: ['追星', '娛樂'],
+    hint: '聽得懂粉絲圈在說什麼' },
+  { key: 'daily',  label: '療癒 · 我的日常',  tags: ['療癒', '生活', '場所', '運動'],
+    hint: '咖啡廳、散步、打掃、一個人的時間' },
+  { key: 'create', label: '創作 · 自媒體',   tags: ['學習', '職業'],
+    hint: '作品、靈感、剪輯、訂閱' },
+  { key: 'design', label: '設計 · 物件',    tags: ['物品', '購物', '個性'],
+    hint: '色調、小物、周邊、扭蛋' },
+  { key: 'fate',   label: '命理 · 運勢',    tags: ['文化'],
+    hint: '四柱、運勢、塔羅、生肖' },
+  { key: 'react',  label: '情緒 · 反應',    tags: ['情緒', '網路用語'],
+    hint: '대박、미쳤다、실화냐 —— 聽得懂也接得上話' },
+];
+
+/** 所有場景用到的標籤（去重）—— 查詢時一次撈完 */
+export const LIFE_TAGS = [...new Set(LIFE_SCENES.flatMap((s) => s.tags))];
+
+/**
+ * 挑一個場景給她。
+ *
+ * ★ 判準與發音課程相反：那邊找「第一個沒掌握牢的」，因為要照順序走；
+ *   這邊優先找「已經開始、還沒做完的」—— 對興趣驅動的內容，
+ *   把手上那件事收完比開新的一件更有成就感。都沒開始就給第一個，
+ *   全部做完就不硬塞。
+ */
+export function pickScene(scenes) {
+  const started = scenes.filter((s) => s.started > 0 && s.mastered < s.total);
+  if (started.length) {
+    // 已開始的裡面挑最接近完成的 —— 差一點就收尾，比從頭開新的划算
+    return { scene: started.sort((a, b) => b.mastered / b.total - a.mastered / a.total)[0],
+             reason: 'continue' };
+  }
+  const fresh = scenes.find((s) => s.started === 0 && s.total > 0);
+  return fresh ? { scene: fresh, reason: 'start' } : { scene: null, reason: 'done' };
+}

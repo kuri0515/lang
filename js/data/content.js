@@ -22,7 +22,9 @@ export async function countItems(deckId) {
 /** 搜尋條件收斂在此，瀏覽與自由練習共用同一套語意 */
 function applyFilters(q, { tag, search, deckId, ids }) {
   if (deckId) q = q.eq('deck_id', deckId);
-  if (tag) q = q.contains('tags', [tag]);
+  // 陣列＝一組標籤取聯集（生活場景由多個標籤組成），字串＝單一標籤
+  if (Array.isArray(tag) && tag.length) q = q.overlaps('tags', tag);
+  else if (typeof tag === 'string' && tag) q = q.contains('tags', [tag]);
   if (ids?.length) q = q.in('id', ids);
   if (search?.trim()) {
     // 這些字元會擾亂 PostgREST 的 or 語法
@@ -95,26 +97,41 @@ export async function sameMeaning(zh, excludeId = null, limit = 4) {
  * 學習者要看的是「這一課碰過沒有」與「這一課穩了沒有」兩件不同的事。
  */
 export async function pronProgress(userId, tags) {
-  const want = new Set(tags);
-  const items = await fetchAll(() => sb.from('items')
-    .select('id, tags').eq('is_active', true).overlaps('tags', tags));
+  return tagProgress(userId, tags.map((t) => ({ key: t, tags: [t] })), null)
+    .then((rows) => rows.map((r) => ({ ...r, tag: r.key })));
+}
+
+/**
+ * 一組一組算進度。groups = [{ key, tags }]，一組可以涵蓋多個標籤。
+ *
+ * 一次撈完再在記憶體裡分組 —— 每組各打一次 API 要幾十趟往返，首頁會卡住。
+ * 同一個詞同時屬於兩個標籤時只算一次（用 Set 去重），
+ * 否則「溫暖」與「關心」都掛著的詞會讓總數虛胖，進度條永遠到不了 100%。
+ */
+export async function tagProgress(userId, groups, deckId = null) {
+  const all = [...new Set(groups.flatMap((g) => g.tags))];
+  const items = await fetchAll(() => {
+    let q = sb.from('items').select('id, tags').eq('is_active', true).overlaps('tags', all);
+    if (deckId) q = q.eq('deck_id', deckId);
+    return q;
+  });
   const cards = await fetchAll(() => sb.from('user_cards')
     .select('item_id, mastered_at').eq('user_id', userId));
 
   const started = new Set(cards.map((c) => c.item_id));
   const mastered = new Set(cards.filter((c) => c.mastered_at).map((c) => c.item_id));
 
-  const by = new Map(tags.map((t) => [t, { tag: t, total: 0, started: 0, mastered: 0 }]));
-  for (const it of items) {
-    for (const t of it.tags || []) {
-      if (!want.has(t)) continue;
-      const g = by.get(t);
-      g.total += 1;
-      if (started.has(it.id)) g.started += 1;
-      if (mastered.has(it.id)) g.mastered += 1;
-    }
-  }
-  return [...by.values()].filter((g) => g.total > 0);
+  return groups.map((g) => {
+    const want = new Set(g.tags);
+    const ids = new Set(items.filter((it) => (it.tags || []).some((t) => want.has(t)))
+                             .map((it) => it.id));
+    return {
+      ...g,
+      total: ids.size,
+      started: [...ids].filter((id) => started.has(id)).length,
+      mastered: [...ids].filter((id) => mastered.has(id)).length,
+    };
+  }).filter((g) => g.total > 0);
 }
 
 /** 選擇題干擾項池：一次抓好放記憶體，避免每題都打一次 API */

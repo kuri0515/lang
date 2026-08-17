@@ -255,5 +255,36 @@ console.log('\n【專注模式】');
   localStorage.removeItem(LS);
 }
 
+// ---------------------------------------------------------------------
+// 生活場景：與發音課程相反，這裡不排順序
+// ---------------------------------------------------------------------
+console.log('\n【生活場景】');
+{
+  const { LIFE_SCENES, LIFE_TAGS, pickScene } =
+    await import(ROOT+'/js/core/taxonomy.js');
+  const sc = (key, total, started, mastered) => ({ key, label: key, total, started, mastered });
+
+  chk('場景都有標籤與說明',
+      LIFE_SCENES.every((s) => s.tags.length && s.label && s.hint));
+  chk('LIFE_TAGS 去重', new Set(LIFE_TAGS).size === LIFE_TAGS.length);
+
+  // ★ 判準與發音課程相反：優先「接著把手上的收完」而不是「照順序往下」
+  let r = pickScene([sc('a', 10, 0, 0), sc('b', 10, 8, 8), sc('c', 10, 2, 1)]);
+  chk('★ 優先挑已開始、最接近完成的', r.scene.key === 'b' && r.reason === 'continue',
+      '興趣驅動的內容，把手上那件事收完比開新的一件更有成就感');
+
+  r = pickScene([sc('a', 10, 0, 0), sc('b', 10, 0, 0)]);
+  chk('都沒開始就給第一個', r.scene.key === 'a' && r.reason === 'start');
+
+  r = pickScene([sc('a', 10, 10, 10)]);
+  chk('全做完就不硬塞', r.scene === null && r.reason === 'done');
+
+  chk('沒有資料時不炸', pickScene([]).scene === null);
+
+  chk('場景定義裡沒有順序或前置條件欄位',
+      LIFE_SCENES.every((s) => !('order' in s) && !('requires' in s)),
+      '生活場景沒有依賴，今天想學咖啡廳就該能直接學');
+}
+
 console.log(f?`\n❌ 失敗 ${f} 項`:'\n✅ 全部通過');
 process.exit(f?1:0);

@@ -3,7 +3,8 @@ import { $, esc, pct, msg, emptyState, qs, qsa } from '../core/dom.js';
 import { on, EVENTS } from '../core/bus.js';
 import { DIR_SHORT } from '../data/client.js';
 import * as content from '../data/content.js';
-import { PRON_ORDER, nextLesson, LESSON_DONE } from '../core/taxonomy.js';
+import { PRON_ORDER, nextLesson, LESSON_DONE,
+         LIFE_SCENES, pickScene } from '../core/taxonomy.js';
 import * as progress from '../data/progress.js';
 import { MODES, getMode, forcedDirection } from '../study/modes/index.js';
 import { computeStreak } from '../core/stats.js';
@@ -64,8 +65,13 @@ export async function load() {
   if (!user) return;
   try {
     const dirs = [effectiveDir()];
-    const [decks, due, today, overall, weak, daily, pron] = await Promise.all([
-      content.listDecks(),
+    // 詞庫先取 —— 生活場景的進度必須限定在 life-01 之內。
+    // 生活、學習這些標籤 vocab-01 也在用，不限定的話進度會被灌水，
+    // 場景永遠做不完。
+    const decks = await content.listDecks();
+    const lifeDeck = decks.find((d) => d.slug === 'life-01')?.id ?? null;
+
+    const [due, today, overall, weak, daily, pron, life] = await Promise.all([
       progress.fetchDue(user.id, dirs, 500),
       progress.todayStats(user.id),
       progress.overallStats(user.id),
@@ -73,6 +79,8 @@ export async function load() {
       progress.dailyStats(user.id, 30).catch(() => []),
       // 發音課程進度失敗不該拖垮整個首頁 —— 它是加值資訊，不是主線
       content.pronProgress(user.id, PRON_ORDER).catch(() => []),
+      lifeDeck ? content.tagProgress(user.id, LIFE_SCENES, lifeDeck).catch(() => [])
+               : Promise.resolve([]),
     ]);
 
     $('s-due').textContent = due.length;
@@ -88,6 +96,7 @@ export async function load() {
 
     renderDecks(decks);
     renderPron(pron);
+    renderLife(life);
     renderWeak(weak);
   } catch (e) {
     msg('載入失敗：' + (e.message || e));
@@ -214,6 +223,55 @@ function renderPron(rows) {
 
   qsa('[data-pron]').forEach((b) => {
     b.onclick = () => deps.onStudyTag(b.dataset.pron);
+  });
+}
+
+/**
+ * 生活 · 興趣模組的場景。
+ *
+ * ★ 措辭刻意與發音課程區分：那邊是「下一課」，這邊是「挑一個」。
+ *   發音有前後依賴，跳著學會夾生；生活場景沒有依賴，
+ *   今天想學咖啡廳就該能直接學。硬套課程那套順序，
+ *   等於把興趣驅動的東西變成作業。所以不鎖、不排名次，全部可點。
+ */
+function renderLife(scenes) {
+  const card = $('life-card');
+  if (!scenes.length) { card.classList.add('hidden'); return; }
+  card.classList.remove('hidden');
+
+  const { scene, reason } = pickScene(scenes);
+  const TEXT = {
+    continue: '接著把這個收完',
+    start: '要不要從這裡開始？',
+    done: '',
+  };
+  $('life-pick').innerHTML = scene
+    ? `<div class="pron-next">
+         <div class="n-body">
+           <div class="n-label">${esc(TEXT[reason])}</div>
+           <div class="n-title">${esc(scene.label)}</div>
+           <div class="n-sub">${esc(scene.hint)} · ${scene.mastered}/${scene.total}</div>
+         </div>
+         <button class="primary small" data-scene="${esc(scene.key)}">開始</button>
+       </div>`
+    : `<div class="pron-next"><div class="n-body">
+         <div class="n-title">🌱 這個模組都掌握了</div>
+         <div class="n-sub">想複習的話，下面任何一個場景都可以再點</div>
+       </div></div>`;
+
+  $('life-list').innerHTML = scenes.map((s) => {
+    const p = s.total ? Math.round((s.mastered / s.total) * 100) : 0;
+    return `<div class="pron-row${p >= LESSON_DONE * 100 ? ' done' : ''}">
+      <span class="p-name">${esc(s.label)}</span>
+      <span class="p-bar"><i style="width:${p}%"></i></span>
+      <span class="p-num">${s.mastered}/${s.total}</span>
+      <button data-scene="${esc(s.key)}">學</button>
+    </div>`;
+  }).join('');
+
+  qsa('[data-scene]').forEach((b) => {
+    const s = scenes.find((x) => x.key === b.dataset.scene);
+    b.onclick = () => deps.onStudyScene(s);
   });
 }
 

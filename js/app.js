@@ -121,9 +121,32 @@ async function startNew(deckId, tag = '') {
 }
 
 /** 自由練習：不看到期時間、不受上限，只記成績不動排程 */
-async function startFree({ ids = null, tag = '', kind = 'free' } = {}) {
+/**
+ * 開始一個生活場景。與發音課程共用同一條路，差別只在取材範圍：
+ * 場景是多標籤的聯集，且限定在 life-01 之內
+ * —— 生活、學習這些標籤 vocab-01 也在用，不限定就會混進通用詞彙。
+ */
+async function startScene(scene) {
+  if (!scene) return;
+  const deck = (await content.listDecks()).find((d) => d.slug === 'life-01');
+  if (!deck) return msg('找不到「生活 · 興趣」詞庫');
+  const limit = profile?.daily_new_limit ?? 20;
+  const done = await progress.newCardsToday(user.id).catch(() => 0);
+  const room = Math.max(0, limit - done);
+  if (!room) return msg(`今日新卡已達上限（${limit} 張）。先把複習做完，明天再來 👍`, 'ok');
+
+  const rows = await progress.fetchNewItems(user.id, deck.id, [home.effectiveDir()],
+                                            room, scene.tags);
+  if (!rows.length) {
+    msg(`「${scene.label}」的新詞都學過了，改成練習這一組 👍`, 'ok');
+    return startFree({ tag: scene.tags, deckId: deck.id, kind: 'drill' });
+  }
+  await begin(rows, { kind: 'new' });
+}
+
+async function startFree({ ids = null, tag = '', deckId = null, kind = 'free' } = {}) {
   try {
-    const items = await content.pickItems({ ids, tag, limit: 60 });
+    const items = await content.pickItems({ ids, tag, deckId, limit: 60 });
     if (!items.length) return msg('沒有符合的內容');
     const dir = home.effectiveDir();
     await begin(shuffle(items.map((item) => ({ item, direction: dir, card: null }))),
@@ -156,6 +179,8 @@ home.initHome({
   // 發音課程的「開始」走與詞庫瀏覽的「學這組」同一條路 ——
   // 同一件事只能有一個入口實作，兩份必然漂移
   onStudyTag: (t) => startNew(null, t),
+  // 場景由多個標籤組成，且只在 life-01 之內取材
+  onStudyScene: (s) => startScene(s),
 });
 study.initStudy({ session, getCtx: studyCtx, onQuit: () => show('view-done') });
 browse.initBrowse({ ...deps, onPractice: (ids) => startFree({ ids }), onStudyTag: (t) => startNew(null, t) });
