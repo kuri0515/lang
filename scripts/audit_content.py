@@ -159,7 +159,9 @@ OK_BOTH = {("台", "臺"), ("祕", "秘"), ("秘", "祕"),
            #        所以放行不會漏掉真正的問題。
            ("了", "瞭"),
            # 困→睏  「疲困」是韓國漢字，睏在台灣專指想睡，改過去反而不對
-           ("困", "睏")}
+           ("困", "睏"),
+           # 占→佔  占卜的占在台灣就是占，佔是佔據。點集在這裡講的是算命
+           ("占", "佔")}
 
 
 def check_simplified(items):
@@ -201,9 +203,12 @@ def check_hanja(items):
           "hanja 是「詞的漢字詞源」，不是把整句改寫成漢字。")
     # 混合詞的 hanja 本來就可能含韓文與拉丁字母（熱情pay、헬朝鮮、工夫하다），
     # 那是刻意保留的形態。只揪真正的雜訊：數字與標點以外的怪東西。
+    # 同形詞會在 hanja 欄並列兩個詞源（차＝茶／車），分隔號是刻意的。
+    # 但中文釋義不該出現在這裡 —— 那是 zh 或 note 的位置。
+    # 實際踩過：힐링（外來語，本來就沒有漢字）被填進「治癒·休息」。
     issue("warn", "hanja 含可疑字元",
           [f"{x['ko']}: {x['hanja']}" for x in items
-           if x.get("hanja") and re.search(r"[^一-鿿가-힯A-Za-z\s?!.]", x["hanja"])])
+           if x.get("hanja") and re.search(r"[^一-鿿가-힯A-Za-z\s?!.／·]", x["hanja"])])
 
 
 def check_type(items):
@@ -380,12 +385,15 @@ def check_hanja_consistency(items):
     # note 已寫明不是漢字詞的先排除 —— 固有語、外來語、專名、網路縮語
     # 本來就沒有詞源，把它們算成「漏標」會讓這條檢查整片誤報，
     # 而誤報整片就等於沒有檢查。
-    non_sino = re.compile(r"固有語|外來語|외래어|源自日語|國名|人名|縮語|"
-                          r"沒有漢字|不標漢字|純韓語|詞源有爭議")
+    non_sino = re.compile(r"固有語|外來語|외래어|源自日語|國名|人名|縮語|品牌名|混合詞|"
+                          r"沒有漢字|不標漢字|純韓語|詞源有爭議|團名")
 
     by_tag = defaultdict(list)
     for x in items:
-        if x["item_type"] == "sentence" or non_sino.search(x.get("note") or ""):
+        # 只看單字。詞組與句子由多個詞組成，「這個詞組的漢字詞源」本身沒有意義
+        # —— 깎아 주세요 要標什麼漢字？把它們算進來只會讓這條檢查變成噪音，
+        # 而噪音多了整項檢查就沒人看。
+        if x["item_type"] != "word" or non_sino.search(x.get("note") or ""):
             continue
         for t in x.get("tags") or []:
             by_tag[t].append(x)
@@ -432,6 +440,49 @@ def check_note_hanja(items):
             bad.append(f"{x['ko']}: note 說「{said}」，hanja 欄是「{hanja}」")
     issue("error", "note 與 hanja 欄說法不一致", bad,
           "同一件事存在兩處必然漂移，學生會不知道信哪個。")
+
+
+def check_dialogues(items):
+    """
+    對話的完整性。畫面把它們當成一段對話呈現，資料不完整就會露餡。
+
+    抓三件事：
+      開頭是 B  —— 對話從第二個人開始，多半是開場那句漏了。
+                  實際踩過：「聊天氣」整組沒有一句在講天氣，
+                  B 的第一句「그러게요（就是啊）」在附和一句不存在的話。
+      只有一句  —— 一句不是對話，清單點進去會是空的。
+      缺語法說明 —— 對話畫面靠它教文法，缺了那句就只是一句沒有解釋的例句。
+
+    行序靠 sort_order，由呼叫端取回時排好。這裡刻意不重排 ——
+    在這裡補排會掩蓋「上游排序欄位挑錯」這種問題，
+    而那個問題正是這條檢查第一次跑就撞到的（上游按 id 排，等於亂序，
+    22 組全被誤判成「從 B 開始」）。
+    """
+    head = re.compile(r"^對話\s*([AB])｜([^｜]+)｜?(.*)$")
+    scenes = defaultdict(list)
+    for x in items:
+        m = head.match((x.get("note") or "").strip())
+        if m:
+            scenes[m.group(2).strip()].append((m.group(1), m.group(3).strip(), x))
+
+    starts_b, singles, no_gram = [], [], []
+    for scene, lines in sorted(scenes.items()):
+        seq = "".join(sp for sp, _, _ in lines)
+        if len(lines) < 2:
+            singles.append(f"{scene}：{lines[0][2]['ko']}")
+            continue
+        if seq.startswith("B"):
+            starts_b.append(f"{scene}（{seq}）：{lines[0][2]['ko']}")
+        miss = [x["ko"] for _, g, x in lines if not g]
+        if miss:
+            no_gram.append(f"{scene}：{'、'.join(miss[:3])}")
+
+    issue("warn", "對話從 B 開始（開場那句可能漏了）", starts_b,
+          "對話不會從第二個人先講。實際靠這條翻出「聊天氣」整組沒有天氣那句。")
+    issue("warn", "對話只有一句", singles,
+          "一句不是對話，清單點進去會是空的。")
+    issue("info", "對話句缺語法說明", no_gram,
+          "對話畫面靠 note 的第三段教文法，缺了就只是一句沒有解釋的例句。")
 
 
 def check_life_scene_coverage(items):
@@ -509,7 +560,7 @@ def check_completeness(items, decks):
 
     # hanja 單獨用三分法報，不算百分比
     non_sino = re.compile(r"固有語|外來語|외래어|源自日語|國名|人名|縮語|"
-                          r"沒有漢字|不標漢字|純韓語|詞源有爭議")
+                          r"沒有漢字|不標漢字|純韓語|詞源有爭議|團名")
     words = [x for x in items if x["item_type"] != "sentence"]
     marked = sum(1 for x in words if x.get("hanja"))
     known_native = sum(1 for x in words if not x.get("hanja")
@@ -528,8 +579,13 @@ def main():
     args = ap.parse_args()
 
     url, key = load_env()
+    # ★ 依 sort_order 取回，不是 id。
+    #   id 是 uuid，排序等於亂序 —— 對話的行序全靠 sort_order。
+    #   這個坑踩過兩次：第一次是我手動查詢時排錯，第二次是這裡。
+    #   加 slug 當第二排序鍵，讓分頁在並發寫入時仍然穩定（slug 唯一）。
     raw = fetch_all(url, key, "items",
-                    "id,slug,ko,zh,romanization,hanja,pos,item_type,example_ko,example_zh,note,tags,deck_id,is_active")
+                    "id,slug,ko,zh,romanization,hanja,pos,item_type,example_ko,example_zh,note,tags,deck_id,is_active",
+                    order="sort_order,slug")
     decks = {d["id"]: d["slug"] for d in rest(url, key, "GET", "decks?select=id,slug")}
     items = [{**x, "deck": decks.get(x["deck_id"], "?")} for x in raw if x["is_active"]]
 
@@ -545,6 +601,7 @@ def main():
     check_note_hanja(items)
     check_hanja_consistency(items)
     check_life_scene_coverage(items)
+    check_dialogues(items)
     check_tags(items)
     check_counter_sync(url, key)
     check_completeness(items, decks)
