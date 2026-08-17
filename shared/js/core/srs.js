@@ -114,3 +114,54 @@ export function humanize(ms) {
   if (mo < 12) return `${Math.round(mo)} 个月`;
   return `${(mo / 12).toFixed(1)} 年`;
 }
+
+/**
+ * 手動回顧的排程規則：**只縮不放**。
+ *
+ * 【為什麼不能直接沿用正規複習的算法】
+ *   回顧是使用者自己挑出來多練的，發生在排程之外。
+ *   若答得好就照正規算法把間隔乘上去，等於「臨時多背幾遍」就把
+ *   下次複習日推遠 —— 那正好破壞間隔重複的節奏，
+ *   而且是往「看起來更熟、實際更容易忘」的方向壞。
+ *
+ * 【為什麼答不好時要縮】
+ *   答不好是真的訊號：這個詞比排程以為的更脆弱。
+ *   忽略它等於明知會忘還讓它照原定日期躺著。
+ *
+ * 所以規則是不對稱的：
+ *   記得／很簡單 → 完全不動排程（回傳 null，呼叫端只記錄答題）
+ *   忘了         → 照正規的遺忘處理（回學習步驟、ease 下修）——
+ *                  真的忘了就是忘了，隱瞞它沒有意義
+ *   有點難       → 把下次到期日拉近，但不算遺忘、不動 ease；
+ *                  它只是「比我以為的更需要再看一眼」
+ *
+ * @returns {object|null} 要寫回卡片的欄位；null 表示不動排程
+ */
+export function scheduleRecall(card, rating, now = new Date()) {
+  if (rating >= RATING.GOOD) return null;            // 答得好 → 一動不如一靜
+
+  if (rating === RATING.AGAIN) return schedule(card, rating, now);
+
+  // ---- HARD：拉近，但不懲罰 ----
+  const interval = Number(card?.interval_days ?? 0);
+  const due = card?.due_at ? new Date(card.due_at) : null;
+  if (card?.state !== 'review' || !(interval > 0)) return null;  // 還在學習階段，本來就很快回來
+
+  const shorter = Math.max(1, Math.round(interval * 0.5 * 100) / 100);
+  const nextDue = new Date(now.getTime() + shorter * DAY_MS);
+
+  // ★ 只縮不放：算出來比原訂日期還晚就不動。
+  //   缺了這一條，一張間隔很短的卡在回顧時按「有點難」，
+  //   反而會被推到更遠 —— 與這個函式的用意完全相反。
+  if (due && nextDue >= due) return null;
+
+  return {
+    state: 'review',
+    due_at: nextDue.toISOString(),
+    interval_days: shorter,
+    ease_factor: Number(card.ease_factor ?? 2.5),   // 不動：這不是遺忘
+    repetitions: Number(card.repetitions ?? 0),
+    lapses: Number(card.lapses ?? 0),
+    last_reviewed_at: now.toISOString(),
+  };
+}

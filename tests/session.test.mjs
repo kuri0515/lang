@@ -7,7 +7,7 @@
 //     node tests/session.test.mjs
 // =====================================================================
 import { createSession, matchesType } from '../shared/js/study/session.js';
-import { RATING } from '../shared/js/core/srs.js';
+import { RATING, scheduleRecall } from '../shared/js/core/srs.js';
 
 let fails = 0;
 const chk = (n, c, e = '') => {
@@ -104,6 +104,40 @@ console.log('\n【內容類型過濾】');
   chk('只練單字：詞組算單字，句子排除',
       matchesType(word, 'word') && matchesType(phrase, 'word') && !matchesType(sent, 'word'),
       '詞組（かき氷）在使用上更接近單字，不是要練語序的對象');
+}
+
+console.log('\n【手動回顧的排程：只縮不放】');
+{
+  const now = new Date('2026-08-17T00:00:00Z');
+  const mk = (interval, dueInDays) => ({
+    state: 'review', interval_days: interval, ease_factor: 2.5,
+    repetitions: 3, lapses: 0,
+    due_at: new Date(now.getTime() + dueInDays * 86400000).toISOString(),
+  });
+  const card = mk(10, 10);
+
+  chk('★ 答得好時完全不動排程',
+      scheduleRecall(card, RATING.GOOD, now) === null &&
+      scheduleRecall(card, RATING.EASY, now) === null,
+      '臨時多背幾遍就把複習日推遠，會往「看起來更熟、實際更容易忘」的方向壞');
+
+  const hard = scheduleRecall(card, RATING.HARD, now);
+  chk('「有點難」把到期日拉近', hard && hard.interval_days === 5, `→ ${hard?.interval_days} 天`);
+  chk('「有點難」不動 ease、不算遺忘',
+      hard && hard.ease_factor === 2.5 && hard.lapses === 0,
+      '它只是「比我以為的更需要再看一眼」，不是忘了');
+
+  const again = scheduleRecall(card, RATING.AGAIN, now);
+  chk('「忘了」照正規遺忘處理', again && again.state === 'learning' && again.lapses === 1,
+      '真的忘了就是忘了，隱瞞它沒有意義');
+
+  // ★ 反面樣本：短間隔的卡不該被「拉近」反而推遠
+  chk('★ 只縮不放：算出來比原訂更晚就不動',
+      scheduleRecall(mk(1, 0.5), RATING.HARD, now) === null,
+      '缺了這條，短間隔的卡按「有點難」會被推到更遠，與用意完全相反');
+
+  chk('還在學習階段的卡不動', scheduleRecall({ state: 'learning' }, RATING.HARD, now) === null,
+      '它本來就很快會再出現');
 }
 
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
