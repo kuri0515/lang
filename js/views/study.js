@@ -22,15 +22,25 @@ let onQuit = null;
  * 課程導言。整堂課常駐 —— 練到一半想回頭確認規則是常態，
  * 用 toast 就等於看一眼之後再也找不到。
  * 這裡只負責顯示，內容與判準都在 core/taxonomy.js。
+ *
+ * 【專注模式：不另外做一個設定開關】
+ *   有人要說明，有人只想直接背單字，不該逼任何一方遷就另一方。
+ *   但「收起」這個動作本身就是偏好 —— 記住它就夠了，
+ *   再開一個設定項只是把同一件事說兩遍。
+ *   收起後仍留課名與「看說明」，隨時點得開，不會變成找不到的功能。
  */
+const LS_INTRO = 'lesson-intro-open';
+
 export function setLesson(tag, intro) {
   const box = $('lesson-intro');
   if (!box) return;
   box.classList.toggle('hidden', !intro);
   if (!intro) return;
-  $('lesson-title').textContent = `${tag}`;
+  $('lesson-title').textContent = tag;
   $('lesson-body').textContent = intro;
-  box.open = true;
+  // 預設展開：第一次進來的人要看得到。收起過就一直維持收起。
+  box.open = localStorage.getItem(LS_INTRO) !== '0';
+  box.ontoggle = () => localStorage.setItem(LS_INTRO, box.open ? '1' : '0');
 }
 
 export function initStudy({ session: s, getCtx, onQuit: quitCb }) {

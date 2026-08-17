@@ -185,14 +185,18 @@ console.log('\n【課程導言】');
 {
   // 不 import study.js —— 它會連帶載入 supabase-js（CDN 網址），Node 無法解析。
   // 這裡驗資料完整性，「每輪必重設」的不變量在 arch 測試用原始碼層檢查。
-  const { LESSON_INTRO, PRON_ORDER } = await import(ROOT+'/js/core/taxonomy.js');
+  const { LESSON_INTRO, PRON_ORDER, lessonOutro } = await import(ROOT+'/js/core/taxonomy.js');
 
   chk('每一課都有導言', PRON_ORDER.every((t) => LESSON_INTRO[t]),
       '路徑解決「學什麼」，導言解決「為什麼」，缺一課就斷一節');
   chk('沒有多餘導言（課程刪掉時要記得跟著刪）',
       Object.keys(LESSON_INTRO).every((t) => PRON_ORDER.includes(t)));
-  chk('導言夠短', Object.values(LESSON_INTRO).every((v) => v.length <= 80),
-      '學習者是按下「開始」之後才看到，長了直接跳過');
+  chk('導言夠短（≤60 字）', Object.values(LESSON_INTRO).every((v) => v.length <= 60),
+      '真實課堂上老師點到就停，不會講滿一段');
+  chk('收尾話更短（≤35 字）',
+      PRON_ORDER.map((t) => lessonOutro(t, 0.9)).concat(PRON_ORDER.map((t) => lessonOutro(t, 0.4)))
+        .filter(Boolean).every((v) => v.length <= 35),
+      '收尾是一句話的事，說完就讓人走');
   chk('導言都給了具體例子',
       Object.values(LESSON_INTRO).every((v) => /[가-힣]/.test(v)),
       '只講規則不給實例，等於還是要學習者自己想像');
@@ -200,7 +204,6 @@ console.log('\n【課程導言】');
       !!$('lesson-intro') && !!$('lesson-title') && !!$('lesson-body'));
 
   // ---- 收尾話 ----
-  const { lessonOutro } = await import(ROOT+'/js/core/taxonomy.js');
   chk('★ 不是每課都有收尾話',
       PRON_ORDER.filter((t) => lessonOutro(t, 0.9)).length < PRON_ORDER.length,
       '每課都給等於每句都不算數，稱讚天天有就成了背景音');
@@ -215,6 +218,41 @@ console.log('\n【課程導言】');
       lessonOutro('收音ㄱ', 0.9) !== lessonOutro('收音ㄼ', 0.9),
       '收音ㄼ 與 收音ㄱ 都是三個字，不能用字串長度分辨');
   chk('非課程內容沒有收尾話', lessonOutro('', 0.9) === '' && lessonOutro('食物', 0.9) === '');
+}
+
+// ---------------------------------------------------------------------
+// 專注模式：收起導言的選擇要被記住
+// ---------------------------------------------------------------------
+console.log('\n【專注模式】');
+{
+  // setLesson 不能從 study.js 匯入（會連帶載入 CDN 上的 supabase-js），
+  // 這裡照它的契約重跑一次邏輯，驗的是「行為」而非「實作」。
+  const LS = 'lesson-intro-open';
+  const box = $('lesson-intro');
+  const apply = () => {
+    box.classList.remove('hidden');
+    box.open = localStorage.getItem(LS) !== '0';
+    box.ontoggle = () => localStorage.setItem(LS, box.open ? '1' : '0');
+  };
+
+  localStorage.removeItem(LS);
+  apply();
+  chk('第一次進來預設展開', box.open === true,
+      '沒看過的人要先看得到，不能藏起來等他自己發現');
+
+  box.open = false; box.ontoggle();          // 使用者收起
+  chk('收起後記住選擇', localStorage.getItem(LS) === '0');
+  apply();
+  chk('★ 下一課仍維持收起 —— 這就是專注模式', box.open === false,
+      '每課又彈開，等於沒有記住');
+
+  box.open = true; box.ontoggle();           // 使用者再展開
+  apply();
+  chk('重新展開後也記住', box.open === true);
+
+  chk('收起時仍看得到課名與提示', !!$('lesson-title') && !!document.querySelector('.li-cue'),
+      '收起後找不到入口，功能就等於消失了');
+  localStorage.removeItem(LS);
 }
 
 console.log(f?`\n❌ 失敗 ${f} 項`:'\n✅ 全部通過');

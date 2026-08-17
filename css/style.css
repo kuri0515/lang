@@ -770,8 +770,14 @@ kbd {
   list-style: none;
 }
 .lesson-intro summary::-webkit-details-marker { display: none; }
-.lesson-intro summary::after { content: ' ▾'; font-weight: 400; opacity: .6; }
-.lesson-intro[open] summary::after { content: ' ▴'; }
+.lesson-intro summary {
+  display: flex; align-items: baseline; gap: 8px;
+}
+.lesson-intro summary::after { content: '▾'; font-weight: 400; opacity: .6; margin-left: auto; }
+.lesson-intro[open] summary::after { content: '▴'; }
+/* 收起時才提示「看說明」—— 展開後說明就在眼前，再標一次是雜訊 */
+.li-cue { font-size: 11.5px; font-weight: 400; opacity: .7; }
+.lesson-intro[open] .li-cue { display: none; }
 .lesson-intro p {
   margin: 7px 0 0; font-size: 13px; line-height: 1.65; color: var(--text);
 }
