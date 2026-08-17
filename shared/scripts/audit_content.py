@@ -115,9 +115,24 @@ def check_duplicates(items):
     for x in items:
         by[x["ko"]].append(x)
 
-    same_deck, cross_deck = [], []
+    def scene_of(r):
+        """對話行的情境名（note 的第二段）；不是對話就回 None"""
+        n = (r.get("note") or "").strip()
+        return n.split("｜")[1] if n.startswith("對話") and n.count("｜") >= 2 else None
+
+    same_deck, cross_deck, dialogue_ok = [], [], []
     for k, v in by.items():
         if len(v) < 2:
+            continue
+        # ★ 對話行的重複是設計要求，不是錯誤。
+        #   「ありがとう。」在三段不同的對話裡各要有自己那一行 ——
+        #   併成一條的話，後兩段各只剩一行，而對話需要 ≥2 行才成組，
+        #   那兩段會從情境對話裡整組消失。
+        #   把這種情況報成 error，只會逼人去「修好」一個本來就對的設計。
+        #   誤報多了，這支稽核就等於沒有作用。
+        scenes = [scene_of(r) for r in v]
+        if all(scenes) and len(set(scenes)) == len(scenes):
+            dialogue_ok.append(f"{k}  →  " + "／".join(scenes))
             continue
         decks = [r["deck"] for r in v]
         line = f"{k}  →  " + " ／ ".join(f"{r['deck']}:{r['zh']}" for r in v)
@@ -127,6 +142,8 @@ def check_duplicates(items):
           "同一份清單裡不該有兩條相同的詞。刪除前確認沒有學習記錄掛在上面。")
     issue("info", "跨詞庫重複（可能是刻意的）", cross_deck,
           "該詞會有兩張卡、統計各算一次。若非本意，刪掉其中一條。")
+    issue("info", "同一句出現在多段對話（設計如此）", dialogue_ok,
+          "每段對話都要有自己那一行，否則該段會因不足兩行而整組消失。")
 
 
 def check_same_meaning(items):
@@ -235,9 +252,12 @@ def check_type(items):
 def check_romanization(items):
     issue("warn", "非句子卻缺羅馬音",
           [x["ko"] for x in items if x["item_type"] != "sentence" and not x.get("romanization")])
+    # 允許句讀：羅馬音是逐句轉寫，日文的「、」「。」轉寫成 , 與 . 是正常的
+    #（韓文站的羅馬音多半是單詞，本來就不會出現，所以放寬不影響它）。
+    # 原本把逗號判成非法，19 句對話全被報成 error —— 那不是髒資料，是書上的寫法。
     issue("error", "羅馬音含非法字元",
           [f"{x['ko']}: {x['romanization']}" for x in items
-           if x.get("romanization") and re.search(r"[^a-z0-9 \-']", x["romanization"])])
+           if x.get("romanization") and re.search(r"[^a-z0-9 \-',.?!]", x["romanization"])])
     issue("error", "羅馬音欄裡出現韓文",
           [f"{x['ko']}: {x['romanization']}" for x in items
            if x.get("romanization") and HANGUL.search(x["romanization"])])

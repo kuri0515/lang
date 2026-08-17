@@ -48,6 +48,36 @@ LESSONS.sort(key=lambda L: GOJUON.index(L['kana']) if L['kana'] in GOJUON else 9
 HEADER = ['ko', 'zh', 'romanization', 'type', 'note', 'tags']
 
 
+def compose_note(L):
+    """口訣 + 字源，但去掉字源裡「把口訣再講一次」的句子。
+
+    【為什麼在這裡做，不改來源檔】
+        來源檔是逐字照書的真理源，動了就失去對照的價值。
+        重複只是「兩段各自都對，接在一起才顯得囉嗦」的呈現問題，
+        所以在組裝的這一層處理。
+
+    【判準：只砍「重述」，不砍「資訊」】
+        砍掉的條件是：這一句與口訣有 ≥6 字連續重疊，
+        而且句子裡帶著「口訣／熟記／記憶」這類指涉口訣的字眼。
+        單純提到同一個詞（お 那句講圖像記憶法時又提到おばさん）不砍 ——
+        它帶著新資訊。寧可留一點囉嗦，也不要砍掉學習者需要的東西。
+    """
+    mnem = L['mnemonic']
+    kept, dropped = [], []
+    for sent in re.split(r'(?<=[。！])', L['origin']):
+        if not sent.strip():
+            continue
+        refers = any(w in sent for w in ('口訣', '熟記', '來記憶'))
+        overlap = any(mnem[i:i + 6] in sent for i in range(max(0, len(mnem) - 5)))
+        # ★ 帶著實際字源說明的句子一律不砍。
+        #   第一版的判準砍掉了 う 的「字源是『宇宙』的『宇』，所以用烏鴉…」——
+        #   那句同時帶著字源與重述，砍掉重述的代價是連字源一起沒了。
+        #   寧可留一句囉嗦，也不要在去重的名義下弄丟學習者要的東西。
+        has_info = any(w in sent for w in ('字源是', '字源來自', '字源為'))
+        (dropped if (refers and overlap and not has_info) else kept).append(sent)
+    return mnem + '\n' + ''.join(kept), dropped
+
+
 def rows_for(L):
     """一課 → 一串列。順序即 sort_order：假名卡 → 單字 → 對話。"""
     rows = []
@@ -58,7 +88,7 @@ def rows_for(L):
         'zh': f"{L['romaji']} ·平假名",
         'romanization': L['romaji'],
         'type': 'word',
-        'note': f"{L['mnemonic']}\n{L['origin']}",
+        'note': compose_note(L)[0],
         'tags': f"清音,平假名,{L['row']}",
     })
     # ② 單字
@@ -198,6 +228,12 @@ def main():
             why = suspicious(r['romanization'])
             if why:
                 review.append((L['kana'], r['ko'], r['romanization'], why))
+
+    trimmed = [(L['kana'], d) for L in LESSONS for d in compose_note(L)[1]]
+    if trimmed:
+        print(f"\n【口訣去重：砍掉 {len(trimmed)} 句重述】原始來源檔未更動")
+        for k, d in trimmed:
+            print(f"   {k}：{d}")
 
     merged, merges = merge_duplicates(all_rows)
     merged_by_key = {
