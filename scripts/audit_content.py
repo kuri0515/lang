@@ -442,6 +442,47 @@ def check_note_hanja(items):
           "同一件事存在兩處必然漂移，學生會不知道信哪個。")
 
 
+def check_note_repeats(items):
+    """
+    note 內有重複的片段 —— 補充說明時貼過頭的必然產物。
+
+    我自己造成過四次：補詞源標註時把「조금 的縮寫」又貼了一遍、
+    버니즈 的「（bunny＋-s）」出現兩次、싫다 的「讀 [실타]」寫了兩次。
+    肉眼看不出來，因為每一句單獨讀都通順，只是整段讀起來囉嗦。
+
+    比對 6 字子串而非整句：重複往往發生在句子開頭，
+    切句比對會漏掉（「조금 的縮寫，但…」與「조금 的縮寫，固有語…」不是同一句）。
+    要求子串至少有 3 個不同字元，避免「、、、」這類標點誤報。
+    """
+    content_ch = lambda c: c.isalnum() or "가" <= c <= "힣" or "一" <= c <= "鿿"
+
+    def dup(t, n=6):
+        seen = {}
+        for i in range(len(t) - n + 1):
+            seg = t[i:i + n]
+            j = seen.get(seg)
+            if j is not None and len(set(seg)) > 2:
+                # 並列句式的重複是刻意的：
+                #   「거기＝那裡（離聽者近）、저기＝那裡（離兩人都遠）」
+                # 特徵是兩處前面各接一個不同的實字（거／저）。
+                # 貼過頭則至少有一處落在句子開頭（前面是句號或整段開頭）。
+                pa = t[j - 1] if j else ""
+                pb = t[i - 1] if i else ""
+                parallel = pa and pb and content_ch(pa) and content_ch(pb) and pa != pb
+                if not parallel:
+                    return seg
+            seen.setdefault(seg, i)
+        return None
+
+    bad = []
+    for x in items:
+        d = dup((x.get("note") or "").replace(" ", ""))
+        if d:
+            bad.append(f"{x['ko']}：重複「{d}」")
+    issue("warn", "note 內有重複片段", bad,
+          "補充說明時貼過頭。每句單獨讀都通順，整段讀起來才發現囉嗦。")
+
+
 def check_dialogues(items):
     """
     對話的完整性。畫面把它們當成一段對話呈現，資料不完整就會露餡。
@@ -602,6 +643,7 @@ def main():
     check_hanja_consistency(items)
     check_life_scene_coverage(items)
     check_dialogues(items)
+    check_note_repeats(items)
     check_tags(items)
     check_counter_sync(url, key)
     check_completeness(items, decks)
