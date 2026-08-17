@@ -198,6 +198,23 @@ console.log('\n【課程導言】');
       '只講規則不給實例，等於還是要學習者自己想像');
   chk('導言的 DOM 錨點存在',
       !!$('lesson-intro') && !!$('lesson-title') && !!$('lesson-body'));
+
+  // ---- 收尾話 ----
+  const { lessonOutro } = await import(ROOT+'/js/core/taxonomy.js');
+  chk('★ 不是每課都有收尾話',
+      PRON_ORDER.filter((t) => lessonOutro(t, 0.9)).length < PRON_ORDER.length,
+      '每課都給等於每句都不算數，稱讚天天有就成了背景音');
+  chk('答得不好時不假稱讚，換成重新定義挫敗',
+      lessonOutro('收音ㄹ', 0.4) !== lessonOutro('收音ㄹ', 0.9)
+      && /正常/.test(lessonOutro('收音ㄹ', 0.4)),
+      '答錯一半最不需要的是「太棒了」');
+  chk('複合收音十一課共用同一句 —— 它們是同一條規則的十一個實例',
+      lessonOutro('收音ㄼ', 0.9) === lessonOutro('收音ㅄ', 0.9)
+      && lessonOutro('收音ㄼ', 0.9) !== '');
+  chk('★ 基本收音不被當成複合收音',
+      lessonOutro('收音ㄱ', 0.9) !== lessonOutro('收音ㄼ', 0.9),
+      '收音ㄼ 與 收音ㄱ 都是三個字，不能用字串長度分辨');
+  chk('非課程內容沒有收尾話', lessonOutro('', 0.9) === '' && lessonOutro('食物', 0.9) === '');
 }
 
 console.log(f?`\n❌ 失敗 ${f} 項`:'\n✅ 全部通過');

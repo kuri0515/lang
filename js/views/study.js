@@ -10,6 +10,7 @@ import { getMode } from '../study/modes/index.js';
 import * as content from '../data/content.js';
 import * as speech from '../core/speech.js';
 import { openEditor } from './editor.js';
+import { lessonOutro } from '../core/taxonomy.js';
 
 const els = {};
 let session = null;
@@ -272,9 +273,16 @@ async function showHanja(item) {
   els.hanjaRel.classList.remove('hidden');
 }
 
-export function renderDone(stats, free) {
+export function renderDone(stats, free, lesson = '') {
   $('done-text').textContent = stats.n
     ? `本輪答了 ${stats.n} 題，正確率 ${pct(stats.correct / stats.n)}。`
       + (free ? '（自由練習：已記錄成績，複習排程未變動）' : '')
     : '本輪沒有作答。';
+
+  // 課程收尾話。刻意不是每課都有 —— 每課都給等於每句都不算數。
+  // 沒作答就不說，那句話會變成對著空氣講。
+  const outro = stats.n ? lessonOutro(lesson, stats.correct / stats.n) : '';
+  const el = $('done-outro');
+  el.textContent = outro;
+  el.classList.toggle('hidden', !outro);
 }

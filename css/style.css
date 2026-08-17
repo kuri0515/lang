@@ -775,3 +775,10 @@ kbd {
 .lesson-intro p {
   margin: 7px 0 0; font-size: 13px; line-height: 1.65; color: var(--text);
 }
+
+/* 課程收尾話。比成績再輕一階 —— 它是陪伴，不是評價。 */
+.done-outro {
+  margin: 10px 0 0; font-size: 13px; line-height: 1.65;
+  color: var(--accent); text-align: left;
+  padding: 10px 13px; background: var(--accent-soft); border-radius: var(--r-sm);
+}

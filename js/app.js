@@ -22,6 +22,8 @@ import { initEdits } from './views/edits.js';
 import * as home from './views/home.js';
 import * as study from './views/study.js';
 import { LESSON_INTRO } from './core/taxonomy.js';
+
+let currentLesson = '';   // 本輪練的是哪一課，結束畫面要用
 import * as browse from './views/browse.js';
 import * as history from './views/history.js';
 import * as importer from './views/importer.js';
@@ -46,7 +48,11 @@ const session = createSession({
     return p.free ? progress.logPractice(args) : progress.saveReview(args);
   },
   onChange: (state) => study.render(state),
-  onFinish: (stats, free) => { study.renderDone(stats, free); show('view-done'); },
+  // 收尾話要知道剛練的是哪一課；自由練習不算推進課程，所以不帶
+  onFinish: (stats, free) => {
+    study.renderDone(stats, free, free ? '' : currentLesson);
+    show('view-done');
+  },
   onError: (e) => msg('儲存失敗：' + (e.message || e)),
 });
 
@@ -56,7 +62,8 @@ async function ensurePool() {
 
 /** 開始一輪：依題型過濾佇列，過濾後沒東西就別進去 */
 async function begin(entries, { freeMode = false, kind = 'review', note = '', lesson = '' } = {}) {
-  // 導言每輪都要重設 —— 不清掉的話，下一輪學別的內容會掛著上一課的說明
+  // 導言與收尾話每輪都要重設 —— 不清掉的話，下一輪會掛著上一課的內容
+  currentLesson = lesson;
   study.setLesson(lesson, lesson ? LESSON_INTRO[lesson] : '');
   const modeId = home.studyMode();
   if (needsPool(modeId)) await ensurePool();
