@@ -11,7 +11,7 @@ import { on, emit, EVENTS } from './core/bus.js';
 import * as auth from './data/auth.js';
 import * as content from './data/content.js';
 import * as progress from './data/progress.js';
-import { createSession } from './study/session.js';
+import { createSession, orderForDiscrimination } from './study/session.js';
 import { getMode, needsPool } from './study/modes/index.js';
 import { show, onEnter, initTabs, viewFromHash } from './views/router.js';
 import { initTheme } from './views/theme.js';
@@ -21,7 +21,7 @@ import { initEditor, openEditor, loadDecksInto } from './views/editor.js';
 import { initEdits } from './views/edits.js';
 import * as home from './views/home.js';
 import * as study from './views/study.js';
-import { lessonIntro } from './core/taxonomy.js';
+import { lessonIntro, confusableOf } from './core/taxonomy.js';
 
 let currentLesson = '';   // 本輪練的是哪一課，結束畫面要用
 import * as browse from './views/browse.js';
@@ -173,7 +173,7 @@ async function startFree({ ids = null, tag = '', deckId = null,
     if (!items.length) return msg('沒有符合的內容');
     const dir = home.effectiveDir();
     const entries = items.map((item) => ({ item, direction: dir, card: null }));
-    await begin(keepOrder ? entries : shuffle(entries),
+    await begin(keepOrder ? entries : orderForDiscrimination(entries, confusableOf),
                 { freeMode: true, kind, lesson: tag,
                   note: kind === 'drill'
                     ? '弱項修復 · 只記錄成績，不影響複習排程'
@@ -194,7 +194,10 @@ async function startRecall() {
     const dir = home.effectiveDir();
     const entries = await progress.fetchRecallEntries(user.id, dir);
     if (!entries.length) return msg('回顧清單是空的。在卡片上點 ☆ 就會加進來。');
-    await begin(shuffle(entries), {
+    // ★ 不用 shuffle：形近組要相鄰出現才練得到辨別。
+    //   ぬ 和 め 被打散到頭尾，中間隔十幾題，等於各自單獨練 ——
+    //   而各自單獨練本來就都會。
+    await begin(orderForDiscrimination(entries, confusableOf), {
       kind: 'drill',
       note: '回顧清單 · 答得好不會把複習日推遠，答不好才拉近',
     });
@@ -246,14 +249,53 @@ async function refreshRecall() {
   } catch { /* 清單載不到不該擋住整個首頁 */ }
 }
 
+/**
+ * 標了一個形近字，把整組一起加進來。
+ *
+ * ★ 這是這份形近組資料真正的用處。
+ *   使用者標 ぬ 的時候想的是「這個字我不熟」，
+ *   但他真正的問題是「ぬ 和 め 分不出來」—— 只練 ぬ 練不掉那個問題。
+ *   老師在旁邊會說「你這兩個一直搞混，我們一起練」，這行就是那句話。
+ *
+ * 不問就直接加：問了等於把判斷丟回給不知道答案的人，
+ * 而且多一次點擊。加錯的代價很小（清單上點 × 就移除），
+ * 漏加的代價是繼續錯下去。
+ */
+async function addConfusableMates(item) {
+  const group = confusableOf(item.ko);
+  if (!group) return [];
+  const mates = await content.pickItems({ ids: null, tag: '', limit: 400 })
+    .then((all) => all.filter((x) => x.ko !== item.ko && group.keys.includes(x.ko)))
+    .catch(() => []);
+  const added = [];
+  for (const m of mates) {
+    if (recallIds.has(m.id)) continue;
+    try {
+      await progress.addToReviewList(m.id, `與「${item.ko}」形近`);
+      recallIds.add(m.id);
+      added.push(m.ko);
+    } catch { /* 單一條加不進去不該中斷整組 */ }
+  }
+  return added;
+}
+
 async function toggleRecall(item) {
   if (!user) return;
   const on = recallIds.has(item.id);
   try {
-    if (on) { await progress.removeFromReviewList(item.id); recallIds.delete(item.id); }
-    else { await progress.addToReviewList(item.id); recallIds.add(item.id); }
+    if (on) {
+      await progress.removeFromReviewList(item.id);
+      recallIds.delete(item.id);
+      msg('已從回顧清單移除', 'ok');
+    } else {
+      await progress.addToReviewList(item.id);
+      recallIds.add(item.id);
+      const mates = await addConfusableMates(item);
+      msg(mates.length
+        ? `已加入，並一起加了形近的 ${mates.join('、')} —— 這組要放在一起練才分得出來`
+        : '已加入回顧清單', 'ok');
+    }
     study.render(session.state());
-    msg(on ? '已從回顧清單移除' : '已加入回顧清單', 'ok');
     refreshRecall();
   } catch (e) { msg(e.message || e); }
 }

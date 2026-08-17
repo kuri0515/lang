@@ -6,7 +6,7 @@
 //
 //     node tests/session.test.mjs
 // =====================================================================
-import { createSession, matchesType } from '../shared/js/study/session.js';
+import { createSession, matchesType, orderForDiscrimination } from '../shared/js/study/session.js';
 import { RATING, scheduleRecall } from '../shared/js/core/srs.js';
 
 let fails = 0;
@@ -138,6 +138,46 @@ console.log('\n【手動回顧的排程：只縮不放】');
 
   chk('還在學習階段的卡不動', scheduleRecall({ state: 'learning' }, RATING.HARD, now) === null,
       '它本來就很快會再出現');
+}
+
+console.log('\n【辨別優先的佇列編排】');
+{
+  const G = [
+    { keys: ['さ', 'き', 'ち'], hint: 'x' },
+    { keys: ['ぬ', 'め'], hint: 'y' },
+  ];
+  const groupOf = (ko) => G.find((g) => g.keys.includes(ko)) || null;
+  const mk = (ks) => ks.map((k) => ({ item: { ko: k } }));
+  let seed = 7;
+  const rand = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+
+  const out = orderForDiscrimination(mk(['ち','ねこ','め','うみ','さ','ぬ','き']), groupOf, rand);
+  const pos = (k) => out.findIndex((e) => e.item.ko === k);
+  const adjacent = (ks) => {
+    const idx = ks.map(pos).filter((i) => i >= 0).sort((a, b) => a - b);
+    return idx.every((v, i) => i === 0 || v === idx[i - 1] + 1);
+  };
+  chk('★ 同一形近組相鄰出現', adjacent(['さ','き','ち']) && adjacent(['ぬ','め']),
+      '被打散到頭尾等於各自單獨練，而各自單獨練本來就都會');
+  chk('組內照教學順序（さ 兩橫 → き 三橫 → ち 鏡像）',
+      pos('さ') < pos('き') && pos('き') < pos('ち'),
+      '不照使用者標記的先後 —— 宣告順序是教學順序');
+  chk('不增不減', out.length === 7);
+  chk('沒有形近組的詞照常參與', pos('ねこ') >= 0 && pos('うみ') >= 0);
+
+  // ★ 反面樣本：沒給 groupOf 時要能退化成純排列，不能炸
+  chk('沒有形近資料時不炸',
+      orderForDiscrimination(mk(['a','b','c']), null, rand).length === 3,
+      '韓文站的 confusable 是空的，這條路必須走得通');
+
+  // 組間要真的會變動，否則使用者靠位置記答案
+  const a = orderForDiscrimination(mk(['さ','ぬ','ねこ','き','め']), groupOf, rand)
+    .map((e) => e.item.ko).join();
+  let seed2 = 999; const rand2 = () => { seed2 = (seed2 * 9301 + 49297) % 233280; return seed2 / 233280; };
+  const b = orderForDiscrimination(mk(['さ','ぬ','ねこ','き','め']), groupOf, rand2)
+    .map((e) => e.item.ko).join();
+  chk('組與組之間會隨機（不同亂數給出不同順序）', a !== b,
+      '固定順序會讓人靠位置記答案 —— 那是記順序不是記字', a + '  vs  ' + b);
 }
 
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');

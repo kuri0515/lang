@@ -162,3 +162,42 @@ export const matchesType = (item, t) =>
   t === 'all' || !t ? true
   : t === 'sentence' ? item.item_type === 'sentence'
   : item.item_type !== 'sentence';
+
+/**
+ * 依「辨別優先」重排佇列：同一形近組的條目相鄰出現。
+ *
+ * 【為什麼隨機打亂是錯的】
+ *   ぬ 和 め 都在清單裡卻被打散到頭尾，中間隔了十幾題 ——
+ *   那等於各自單獨練，而各自單獨練本來就都會。
+ *   辨別要的是「剛看完 ぬ 馬上看到 め」，讓兩者在工作記憶裡碰面。
+ *
+ * 【為什麼組與組之間仍要打亂】
+ *   固定順序會讓人靠位置記答案（第三題總是 ぬ），
+ *   那是記順序不是記字。所以組內固定、組間隨機。
+ *
+ * @param {Array}    entries  佇列項目（含 item）
+ * @param {Function} groupOf  item.ko → 形近組（沒有回 null）
+ * @param {Function} rand     可注入，測試才驗得了
+ */
+export function orderForDiscrimination(entries, groupOf, rand = Math.random) {
+  const blocks = [];
+  const byGroup = new Map();
+  for (const e of entries) {
+    const g = groupOf?.(e.item?.ko);
+    if (!g) { blocks.push([e]); continue; }
+    const key = g.keys.join('|');
+    if (!byGroup.has(key)) { const b = []; byGroup.set(key, b); blocks.push(b); }
+    byGroup.get(key).push(e);
+  }
+  // 組內照該組宣告的順序排，不照使用者標記的先後 ——
+  // 宣告順序是教學順序（先 さ 再 き 再 ち：兩橫→三橫→鏡像）
+  for (const [key, b] of byGroup) {
+    const order = key.split('|');
+    b.sort((x, y) => order.indexOf(x.item.ko) - order.indexOf(y.item.ko));
+  }
+  for (let i = blocks.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [blocks[i], blocks[j]] = [blocks[j], blocks[i]];
+  }
+  return blocks.flat();
+}
