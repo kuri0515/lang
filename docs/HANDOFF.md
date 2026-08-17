@@ -1,22 +1,55 @@
-# 接手文件 · 韓語單字卡
+# 接手文件 · 單字卡（韓語 / 日語）
 
 > 停在 2026-08-17。接手先讀這份，讀完再動手。
-> 線上：https://kuri0515.github.io/korean/　倉庫：github.com/kuri0515/korean
+> 線上：`kuri0515.github.io/lang/korean/`　倉庫：github.com/kuri0515/lang
+
+---
+
+## ⚠️ 2026-08-17：拆成 monorepo，多了一個日文站
+
+原本這個倉庫**就是**韓文站（檔案都在根目錄）。現在改成：
+
+```
+shared/     程式碼只有一份，兩站共用。沒有一行認識「韓文」或「日文」
+korean/     韓文站：只有語言設定 + 課程內容 + 詞表
+japanese/   日文站：同上，骨架完成，等 Supabase 專案與詞表
+```
+
+**這份文件以下的內容仍然有效，但路徑要換**：
+`js/` → `shared/js/`，`scripts/` → `shared/scripts/`，
+`data/` → `korean/data/`，`index.html` → `korean/index.html`。
+
+**動腳本一定要帶站台**（預設 `korean`）：
+
+```bash
+python3 shared/scripts/audit_content.py                    # 韓文站
+SITE=japanese python3 shared/scripts/audit_content.py      # 日文站
+```
+
+每支腳本第一行都會印出它要連的 Supabase project ref。**每次都看一眼** ——
+這些腳本拿的是 service_role key，RLS 對它無效，站台認錯就寫進另一站的線上資料。
+兩站是**兩個不同的 Supabase 專案**，這是刻意的：共用一個的話，
+匯入或清理腳本的條件一寫寬，就會動到另一站的真實學習記錄。
+
+新增語言的完整步驟見 `README.md`「新增一個語言站」。`shared/` 一行都不用改。
 
 ---
 
 ## 〇、三十秒認識這個專案
 
-給**一位特定學習者**做的韓語學習網站。不是通用產品 —— 內容是照她的興趣客製的：
+給**一位特定學習者**做的語言學習網站。不是通用產品 —— 內容是照她的興趣客製的：
 NewJeans（尤其 해린）、三麗鷗、扭蛋、設計美學、打掃收納、命理運勢、自媒體、
 療癒與生活品質。目標不是應付考試，是**能開口說**。
+
+（她的興趣裡有很大一塊本來就是日本的 —— 三麗鷗、扭蛋、收納、占卜。
+這些在韓文站是「借來講」，在日文站是講原產地，這也是開日文站的理由之一。）
 
 技術上是靜態前端（GitHub Pages）+ Supabase（Auth／Postgres／RLS），沒有建置步驟。
 
 ```bash
-npm test                          # 146 項斷言，動任何 js/ 之前先跑
-python3 scripts/audit_content.py  # 內容稽核，error 必須是 0
-python3 -m http.server 8000       # 本機預覽
+npm test                                  # 兩站一起驗，動任何 shared/js 之前先跑
+python3 shared/scripts/audit_content.py   # 內容稽核，error 必須是 0
+python3 -m http.server 8000               # 本機預覽，★ 必須從倉庫根起服務
 ```
 
 ---
@@ -113,8 +146,8 @@ error 0 · warn 25（全部需人眼判斷，沒有可自動處理的）
 ### 動資料之前
 
 ```bash
-python3 scripts/backup.py --selftest   # 確認備份跑得動
-python3 scripts/backup.py              # 真的備份
+python3 shared/scripts/backup.py --selftest   # 確認備份跑得動
+python3 shared/scripts/backup.py              # 真的備份
 ```
 
 **為什麼要 selftest**：修分頁排序時我一律加了 `order=id`，
@@ -139,7 +172,7 @@ python3 scripts/backup.py              # 真的備份
 ### 誤報多了就等於沒有檢查
 
 做過一條「zh 與 note 的解釋對不上」的檢查，全庫 73 命中只有 1 條是真的，
-**信噪比 1/73，撤掉了**。判斷寫在 `scripts/audit_content.py` 開頭的
+**信噪比 1/73，撤掉了**。判斷寫在 `shared/scripts/audit_content.py` 開頭的
 「試過但撤掉的檢查」區塊 —— 不寫下來，下次會再做一次同樣的嘗試。
 
 ### 中斷後先確認狀態再重試
@@ -168,7 +201,7 @@ python3 scripts/backup.py              # 真的備份
 
 ### 自己加：CSV 批次匯入
 
-在 `data/vocab/` 建檔（欄位順序不拘，認得別名）：
+在 `korean/data/vocab/` 建檔（欄位順序不拘，認得別名）：
 
 ```csv
 ko,zh,type,pos,hanja,romanization,note,example_ko,example_zh,tags
@@ -176,12 +209,12 @@ ko,zh,type,pos,hanja,romanization,note,example_ko,example_zh,tags
 ```
 
 ```bash
-python3 scripts/backup.py --selftest
-python3 scripts/backup.py
-python3 scripts/import_words.py data/vocab/新檔.csv \
+python3 shared/scripts/backup.py --selftest
+python3 shared/scripts/backup.py
+python3 shared/scripts/import_words.py korean/data/vocab/新檔.csv \
     --deck life-01 --title "生活 · 興趣" --append            # dry-run，先看
-python3 scripts/import_words.py ... --append --apply         # 確認後才寫
-python3 scripts/audit_content.py                             # error 必須 0
+python3 shared/scripts/import_words.py ... --append --apply  # 確認後才寫
+python3 shared/scripts/audit_content.py                      # error 必須 0
 ```
 
 **`--append` 一定要加。** 不加會用序號當 slug，分批匯入時後一批覆蓋前一批 ——
@@ -207,8 +240,9 @@ python3 -c "import sys;sys.path.insert(0,'scripts');from prep_paste import roman
 | `type` | `word` / `phrase` / `sentence`。句子不需要例句，也不需要 pos |
 | 對話 | note 格式 `對話 A｜情境｜語法說明`，行序靠 `sort_order`，每組至少兩句、不能從 B 開始 |
 
-新增場景要**改兩個地方**：`js/core/taxonomy.js` 的 `LIFE_SCENES` 與
-`scripts/audit_content.py` 的 `check_life_scene_coverage`。
+新增場景要**改兩個地方**：`korean/taxonomy.js` 的 `LIFE_SCENES` 與
+`shared/scripts/audit_content.py` 的 `check_life_scene_coverage`。
+（場景定義搬到站台了 —— 演算法才在 `shared/js/core/taxonomy.js`。）
 只改一邊稽核會報警提醒 —— 這是刻意的。
 
 ---
@@ -216,26 +250,36 @@ python3 -c "import sys;sys.path.insert(0,'scripts');from prep_paste import roman
 ## 六、專案地圖
 
 ```
-index.html            全部畫面（單頁）
-css/style.css         全部樣式
-js/
-  core/               純邏輯，不碰網路
-    srs.js            SM-2 排程
-    taxonomy.js       ★ 教學知識：發音課程順序、生活場景、導言、收尾話
-    dialogue.js       對話解析與打亂
-    speech.js         TTS（speakAwait 會等唸完）
-  data/               只有 client.js 認識 supabase
-  study/              session.js 是 DOM-free 引擎；modes/ 是可插拔題型
-  views/              畫面，只負責畫與轉手
-scripts/
-  audit_content.py    ★ 內容稽核，開頭有「試過但撤掉的檢查」
-  import_words.py     CSV 匯入（--append 冪等）
-  backup.py           備份（--selftest / --verify / --restore-plan）
-  prep_paste.py       羅馬化 + 貼上處理
-  fill_*.py           補 pos／例句／note 的一次性腳本，含判定台帳
-tests/                arch（架構＋DOM 契約）· dom · session · modes
-data/vocab/           116 個 CSV，匯入的原始台帳
-supabase/migrations/  12 個，用 scripts/migrate.sh
+index.html            岔路口：選語言
+shared/
+  css/style.css       全部樣式
+  js/
+    core/             純邏輯，不碰網路
+      lang.js         ★ 語言設定登記處。共用碼要語言相關的東西一律向它要
+      srs.js          SM-2 排程
+      taxonomy.js     ★ 分組／排序／下一課的**演算法**（沒有課程內容）
+      dialogue.js     對話解析與打亂
+      speech.js       TTS（speakAwait 會等唸完），語言相關的走 lang()
+    data/             只有 client.js 認識 supabase
+    study/            session.js 是 DOM-free 引擎；modes/ 是可插拔題型
+    views/            畫面，只負責畫與轉手
+  scripts/
+    site_ctx.py       ★ 站台解析 + 密鑰載入，所有腳本共用；會印出目標 project ref
+    audit_content.py  ★ 內容稽核，開頭有「試過但撤掉的檢查」
+    import_words.py   CSV 匯入（--append 冪等）
+    backup.py         備份（--selftest / --verify / --restore-plan）
+    prep_paste.py     羅馬化 + 貼上處理
+    fill_*.py         補 pos／例句／note 的一次性腳本，含判定台帳
+  supabase/migrations/  12 個，用 shared/scripts/migrate.sh（SITE= 決定跑哪一站）
+korean/
+  index.html          全部畫面（單頁）
+  main.js             進入點：先 setLang，才動態載入 shared/js/app.js
+  lang.config.js      ★ 這個語言的一切：稱呼、TTS、正則、欄位別名、Supabase
+  taxonomy.js         ★ 這個語言的課程內容：發音序列、導言、生活場景
+  data/vocab/         116 個 CSV，匯入的原始台帳
+japanese/             同上結構，骨架完成、等 Supabase 專案與詞表
+tests/                lang（設定完備性）· boot（兩站真的載得起來）
+                      arch（架構＋DOM 契約）· dom · session · modes
 docs/HANDOFF.md       這份
 ```
 
