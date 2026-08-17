@@ -5,6 +5,7 @@
 // 前端沒有「忘了記」的可能。這裡只負責把它讀出來畫。
 // =====================================================================
 import { $, esc, skeleton, emptyState, qs } from '../core/dom.js';
+import { wordHTML } from '../core/ruby.js';
 import { on, EVENTS } from '../core/bus.js';
 import * as admin from '../data/admin.js';
 import { lang } from '../core/lang.js';
@@ -65,7 +66,7 @@ async function load() {
       return `<div class="edit-row">
         <div class="edit-head">
           <span><span class="edit-act">${ACTION[r.action]?.label || r.action}</span>
-            <b>${esc(r.ko)}</b> <span class="muted">${esc(r.zh)}</span></span>
+            <b>${wordHTML(r)}</b> <span class="muted">${esc(r.zh)}</span></span>
           <span class="edit-when">${esc(fmt(r.edited_at))}${r.editor ? ` · ${esc(r.editor)}` : ''}</span>
         </div>
         ${diff ? `<div class="edit-diff">${diff}</div>` : ''}

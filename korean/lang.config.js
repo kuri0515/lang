@@ -84,6 +84,11 @@ export const LANG = {
     importSample: '사랑,愛,sarang,單字,명사,,,,情感',
     posSample: '명사 / 동사 …',
     readingSample: '',
+    // 韓文站沒有字母表（諺文是拼合而成，不是逐字表），
+    // 這兩句不會被輸出 —— 但仍要有值，否則樣板檢查會直接失敗，
+    // 而「悄悄少一段」比報錯難發現得多。
+    gridHint: '',
+    dakuonHint: '',
     hanjaLabel: '漢字詞（如 學校；固有語留空）',
     hanjaSample: '',
   },

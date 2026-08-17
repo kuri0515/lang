@@ -3,6 +3,7 @@
 // 佇列與計分邏輯全在 study/session.js，題型渲染全在 study/modes/*
 // =====================================================================
 import { $, esc, pct, msg } from '../core/dom.js';
+import { wordHTML } from '../core/ruby.js';
 import { on, EVENTS } from '../core/bus.js';
 import { dirLabel, TYPE_LABEL } from '../data/client.js';
 import { previewIntervals } from '../core/srs.js';
@@ -278,7 +279,7 @@ async function showSameMeaning(item) {
 
   els.same.innerHTML = '<div class="sm-title">中文相同的還有</div>'
     + rel.map((r) => '<div class="sm-row">'
-      + `<span class="sm-ko">${esc(r.ko)}</span>`
+      + `<span class="sm-ko">${wordHTML(r)}</span>`
       + (r.romanization ? `<span class="sm-roman">${esc(r.romanization)}</span>` : '')
       + (r.note ? `<span class="sm-note">${esc(r.note)}</span>` : '')
       + '</div>').join('');
@@ -329,7 +330,7 @@ async function showHanja(item) {
 
   els.hanjaRel.innerHTML = groups.map((g) =>
     `<div><b>${esc(g.ch)}</b> — ` + g.rel.map((r) =>
-      `<span class="rel"><b>${esc(r.ko)}</b> ${esc(r.zh)}</span>`).join('') + '</div>').join('');
+      `<span class="rel"><b>${wordHTML(r)}</b> ${esc(r.zh)}</span>`).join('') + '</div>').join('');
   els.hanjaRel.classList.remove('hidden');
 }
 

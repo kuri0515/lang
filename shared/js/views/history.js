@@ -1,5 +1,6 @@
 // 學習記錄：逐筆時間線 + 近 30 天曲線
 import { $, esc, msg, skeleton, emptyState, qs, qsa, debounce, createPager } from '../core/dom.js';
+import { wordHTML } from '../core/ruby.js';
 import { dirShort, dirLabel, RATE_LABEL } from '../data/client.js';
 import * as progress from '../data/progress.js';
 import { summarize, funnel, byDirection } from '../core/stats.js';
@@ -157,7 +158,7 @@ function bindToggles() {
           <div class="h-item">
             <span class="h-time">${fmtTime(r.reviewed_at)}</span>
             <span class="h-mark">${r.is_correct ? '✅' : '❌'}</span>
-            <span class="h-word">${esc(r.items.ko)} <small>${esc(r.items.zh)}</small>
+            <span class="h-word">${wordHTML(r.items)} <small>${esc(r.items.zh)}</small>
               ${r.items.hanja ? `<small class="b-hanja"> · 漢 ${esc(r.items.hanja)}</small>` : ''}</span>
             <span class="h-rate">${RATE_LABEL[r.rating] || ''}${
               r.elapsed_ms ? `<small> ${(r.elapsed_ms / 1000).toFixed(1)}s</small>` : ''
@@ -313,7 +314,7 @@ function renderWords() {
     return `<div class="w-row" data-id="${esc(w.item_id)}">
       <button class="w-head">
         <span class="w-main">
-          <span class="w-ko">${esc(w.ko)}</span>
+          <span class="w-ko">${wordHTML(w)}</span>
           <span class="w-zh"> ${esc(w.zh)}</span>
           ${w.hanja ? `<span class="b-hanja"> · 漢 ${esc(w.hanja)}</span>` : ''}
           <span class="w-sub">${esc(sub)}</span>

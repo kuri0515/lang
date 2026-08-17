@@ -1,5 +1,6 @@
 // 學習首頁：今日統計、連續天數、練習方式、詞庫、弱項
 import { $, opt, esc, pct, msg, emptyState, qs, qsa } from '../core/dom.js';
+import { wordHTML } from '../core/ruby.js';
 import { on, EVENTS } from '../core/bus.js';
 import { dirShort } from '../data/client.js';
 import * as content from '../data/content.js';
@@ -349,7 +350,7 @@ function renderWeak(weak) {
         const a = w.accuracy == null ? null : Number(w.accuracy);
         const cls = a == null ? '' : a < 0.5 ? 'low' : a < 0.8 ? 'mid' : '';
         return `<div class="weak-row">
-          <div>${esc(w.ko)} <span class="muted">${esc(w.zh)}</span>
+          <div>${wordHTML(w)} <span class="muted">${esc(w.zh)}</span>
             <span class="muted">· ${dirShort()[w.direction]}</span></div>
           <div class="pct ${cls}">${pct(a)} <span class="muted">(${w.total_reviews})</span></div>
         </div>`;
@@ -376,7 +377,7 @@ export function renderRecall(rows) {
     const tag = (it.tags || []).find((t) => t.length === 1) || '';
     const lesson = tag === it.ko ? '' : tag;
     return `<div class="recall-row">
-      <span class="r-ko">${esc(it.ko)}</span>
+      <span class="r-ko">${wordHTML(it)}</span>
       <span class="r-zh muted">${esc(it.zh)}</span>
       ${lesson ? `<span class="r-tag">${esc(lesson)}</span>` : ''}
       ${r.note ? `<span class="r-note">${esc(r.note)}</span>` : ''}

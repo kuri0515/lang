@@ -82,11 +82,9 @@
 {{#grid}}
       <details id="grid-box" class="grid-box hidden">
         <summary><span>五十音表</span><span id="grid-sub" class="muted"></span></summary>
-        <p class="hint">橫是「行」、縱是「段」。這不只是排版 ——
-          動詞活用就是在同一行上移動（書く → 書きます → 書いた）。</p>
+        <p class="hint">{{html.gridHint}}</p>
         <div id="gojuon"></div>
-        <p class="hint" style="margin-top:10px">濁音・半濁音不是新字 ——
-          在清音右上加兩點（゛）或小圈（゜）就變成它。要學的是規則，不是 25 個新符號。</p>
+        <p class="hint" style="margin-top:10px">{{html.dakuonHint}}</p>
         <div id="dakuon"></div>
       </details>
 {{/grid}}

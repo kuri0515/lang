@@ -17,7 +17,11 @@ export function initVoiceUI() {
     sel.innerHTML = list.map((v, i) =>
       `<option value="${esc(v.name)}"${v.name === cur?.name ? ' selected' : ''}>${esc(v.name)}${i === 0 ? '（推薦）' : ''}</option>`
     ).join('');
-    sel.onchange = () => { speech.setVoice(sel.value); speech.speak('안녕하세요'); };
+    // 試聽句由站台宣告 —— 曾經這裡寫死韓文問候語，
+    // 於是日文站選日語語音、按下去唸出一句韓文。
+    // 換語音的當下正是要聽「這個聲音唸我在學的語言好不好聽」，
+    // 唸錯語言等於這個功能整個失效。
+    sel.onchange = () => { speech.setVoice(sel.value); speech.speak(lang().voiceSampleShort); };
   });
 
   const r = $('voice-rate');

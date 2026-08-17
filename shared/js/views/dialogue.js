@@ -15,7 +15,7 @@ import { groupDialogues, shuffleLines, checkOrder } from '../core/dialogue.js';
 import * as speech from '../core/speech.js';
 import * as content from '../data/content.js';
 import { lang } from '../core/lang.js';
-import { hasRuby, rubyHTML } from '../core/ruby.js';
+import { stripRuby, wordHTML } from '../core/ruby.js';
 
 let all = [];          // [{ scene, lines }]
 let cur = null;        // 目前開啟的對話
@@ -106,10 +106,9 @@ function openOne(d) {
  *
  * 朗讀與答案比對一律用 item.ko（純文字）—— TTS 唸到 [えき] 會變成雜音。
  */
-const shownHTML = (item) => {
-  const src = (lang().rubyFromHanja && hasRuby(item.hanja)) ? item.hanja : item.ko;
-  return hasRuby(src) ? rubyHTML(src) : esc(src);
-};
+// 排序練習的句塊也走這裡：這一關考的是「語序」，不是「漢字怎麼唸」，
+// 所以標音不算洩題 —— 反而讓學習者是在讀句子，而不是在拼圖形。
+const shownHTML = (item) => wordHTML(item);
 
 function render() {
   if (!cur) return;
@@ -232,7 +231,7 @@ function renderShuffle() {
     const cls = !p ? '' : done ? (flags[i] ? 'ok' : 'no') : 'filled';
     return `<div class="dlg-slot">
       <span class="n">${i + 1}</span>
-      <div class="s ${cls}" data-slot="${i}">${p ? esc(p.item.ko) : '　'}</div>
+      <div class="s ${cls}" data-slot="${i}">${p ? shownHTML(p.item) : '　'}</div>
     </div>`;
   }).join('');
 
@@ -240,7 +239,7 @@ function renderShuffle() {
   $('dlg-pool').innerHTML = pool.map((l, i) => {
     const used = picked.includes(l);
     return `<button class="dlg-pick${used ? ' used' : ''}" data-pick="${i}"
-              ${used ? 'disabled' : ''}>${esc(l.item.ko)}</button>`;
+              ${used ? 'disabled' : ''}>${shownHTML(l.item)}</button>`;
   }).join('');
 
   $('dlg-result').textContent = !done ? ''

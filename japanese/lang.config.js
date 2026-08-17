@@ -90,6 +90,10 @@ export const LANG = {
     importSample: 'ねこ,貓,ne ko,單字,名詞,,,,動物',
     posSample: '名詞 / 動詞 …',
     readingSample: 'ha wo mi ga ki',
+    gridHint: '橫是「行」、縱是「段」。這不只是排版 —— 動詞活用就是在同一行上移動'
+            + '（書く → 書きます → 書いた）。',
+    dakuonHint: '濁音・半濁音不是新字 —— 在清音右上加兩點（゛）或小圈（゜）就變成它。'
+              + '要學的是規則，不是 25 個新符號。',
     hanjaLabel: '注音（漢字[かな]，沒有漢字就留空）',
     hanjaSample: '歯[は]を磨[みが]きましょう。',
   },

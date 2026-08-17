@@ -1,5 +1,6 @@
 // 詞庫瀏覽：搜尋、標籤、雙向學習狀態、批次下架（管理員）
 import { $, esc, msg, qsa, debounce, skeleton, emptyState, createPager } from '../core/dom.js';
+import { wordHTML } from '../core/ruby.js';
 import { on, emit, EVENTS } from '../core/bus.js';
 import { STATE_LABEL, TYPE_LABEL, dirShort } from '../data/client.js';
 import * as content from '../data/content.js';
@@ -105,7 +106,7 @@ export async function render() {
         <div class="b-main">
           <div>
             ${admin_ ? `<input type="checkbox" class="b-check" data-pick="${r.id}">` : ''}
-            <span class="b-ko">${esc(r.ko)}</span><span class="muted"> — </span><span class="b-zh">${esc(r.zh)}</span>
+            <span class="b-ko">${wordHTML(r)}</span><span class="muted"> — </span><span class="b-zh">${esc(r.zh)}</span>
           </div>
           <div class="b-badges">${badge('ko2zh')}${badge('zh2ko')}
             <button class="b-speak" data-ko="${esc(r.ko)}" title="朗讀">🔊</button>

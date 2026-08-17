@@ -327,5 +327,38 @@ const svcKeys = files.filter((f) => {
 });
 chk('前端沒有 service_role key', svcKeys.map(rel), 'anon key 公開是設計如此，安全靠 RLS');
 
+// ---------------------------------------------------------------------
+// 【清單畫面不可以直接印 ko】
+//
+// 資料裡 826 條的漢字全標了讀音，但一度只有學習卡片和情境對話會渲染 ——
+// 詞庫、學習歷史、回顧清單、同義詞、漢字詞群共七處印的是裸漢字。
+// 於是「駅」在卡片上看得到 えき，翻到詞庫又變回一個不會唸的字。
+//
+// 初學者這個階段還沒有「看到漢字自動浮出讀音」的能力，
+// 少標一次就是少一次曝光，而列表正是滑最快、看最多的地方。
+//
+// 這種缺陷不會報錯、資料查起來也是 100% 覆蓋率 —— 只有把畫面渲染出來才看得到。
+// 所以改成用一支 wordHTML()，並在這裡擋住走回頭路。
+//
+// 【兩種例外，都不是漏改】
+//   ① 屬性值（data-ko="…"）—— 那是拿去給 TTS 唸的，必須是純文字。
+//      塞 <ruby> 進屬性只會唸出一串標籤。
+//   ② importer.js —— 那是「你剛貼進來的東西長這樣」的預覽。
+//      預覽要忠實呈現原文，加工過的預覽就失去預覽的意義。
+//   把例外寫進閘門並說明理由，比讓人每次看到紅字再自己判斷一遍可靠。
+const RAW_KO = /\$\{esc\((?:\w+\.)*\w+\.ko\)\}/g;
+const rawKo = [];
+for (const f of files.filter((f) => /\/views\//.test(f) && !/importer\.js$/.test(f))) {
+  const src = read(f);
+  for (const m of src.matchAll(RAW_KO)) {
+    // 屬性值：往前找到最近的 < 或 > ，若中間有 =" 就是在標籤屬性裡
+    const head = src.slice(Math.max(0, m.index - 120), m.index);
+    if (/<[^<>]*=\"$/.test(head)) continue;
+    rawKo.push(`${rel(f)}: ${m[0]}`);
+  }
+}
+chk('清單畫面用 wordHTML() 而不是直接印 ko', rawKo,
+  '日文站的漢字要標讀音；韓文站 wordHTML 會原樣回傳，兩站共用同一支');
+
 console.log(fails ? `\n❌ ${fails} 項約束被違反` : '\n✅ 所有架構約束通過');
 process.exit(fails ? 1 : 0);
