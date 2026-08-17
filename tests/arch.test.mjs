@@ -92,6 +92,38 @@ const fieldLists = files.filter((f) => /'id, ko, zh, romanization/.test(read(f))
 chk('條目欄位清單集中一處',
   fieldLists.length > 1 ? fieldLists.map(rel) : [], 'ITEM_FIELDS');
 
+// 用到卻沒有匯入的識別字。
+// 實際踩過：把一個純函式搬到別的模組後，呼叫端改好了、import 卻沒補上，
+// 依賴方向與相對路徑檢查都是綠的（因為根本沒有那一行 import），
+// 直到執行到那個函式才 ReferenceError。
+console.log('\n【匯入完備】');
+{
+  const missing = [];
+  for (const f of files) {
+    const src = read(f);
+    const imported = new Set();
+    for (const m of src.matchAll(/import\s+(?:\*\s+as\s+(\w+)|\{([^}]*)\}|(\w+))\s+from/g)) {
+      if (m[1]) imported.add(m[1]);
+      if (m[3]) imported.add(m[3]);
+      if (m[2]) {
+        for (const part of m[2].split(',')) {
+          const name = part.trim().split(/\s+as\s+/).pop().trim();
+          if (name) imported.add(name);
+        }
+      }
+    }
+    // 只查「看起來像從別處來的」：駝峰或底線命名，且本檔沒有宣告過
+    const declared = new Set([...src.matchAll(
+      /(?:const|let|var|function|class)\s+([A-Za-z_$][\w$]*)/g)].map((m) => m[1]));
+    for (const m of src.matchAll(/\b([a-z][A-Za-z0-9]*(?:Pure|Impl|Raw))\b/g)) {
+      const id = m[1];
+      if (!imported.has(id) && !declared.has(id)) missing.push(`${rel(f)}: ${id}`);
+    }
+  }
+  chk('沒有用到未匯入的識別字', [...new Set(missing)],
+      '依賴檢查看不到「根本沒寫的那一行 import」');
+}
+
 console.log('\n【DOM 契約】');
 // JS 取用了 HTML 裡不存在的元素 —— 這類 bug 不會在語法檢查時暴露，
 // 只會在使用者點到那個功能時才炸。已經咬過兩次（listen-box、h-filter）。

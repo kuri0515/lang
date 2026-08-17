@@ -144,3 +144,21 @@ export function createSession({ save, onChange, onFinish, onError }) {
     },
   };
 }
+
+/**
+ * 這一輪只練哪一種內容：all / word / sentence。
+ *
+ * 【為什麼放在這裡而不是 views】
+ *   它是純函式，卻決定了佇列裡留下什麼 —— 屬於會話引擎的職責。
+ *   放在 views/home.js 的話，想測它就得連帶載入資料層，
+ *   而資料層會去 CDN 取 supabase-js，node 根本載不起來。
+ *   測不到的判斷邏輯遲早會壞掉而沒人發現。
+ *
+ * 【詞組算在「單字」】
+ *   詞組（かき氷、お菓子）在使用上更接近單字，不是要練語序的對象。
+ *   分成三類會讓選擇器變長，而第三類幾乎沒人會單獨挑。
+ */
+export const matchesType = (item, t) =>
+  t === 'all' || !t ? true
+  : t === 'sentence' ? item.item_type === 'sentence'
+  : item.item_type !== 'sentence';

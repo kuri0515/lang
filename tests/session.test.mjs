@@ -6,7 +6,7 @@
 //
 //     node tests/session.test.mjs
 // =====================================================================
-import { createSession } from '../shared/js/study/session.js';
+import { createSession, matchesType } from '../shared/js/study/session.js';
 import { RATING } from '../shared/js/core/srs.js';
 
 let fails = 0;
@@ -91,6 +91,20 @@ chk('越界導覽回 false', S.go(-1) === false && S.go(99) === false);
 finished = null;
 S.grade(RATING.GOOD);
 chk('答完最後一題觸發完成', finished !== null);
+
+console.log('\n【內容類型過濾】');
+{
+  const word = { item_type: 'word' };
+  const phrase = { item_type: 'phrase' };
+  const sent = { item_type: 'sentence' };
+  chk('全部：三種都收', ['all', undefined, ''].every((t) =>
+      [word, phrase, sent].every((i) => matchesType(i, t))));
+  chk('只練句子：只留句子',
+      matchesType(sent, 'sentence') && !matchesType(word, 'sentence') && !matchesType(phrase, 'sentence'));
+  chk('只練單字：詞組算單字，句子排除',
+      matchesType(word, 'word') && matchesType(phrase, 'word') && !matchesType(sent, 'word'),
+      '詞組（かき氷）在使用上更接近單字，不是要練語序的對象');
+}
 
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);

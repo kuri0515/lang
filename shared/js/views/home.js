@@ -7,6 +7,7 @@ import { pronOrder, nextLesson, LESSON_DONE,
          lifeScenes, pickScene } from '../core/taxonomy.js';
 import * as progress from '../data/progress.js';
 import { MODES, getMode, forcedDirection } from '../study/modes/index.js';
+import { matchesType as matchesTypePure } from '../study/session.js';
 import { computeStreak } from '../core/stats.js';
 
 let deps = null;      // { user, profile, onReview, onFree, onNewDeck, onDrillWeak }
@@ -15,6 +16,23 @@ let primaryAction = null;
 let firstDeckId = null;
 
 export const studyMode = () => qs('#mode-pick input:checked')?.value || 'flip';
+
+/**
+ * 這輪只練哪一種內容：all / word / sentence。
+ *
+ * 【為什麼要這個】
+ *   單字和句子練起來是兩件事：單字是認字，句子是理解語序與語尾。
+ *   混在一起排程沒有錯，但「今天只想把句子唸順」是很正常的需求，
+ *   而原本只能整批練或不練。
+ *
+ * 【為什麼包含詞組（phrase）算在「單字」】
+ *   詞組在使用上更接近單字（かき氷、お菓子），不是要練語序的對象。
+ *   分成三類會讓選擇器變長，而第三類幾乎沒人會單獨挑。
+ */
+export const studyType = () => qs('#type-pick input:checked')?.value || 'all';
+
+/** 條目符不符合目前選的類型（判斷本身在 study/session.js，這裡只補上預設值）*/
+export const matchesType = (item, t = studyType()) => matchesTypePure(item, t);
 export const selectedDir = () => qs('#dir-pick input:checked')?.value || 'ko2zh';
 export const effectiveDir = () => forcedDirection(studyMode()) || selectedDir();
 
@@ -22,7 +40,9 @@ export const effectiveDir = () => forcedDirection(studyMode()) || selectedDir();
 export function syncModeUI() {
   const m = getMode(studyMode());
   $('mode-hint').textContent = m.hint || '';
-  $('opt-summary').textContent = `${m.label} · ${dirShort()[effectiveDir()]}`;
+  const TYPE_TXT = { all: '', word: ' · 只練單字', sentence: ' · 只練句子' };
+  $('opt-summary').textContent =
+    `${m.label} · ${dirShort()[effectiveDir()]}${TYPE_TXT[studyType()] || ''}`;
   qsa('#dir-pick input').forEach((i) => {
     i.disabled = !!m.direction;
     if (m.direction) i.checked = i.value === m.direction;
@@ -43,6 +63,9 @@ export function initHome(d) {
   // 全量重載會打 6+N 個查詢，切個選項就卡一下。
   $('mode-pick').addEventListener('change', () => { syncModeUI(); refreshDue(); });
   $('dir-pick').addEventListener('change', () => { syncModeUI(); refreshDue(); });
+  // 類型只影響「這輪抽什麼」，不影響到期張數的計算，所以不必 refreshDue()。
+  // 但摘要要跟著變 —— 選項收合起來時，摘要是唯一看得到目前設定的地方。
+  $('type-pick').addEventListener('change', syncModeUI);
   on(EVENTS.ITEMS_CHANGED, () => { deckCounts = null; load(); });
   on(EVENTS.PROGRESS_WRITTEN, () => load());
   syncModeUI();

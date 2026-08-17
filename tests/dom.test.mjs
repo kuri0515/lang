@@ -392,6 +392,28 @@ console.log('\n【情境對話】');
 // 資料完全正確、畫面上也看得到假名，但對應是錯的，
 // 而學習者會照著錯的對應去記。
 // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
+// 內容類型選擇器（單字／句子／全部）
+// ---------------------------------------------------------------------
+console.log('\n【內容類型選擇】');
+{
+  const pick = $('type-pick');
+  chk('選擇器存在', !!pick);
+  const vals = [...pick.querySelectorAll('input')].map((i) => i.value);
+  chk('三個選項：全部／單字／句子',
+      JSON.stringify(vals) === JSON.stringify(['all', 'word', 'sentence']), vals.join('/'));
+  chk('預設是「全部」',
+      pick.querySelector('input:checked')?.value === 'all',
+      '一進來就被縮限成某一類，會讓人以為詞庫變少了');
+
+  const { matchesType } = await import(SHARED + '/js/study/session.js');
+  const n = (t) => items.filter((i) => matchesType(i, t)).length;
+  chk('三種選擇加起來等於全部', n('word') + n('sentence') === n('all'),
+      `單字 ${n('word')} + 句子 ${n('sentence')} vs 全部 ${n('all')}`);
+  chk('本站三種都有內容', n('word') > 0 && n('sentence') > 0,
+      `單字 ${n('word')}／句子 ${n('sentence')}`);
+}
+
 console.log('\n【振り仮名】');
 {
   const { rubyHTML, stripRuby, hasRuby, checkRuby } =

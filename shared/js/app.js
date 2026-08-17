@@ -71,6 +71,18 @@ async function begin(entries, { freeMode = false, kind = 'review', note = '', le
 
   session.start(entries, { freeMode, mode: modeId, kind });
   const mode = getMode(modeId);
+  // 兩道過濾分開報，因為兩種空結果要給的建議完全不同：
+  //   類型過空 → 「這批沒有句子」，該換的是類型或內容
+  //   題型過空 → 「沒有適合這個題型的」，該換的是題型
+  // 併成一句「沒有題目」的話，使用者只會反覆換錯的那一個。
+  const type = home.studyType();
+  if (type !== 'all') {
+    const r = session.filter((e) => home.matchesType(e.item, type));
+    if (!r.kept) {
+      const what = type === 'sentence' ? '句子' : '單字';
+      return msg(`這批內容裡沒有${what}。改選「全部」，或換一批內容。`);
+    }
+  }
   const { kept, dropped } = session.filter((e) => mode.canUse(e.item, studyCtx()));
 
   if (!kept) {
