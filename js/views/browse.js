@@ -4,6 +4,7 @@ import { on, emit, EVENTS } from '../core/bus.js';
 import { STATE_LABEL, TYPE_LABEL, DIR_SHORT } from '../data/client.js';
 import * as content from '../data/content.js';
 import { groupTags, GROUPS } from '../core/taxonomy.js';
+import * as dialogue from './dialogue.js';
 import * as admin from '../data/admin.js';
 import * as progress from '../data/progress.js';
 import { openEditor } from './editor.js';
@@ -24,10 +25,25 @@ export function initBrowse(d) {
     deps.onPractice([...picked]);
   };
   on(EVENTS.ITEM_UPDATED, () => { if (!$('view-browse').classList.contains('hidden')) render(); });
-  on(EVENTS.ITEMS_CHANGED, () => { tagsLoaded = false; });
+  // 內容變動時兩邊都要作廢，否則對話畫面會停在舊句子
+  on(EVENTS.ITEMS_CHANGED, () => { tagsLoaded = false; dialogue.invalidate(); });
+  initTabs();
+  dialogue.initDialogue(d);
 }
 
 let tagsLoaded = false;
+
+/** 單字／對話 子分頁。對話是另一種學習形態，不該混在單字清單裡 */
+function initTabs() {
+  qsa('input[name="btab"]').forEach((r) => {
+    r.onchange = () => {
+      const dlg = r.value === 'dialogue';
+      $('b-pane-words').classList.toggle('hidden', dlg);
+      $('b-pane-dialogue').classList.toggle('hidden', !dlg);
+      if (dlg) dialogue.open().catch((e) => msg(e.message || e));
+    };
+  });
+}
 
 export async function open() {
   if (!tagsLoaded) {

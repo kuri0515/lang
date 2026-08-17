@@ -112,4 +112,46 @@ function speakTTS(text, { rate: override, slow = false } = {}) {
   speechSynthesis.speak(u);
 }
 
+/**
+ * 唸完才 resolve。整段對話朗讀要靠它 ——
+ * 用 speak() 連續呼叫會同時觸發，四句疊在一起變成噪音。
+ *
+ * 有音檔走 <audio> 的 ended／error；沒有就走 TTS 的 onend。
+ * 兩邊都要保底：瀏覽器不支援語音合成時直接 resolve，
+ * 否則整段朗讀會卡在第一句等一個永遠不來的事件。
+ */
+export function speakAwait(text, audioUrl = null, opts = {}) {
+  return new Promise((resolve) => {
+    if (audioUrl && !opts.slow) {
+      const a = new Audio(audioUrl);
+      a.onended = resolve;
+      a.onerror = () => ttsAwait(text, opts).then(resolve);
+      a.play().catch(() => ttsAwait(text, opts).then(resolve));
+      return;
+    }
+    ttsAwait(text, opts).then(resolve);
+  });
+}
+
+function ttsAwait(text, { rate: override, slow = false } = {}) {
+  return new Promise((resolve) => {
+    if (!('speechSynthesis' in window)) return resolve();
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ko-KR';
+    const base = override ?? autoRate(text, rate());
+    u.rate = slow ? Math.max(0.4, base - 0.25) : base;
+    const v = currentVoice();
+    if (v) u.voice = v;
+    u.onend = resolve;
+    u.onerror = resolve;          // 唸失敗也要往下走，不能卡住整段
+    speechSynthesis.speak(u);
+  });
+}
+
+/** 停止朗讀。切換畫面或按停止時用 —— 聲音不該跟著人跑到別的頁面 */
+export function cancel() {
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+}
+
 export { cached as _cached };

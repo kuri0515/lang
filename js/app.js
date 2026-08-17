@@ -144,12 +144,19 @@ async function startScene(scene) {
   await begin(rows, { kind: 'new' });
 }
 
-async function startFree({ ids = null, tag = '', deckId = null, kind = 'free' } = {}) {
+/**
+ * @param keepOrder 保留原順序（對話用）。預設打亂 ——
+ *   一般練習照原順序會讓人靠位置記答案，但對話照順序是刻意的：
+ *   那練的是「這句接哪句」，順序本身就是內容。
+ */
+async function startFree({ ids = null, tag = '', deckId = null,
+                           kind = 'free', keepOrder = false } = {}) {
   try {
     const items = await content.pickItems({ ids, tag, deckId, limit: 60 });
     if (!items.length) return msg('沒有符合的內容');
     const dir = home.effectiveDir();
-    await begin(shuffle(items.map((item) => ({ item, direction: dir, card: null }))),
+    const entries = items.map((item) => ({ item, direction: dir, card: null }));
+    await begin(keepOrder ? entries : shuffle(entries),
                 { freeMode: true, kind, lesson: tag,
                   note: kind === 'drill'
                     ? '弱項修復 · 只記錄成績，不影響複習排程'
@@ -183,7 +190,12 @@ home.initHome({
   onStudyScene: (s) => startScene(s),
 });
 study.initStudy({ session, getCtx: studyCtx, onQuit: () => show('view-done') });
-browse.initBrowse({ ...deps, onPractice: (ids) => startFree({ ids }), onStudyTag: (t) => startNew(null, t) });
+browse.initBrowse({ ...deps,
+  onPractice: (ids) => startFree({ ids }),
+  onStudyTag: (t) => startNew(null, t),
+  // 對話的翻譯練習：走同一條自由練習的路，只差要不要打亂
+  onPracticeDialogue: (ids, keepOrder) => startFree({ ids, keepOrder, kind: 'drill' }),
+});
 history.initHistory(deps);
 history.initWords((ids) => startFree({ ids, kind: 'drill' }));
 importer.initImporter();

@@ -286,5 +286,57 @@ console.log('\n【生活場景】');
       '生活場景沒有依賴，今天想學咖啡廳就該能直接學');
 }
 
+// ---------------------------------------------------------------------
+// 情境對話：解析、分組、打亂、對答案
+// ---------------------------------------------------------------------
+console.log('\n【情境對話】');
+{
+  const { parseLine, groupDialogues, shuffleLines, checkOrder } =
+    await import(ROOT+'/js/core/dialogue.js');
+
+  chk('解析出說話者與情境',
+      parseLine('對話 A｜咖啡廳點餐｜口語常縮成 아아')?.speaker === 'A'
+      && parseLine('對話 B｜聊新歌｜').scene === '聊新歌');
+  chk('不是對話的 note 回 null',
+      parseLine('漢字「便宜店」') === null && parseLine('') === null);
+
+  const mk = (ko, note) => ({ ko, zh: ko, note });
+  const items = [
+    mk('1', '對話 A｜甲｜x'), mk('2', '對話 B｜甲｜y'),
+    mk('3', '對話 A｜乙｜z'), mk('4', '對話 B｜乙｜w'),
+    mk('x', '一般備註'),
+    mk('5', '對話 A｜丙｜只有一句'),
+  ];
+  const gs = groupDialogues(items);
+  chk('依情境歸組', gs.length === 2 && gs[0].scene === '甲');
+  chk('★ 只有一句的不算對話', !gs.some((d) => d.scene === '丙'),
+      '一句話不是對話，收進來只會讓清單看起來有東西其實點不出內容');
+  chk('保持傳入順序（呼叫端已依 sort_order 排好）',
+      gs[0].lines.map((l) => l.item.ko).join('') === '12');
+
+  // ★ 打亂最容易出的錯：打亂後跟原本一樣，使用者以為壞了
+  const four = ['a', 'b', 'c', 'd'];
+  let same = 0;
+  for (let i = 0; i < 200; i++) if (shuffleLines(four).every((x, j) => x === four[j])) same++;
+  chk('★ 打亂後絕不等於原順序', same === 0,
+      '打亂後跟原本一樣，使用者只會以為功能壞了');
+  chk('兩句的對話直接對調',
+      shuffleLines(['a', 'b']).join('') === 'ba', '兩句只有一種打亂方式');
+  chk('打亂不增減內容',
+      [...shuffleLines(four)].sort().join('') === 'abcd');
+  chk('一句不炸', shuffleLines(['a']).join('') === 'a');
+  // 亂數永遠回傳同一格時仍要能打亂 —— 保底路徑
+  chk('亂數退化時走保底位移',
+      shuffleLines(four, () => 0).some((x, i) => x !== four[i]),
+      '不保底的話，壞掉的亂數會讓打亂變成沒打亂');
+
+  const r1 = checkOrder(['a', 'b', 'c'], ['a', 'b', 'c']);
+  chk('全對時 correct 為真', r1.correct && r1.flags.every(Boolean));
+  const r2 = checkOrder(['a', 'c', 'b'], ['a', 'b', 'c']);
+  chk('逐格標示對錯，不是只說一句錯了',
+      !r2.correct && r2.flags.join() === 'true,false,false',
+      '只說錯不告訴哪裡錯，等於要人重猜');
+}
+
 console.log(f?`\n❌ 失敗 ${f} 項`:'\n✅ 全部通過');
 process.exit(f?1:0);

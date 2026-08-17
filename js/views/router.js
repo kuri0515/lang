@@ -9,6 +9,7 @@
 //   把人丟回一個空的學習畫面比丟回首頁更糟。
 // =====================================================================
 import { $, qsa } from '../core/dom.js';
+import * as speech from '../core/speech.js';
 
 const VIEWS = ['view-auth', 'view-home', 'view-study', 'view-done',
                'view-browse', 'view-history', 'view-me', 'view-import'];
@@ -27,6 +28,9 @@ let syncingHash = false;
 export const onEnter = (view, fn) => enterHooks.set(view, fn);
 
 export async function show(view, { push = true } = {}) {
+  // 換畫面就停朗讀 —— 聲音不該跟著人跑到別的頁面。
+  // 放在 router 而不是各畫面自理：新增畫面時不會忘記做這件事。
+  if (current !== view) speech.cancel();
   current = view;
   VIEWS.forEach((v) => $(v)?.classList.toggle('hidden', v !== view));
   $('tabbar')?.classList.toggle('hidden', NO_TAB.includes(view));

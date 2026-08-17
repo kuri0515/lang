@@ -123,6 +123,44 @@
 
   <!-- ══════════════ ② 詞庫瀏覽 ══════════════ -->
   <section id="view-browse" class="hidden">
+    <div class="seg seg-2 subtabs" id="b-tabs">
+      <label><input type="radio" name="btab" value="words" checked><span>單字</span></label>
+      <label><input type="radio" name="btab" value="dialogue"><span>情境對話</span></label>
+    </div>
+
+    <div id="b-pane-dialogue" class="hidden">
+      <div class="card" id="dlg-list-card">
+        <div class="browse-head">
+          <span id="dlg-count" class="muted"></span>
+          <button id="dlg-tr-all" class="small primary">全部對話 · 隨機翻譯練習</button>
+        </div>
+        <div id="dlg-list"></div>
+      </div>
+
+      <div id="dlg-detail" class="hidden">
+        <div class="card">
+          <div class="dlg-head">
+            <button id="dlg-back" class="link">← 全部對話</button>
+            <h2 id="dlg-title" class="nomargin"></h2>
+          </div>
+          <div class="dlg-tools">
+            <button id="dlg-zh" class="small">顯示中文</button>
+            <button id="dlg-play" class="small">▶ 整段朗讀</button>
+            <button id="dlg-mode" class="small primary">打亂順序</button>
+          </div>
+          <div class="dlg-tools">
+            <button id="dlg-tr-order" class="small ghost">翻譯練習 · 照順序</button>
+            <button id="dlg-tr-mix" class="small ghost">翻譯練習 · 打亂</button>
+          </div>
+          <p id="dlg-hint" class="hint nomargin"></p>
+          <div id="dlg-body"></div>
+          <div id="dlg-pool" class="dlg-pool hidden"></div>
+          <p id="dlg-result" class="hint center"></p>
+        </div>
+      </div>
+    </div>
+
+    <div id="b-pane-words">
     <div class="card sticky-search">
       <input id="b-search" type="search" placeholder="搜尋韓文／中文／羅馬音…" class="nomargin">
       <div id="b-tags" class="tag-row"></div>
@@ -137,6 +175,7 @@
       </div>
       <div id="b-list"></div>
       <div id="b-more" class="pager"></div>
+    </div>
     </div>
   </section>
 

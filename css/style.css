@@ -788,3 +788,42 @@ kbd {
   color: var(--accent); text-align: left;
   padding: 10px 13px; background: var(--accent-soft); border-radius: var(--r-sm);
 }
+
+/* ---------- 情境對話 ----------
+   對話用氣泡呈現，左右分說話者 —— 一眼看得出是兩個人在講話，
+   而不是四句不相干的例句排在一起。 */
+.dlg-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.dlg-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+.dlg-row { display: flex; margin-top: 10px; }
+.dlg-row.b { justify-content: flex-end; }
+.dlg-bubble {
+  max-width: 82%; padding: 10px 13px; border-radius: 14px;
+  background: var(--surface-2); border: 1px solid var(--border);
+}
+.dlg-row.b .dlg-bubble { background: var(--accent-soft); border-color: var(--accent); }
+.dlg-who { font-size: 10.5px; color: var(--faint); letter-spacing: .5px; margin-bottom: 3px; }
+.dlg-ko { font-size: 15px; line-height: 1.55; }
+.dlg-roman { font-size: 11.5px; color: var(--faint); margin-top: 2px; }
+.dlg-zh { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.dlg-gram { font-size: 11.5px; color: var(--faint); margin-top: 5px; line-height: 1.55;
+            padding-top: 5px; border-top: 1px dashed var(--border); }
+.dlg-bubble button { border: none; background: none; padding: 2px 4px; font-size: 13px; }
+/* 打亂練習 */
+.dlg-pool { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.dlg-pick {
+  text-align: left; padding: 10px 13px; border-radius: var(--r-sm);
+  border: 1px solid var(--border); background: var(--surface); width: 100%;
+}
+.dlg-pick.used { opacity: .35; }
+.dlg-slot { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.dlg-slot .n { font-size: 11px; color: var(--faint); width: 16px; flex-shrink: 0; }
+.dlg-slot .s { flex: 1; padding: 9px 12px; border-radius: var(--r-sm);
+               border: 1px dashed var(--border); font-size: 14px; color: var(--faint); }
+.dlg-slot .s.filled { border-style: solid; color: var(--text); background: var(--surface); }
+.dlg-slot .s.ok { border-color: var(--ok-bd); background: var(--ok-bg); color: var(--ok-fg); }
+.dlg-slot .s.no { border-color: var(--no-bd); background: var(--no-bg); color: var(--no-fg); }
+.dlg-item { padding: 11px 0; border-bottom: 1px solid var(--border-soft); cursor: pointer;
+            display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.dlg-item:last-child { border-bottom: none; }
+.dlg-item b { font-weight: 600; font-size: 14.5px; }
+.dlg-item span { font-size: 12px; color: var(--faint); }
