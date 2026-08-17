@@ -95,11 +95,17 @@ def rows_for(L):
         'hanja': '',
     })
     # ② 單字
+    # を 那一課教的是助詞用法（ごはんを食べる），那是詞組不是單字。
+    # 類型標錯會影響四選一的干擾項挑選與統計，所以讓課自己宣告。
+    wtype = L.get('word_type', 'word')
     for ja, ro, zh, topic in L['words']:
         rows.append({
-            'ko': ja, 'zh': zh, 'romanization': ro, 'type': 'word',
+            'ko': ja, 'zh': zh, 'romanization': ro, 'type': wtype,
             'note': '', 'tags': f"清音,{L['row']},{L['kana']},{topic}",
-            'hanja': '',
+            # 單字也可能含漢字（を 那一課的助詞用法：ごはんを食べる）。
+            # 標註的判準是「這行字裡有沒有讀不出來的字」，
+            # 與它是單字還是對話句無關。
+            'hanja': FURIGANA.get(ja, ''),
         })
     # ③ 對話。說話者 A/B 交替；情境名稱是我下的標籤，書上只給句子
     for i, (ja, ro, zh) in enumerate(L['dialogue']):
@@ -140,11 +146,18 @@ def suspicious(ro):
     reasons = []
     if re.search(r'[āīūēō]', ro):
         reasons.append('用了長音符號（書上多數地方是拆成兩拍寫，如 to u）')
-    for tok in re.split(r'[\s,.。、？?！!]+', ro):
-        if not tok:
-            continue
+    toks = [t for t in re.split(r'[\s,.。、？?！!]+', ro) if t]
+    for i, tok in enumerate(toks):
         t = tok.lower()
         if t in MORA:
+            continue
+        # ★ 促音（っ）自成一拍，書上寫成單獨一個子音字母：
+        #   いっしょに → i s sho ni
+        #   那不是打錯，是這本書在教「促音佔一整拍」——
+        #   而那正是華語母語者最容易滑過去的地方。
+        #   判準是「下一個拍以同一個子音開頭」，避免把真的錯字放行。
+        nxt = toks[i + 1].lower() if i + 1 < len(toks) else ''
+        if len(t) == 1 and t.isalpha() and t not in 'aiueon' and nxt.startswith(t):
             continue
         # っ 的促音在羅馬音是子音重複（ki tte / ma tte），書上就是這樣寫
         if len(t) > 1 and t[0] == t[1] and t[1:] in MORA:
@@ -158,9 +171,11 @@ def suspicious(ro):
 
 def _selftest():
     """★ 檢查本身要先對著已知的違規案例驗過，才敢相信它的綠燈。"""
-    must_flag = ['nan de su ka', 'ten ki', 'ni hon go', 'a ri ga tō u', 'hi roi']
+    must_flag = ['nan de su ka', 'ten ki', 'ni hon go', 'a ri ga tō u', 'hi roi',
+                 's ka', 'k a ki']                # 單獨子音後面沒有同子音 = 真的錯
     must_pass = ['a ki', 'i chi go', 'kyo u', 'cho tto ma tte', 'sho u sho u',
-                 'ha i', 'ko re, a ge ru', 'go hya ku e n de su', 'shi tte i ma su ka']
+                 'ha i', 'ko re, a ge ru', 'go hya ku e n de su', 'shi tte i ma su ka',
+                 'i s sho ni', 'ki t te']          # 促音自成一拍的寫法
     bad = [x for x in must_flag if not suspicious(x)]
     wrong = [(x, suspicious(x)) for x in must_pass if suspicious(x)]
     if bad:
@@ -220,12 +235,17 @@ def merge_duplicates(all_rows):
     return [by_ko[k] for k in order], merges
 
 
-KANJI = re.compile(r'[一-鿿]')
+# 需要標註的不只是漢字 —— 數字也要（5つ 唸 いつつ，看字面猜不到）。
+# 第一版只認漢字，於是「りんごを5つください。」的標註被判成「多餘的」，
+# 而它其實是必要的。判準寫窄的代價是把正確的東西擋掉。
+NEEDS_READING = re.compile(r'[一-鿿0-9０-９]')
 
 
 def check_furigana():
     """標註寫錯不會報錯，只會讓學習者背下一個錯的音 —— 所以這裡硬擋。"""
-    plain = [ja for L in LESSONS for ja, _, _ in L['dialogue'] if KANJI.search(ja)]
+    all_lines = ([ja for L in LESSONS for ja, _, _ in L['dialogue']]
+                 + [ja for L in LESSONS for ja, _, _, _ in L['words']])
+    plain = [x for x in all_lines if NEEDS_READING.search(x)]
     missing = [x for x in plain if x not in FURIGANA]
     if missing:
         sys.exit('❌ 這些含漢字的句子沒有振り仮名標註：\n   ' + '\n   '.join(missing))
@@ -237,7 +257,8 @@ def check_furigana():
         for m in re.finditer(r'\[([^\[\]]+)\]', ann):
             if not re.fullmatch(r'[ぁ-ゖァ-ヺー]+', m.group(1)):
                 bad.append(f'{src} → 讀音「{m.group(1)}」不是純假名')
-    orphan = [k for k in FURIGANA if k not in plain]
+    # 對得上任何一句就不算多餘 —— 判斷「該不該標」是上面 plain 的事
+    orphan = [k for k in FURIGANA if k not in all_lines]
     if orphan:
         bad.append('標註了但沒有對應句子：' + '／'.join(orphan))
     if bad:
