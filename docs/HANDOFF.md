@@ -5,6 +5,24 @@
 
 ---
 
+## ⚠️ 2026-08-17 這一天做了很多事，先看這張表
+
+| 變更 | 影響 | 細節 |
+|---|---|---|
+| 拆成 monorepo | `js/` → `shared/js/`，`data/` → `korean/data/` | 見下一段 |
+| 新增日文站 | 平假名 46 課、365 條，已上線 | `japanese/` |
+| **排程換成費氏階梯** | 1,2,3,5,8,13,21,34,55,89 天，不再乘係數 | README「幾個關鍵設計」 |
+| **新卡本輪循環到會為止** | 按「記得」的新卡會排回隊尾直到畢業 | 同上 |
+| **回顧清單** | 自己標 ☆，答得好不動排程、答不好才拉近 | 同上 |
+| **形近字辨別** | 四選一的干擾項取同組成員；佇列讓同組相鄰 | 同上 |
+| **振り仮名** | `hanja` 欄在日文站存注音版本 `駅[えき]は…` | 同上 |
+| **課程清單改為動態** | 加內容不必重新部署；片假名進雲端就自動出現 | 同上 |
+| **index.html 樣板化** | ⚠️ 兩站的 index.html 是產生物，別手改 | `shared/index.template.html` |
+
+**動手之前跑一次 `npm test`**（11 組），它會擋住這裡面大部分的坑。
+
+---
+
 ## ⚠️ 2026-08-17：拆成 monorepo，多了一個日文站
 
 原本這個倉庫**就是**韓文站（檔案都在根目錄）。現在改成：
@@ -47,10 +65,27 @@ NewJeans（尤其 해린）、三麗鷗、扭蛋、設計美學、打掃收納�
 技術上是靜態前端（GitHub Pages）+ Supabase（Auth／Postgres／RLS），沒有建置步驟。
 
 ```bash
-npm test                                  # 兩站一起驗，動任何 shared/js 之前先跑
+npm test                                  # 11 組，兩站一起驗，動任何 shared/js 之前先跑
+npm run build:sites                       # 改過 index.template.html 之後要重新產生
 python3 shared/scripts/audit_content.py   # 內容稽核，error 必須是 0
+SITE=japanese python3 shared/scripts/audit_content.py
 python3 -m http.server 8000               # 本機預覽，★ 必須從倉庫根起服務
 ```
+
+### 加日文內容的流程（片假名、濁音…）
+
+```bash
+# 1. 內容寫進 japanese/data/kana-01/_source_*.py（逐字照書）
+#    含漢字或數字的句子要在 _furigana.py 補注音；語法說明在 _grammar.py
+# 2. 產生 CSV（會驗羅馬音的拍、注音對不對得上原句）
+python3 japanese/data/kana-01/build.py
+# 3. 匯入（--slug-scope note 讓同一句在不同對話裡各自成立）
+SITE=japanese python3 shared/scripts/import_words.py japanese/data/kana-01/<x>.csv \
+    --deck kana-01 --title "五十音 · 入門" --append --slug-scope note --apply
+# 4. 對帳：來源筆數必須等於線上筆數，對話每組必須 2 行
+```
+
+**不必改任何程式碼** —— 課程序列已含片假名與規則課的位置，資料進雲端就自動出現。
 
 ---
 

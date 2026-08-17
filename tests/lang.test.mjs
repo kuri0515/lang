@@ -17,6 +17,7 @@
 // =====================================================================
 import { setLang, _resetLang } from '../shared/js/core/lang.js';
 import { execFileSync } from 'child_process';
+import fs from 'fs';
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
 const SITES = ['korean', 'japanese'];
@@ -31,6 +32,19 @@ const configs = {};
 for (const site of SITES) {
   const { LANG } = await import(`${ROOT}/${site}/lang.config.js`);
   configs[site] = LANG;
+}
+
+// README 說「照現有兩份的欄位填齊（目前 N 個）」—— 那個數字會過期，
+// 而過期的文件比沒有文件更糟：照著做的人會以為自己填完了。
+// 這裡把它釘住：數字不對就報，逼人順手改掉。
+{
+  const n = Object.keys(configs.korean).length;
+  const readme = fs.readFileSync(`${ROOT}/README.md`, 'utf8');
+  const m = readme.match(/照現有兩份的欄位填齊（目前 (\d+) 個/);
+  console.log('【文件與現況一致】');
+  chk(`README 寫的欄位數與實際相符（實際 ${n} 個）`,
+      !!m && Number(m[1]) === n,
+      m ? `README 寫 ${m[1]} 個` : 'README 找不到那句話');
 }
 
 // ── 欄位集合必須一致 ──
