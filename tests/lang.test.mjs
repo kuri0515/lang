@@ -153,6 +153,22 @@ for (const site of SITES) {
   chk('靜態導言都帶該語言的實例',
     Object.values(t.lessonIntro).every((v) => L.scriptRe.test(v)),
     '規則講完要有一個看得到的例子，否則只是抽象敘述');
+  // ★ 收尾話的判準是「在不在教學序列裡」，不是「有沒有靜態導言」。
+  //   導言搬到雲端之後，用 lessonIntro 判斷會把 92 個假名課全部排除 ——
+  //   它們的收尾話從此不再出現，而且不會報錯。
+  {
+    const withOutro = t.pronOrder.filter((x) => {
+      for (const f of t.lessonFamilies || []) if (f.match(x)) return true;
+      return t.outroOk[x] || t.outroLow[x];
+    });
+    chk(`收尾話涵蓋教學序列裡的課（${withOutro.length} 課有）`,
+        withOutro.length > 0,
+        '一句都沒有，多半是判準把整類課排除掉了');
+    const orphan = [...new Set([...Object.keys(t.outroOk), ...Object.keys(t.outroLow)])]
+      .filter((x) => !t.pronOrder.includes(x));
+    chk('沒有對不上任何一課的收尾話', orphan.length === 0, orphan.join('／'));
+  }
+
   chk('收尾話刻意留白（不是每課都有）',
     t.pronOrder.filter((x) => {
       for (const f of t.lessonFamilies || []) if (f.match(x)) return true;

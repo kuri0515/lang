@@ -187,7 +187,11 @@ export function nextLesson(rows) {
  */
 export function lessonOutro(tag, accuracy) {
   const t = tx();
-  if (!tag || !t.lessonIntro[tag]) return '';
+  // ★ 判準是「這是不是教學序列裡的一課」，不是「它有沒有靜態導言」。
+  //   導言搬到雲端之後（清音課的導言就是假名卡上的口訣），
+  //   用 lessonIntro 判斷等於把 92 個假名課全部排除 ——
+  //   它們的收尾話從此再也不會出現，而且不會報錯。
+  if (!tag || !t.pronOrder.includes(tag)) return '';
   const low = accuracy < 0.6;
   for (const fam of t.lessonFamilies || []) {
     if (fam.match(tag)) return low ? fam.low : fam.ok;

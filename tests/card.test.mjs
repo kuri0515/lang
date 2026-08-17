@@ -90,5 +90,53 @@ if (ruby) {
       $('c-front').querySelectorAll('ruby').length === 0);
 }
 
+// ---------------------------------------------------------------------
+// 首頁的五十音表 —— 驗「畫出來的東西」，不是驗資料
+//
+// ★ 先前有一條測試叫「課程裡的假名都在表上（含片假名）」，它是綠的，
+//   但它比對的是 taxonomy 的資料。而渲染那段程式碼其實根本沒進到檔案裡，
+//   畫面上只有平假名。測了旁邊的東西，看起來一樣安全。
+//   這一段直接讀 DOM。
+// ---------------------------------------------------------------------
+console.log('\n【五十音表的渲染】');
+{
+  const home = await import(`${SHARED}/js/views/home.js`);
+  const { pronOrder } = await import(`${SHARED}/js/core/taxonomy.js`);
+  const grid = LANG.taxonomy.grid;
+  if (!grid) {
+    console.log('  ⏭  本站沒有字母表視圖');
+  } else {
+    const rows = pronOrder()
+      .map((tag) => ({ tag, total: items.filter((i) => i.tags.includes(tag)).length,
+                       started: 0, mastered: 0 }))
+      .filter((r) => r.total > 0);
+    home.initHome({ user: () => ({ id: 'u' }), isAdmin: () => false,
+                    onStudyTag: () => {}, onRecall: () => {} });
+    home.renderGojuon(grid, rows, new Set(rows.map((r) => r.tag)));
+
+    const pairs = $('gojuon').querySelectorAll('.g-cell-pair');
+    const cells = $('gojuon').querySelectorAll('button.g-cell');
+    chk(`每個音一格、格內兩種寫法（${pairs.length} 格）`, pairs.length === 46, `${pairs.length} 格`);
+    chk('★ 片假名真的畫出來了', cells.length > 46,
+        `只有 ${cells.length} 個可點 —— 少於 47 表示片假名沒渲染`);
+
+    const first = pairs[0];
+    chk('同一格是同一個音的兩種寫法',
+        first && [...first.children].map((c) => c.textContent).join('') === 'あア',
+        first ? [...first.children].map((c) => c.textContent).join('/') : '');
+
+    chk('摘要數字含兩種寫法',
+        /\/ 9[0-9] 個假名/.test($('grid-sub').textContent),
+        $('grid-sub').textContent);
+
+    // 濁音區：清音一列（不可點）、變化形一列（可點）
+    const dk = $('dakuon').querySelectorAll('.d-block');
+    chk(`濁音對照 ${dk.length} 組`, dk.length === 5, `${dk.length} 組`);
+    chk('濁音格可點、對照的清音不可點',
+        $('dakuon').querySelectorAll('button.g-cell').length === 25 &&
+        $('dakuon').querySelectorAll('span.g-todo').length === 25);
+  }
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);

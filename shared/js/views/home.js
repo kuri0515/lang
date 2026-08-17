@@ -371,7 +371,10 @@ export function renderRecall(rows) {
   $('recall-n').textContent = `${rows.length} 條`;
   $('recall-list').innerHTML = rows.slice(0, 8).map((r) => {
     const it = r.item;
-    const lesson = (it.tags || []).find((t) => t.length === 1) || '';
+    // 課程標籤與詞本身相同時不重複顯示 —— 假名卡的課就是那個假名，
+    // 印成「ぬ … ぬ」只是佔位置，還讓人以為是兩個不同的東西。
+    const tag = (it.tags || []).find((t) => t.length === 1) || '';
+    const lesson = tag === it.ko ? '' : tag;
     return `<div class="recall-row">
       <span class="r-ko">${esc(it.ko)}</span>
       <span class="r-zh muted">${esc(it.zh)}</span>
@@ -402,9 +405,14 @@ export function renderGojuon(grid, rows, available) {
   box.classList.remove('hidden');
 
   const by = Object.fromEntries(rows.map((r) => [r.tag, r]));
-  const all = grid.rows.flatMap((r) => r.kana).filter(Boolean);
+  // 片假名由平假名推得（碼位 +0x60）—— あ 與 ア 是同一個音的兩種寫法，
+  // 不必再維護一份對照表。統計含兩種，所以片假名上線後數字自己會變。
+  const kata = (k) => String.fromCodePoint(k.codePointAt(0) + 0x60);
+  const all = grid.rows.flatMap((r) => r.kana).filter(Boolean)
+    .flatMap((k) => [k, kata(k)])
+    .filter((k) => available.has(k));
   const walked = all.filter((k) => by[k] && by[k].started >= by[k].total).length;
-  opt('grid-sub').textContent = `${walked} / ${all.length} 個清音`;
+  opt('grid-sub').textContent = `${walked} / ${all.length} 個假名`;
 
   const head = `<div class="g-row g-head"><span class="g-lab"></span>${
     grid.cols.map((c) => `<span class="g-col">${esc(c[0])}</span>`).join('')}</div>`;
@@ -414,15 +422,20 @@ export function renderGojuon(grid, rows, available) {
       <span class="g-lab">${esc(r.row)}</span>
       ${r.kana.map((k) => {
         if (!k) return '<span class="g-cell g-none"></span>';
-        if (!available.has(k)) {
-          return `<span class="g-cell g-todo" title="這一課的內容還沒加進來">${esc(k)}</span>`;
-        }
-        const p = by[k];
-        const done = p && p.mastered / p.total >= LESSON_DONE;
-        const seen = p && p.started >= p.total;
-        const cls = done ? 'g-done' : seen ? 'g-seen' : 'g-new';
-        const tip = !p ? '' : done ? '已掌握' : seen ? `學過 ${p.started}/${p.total}` : '還沒開始';
-        return `<button class="g-cell ${cls}" data-pron="${esc(k)}" title="${esc(k)}　${tip}">${esc(k)}</button>`;
+        // ★ 一格放兩種寫法：あ 在上、ア 在下。
+        //   分成兩張表會讓學習者以為要背 92 個獨立符號，
+        //   實際上是 46 個音各有兩種寫法 —— 那個認知差別很大。
+        return `<span class="g-cell-pair">${[k, kata(k)].map((x) => {
+          if (!available.has(x)) {
+            return `<span class="g-cell g-todo" title="${esc(x)}　這一課的內容還沒加進來">${esc(x)}</span>`;
+          }
+          const p = by[x];
+          const done = p && p.mastered / p.total >= LESSON_DONE;
+          const seen = p && p.started >= p.total;
+          const cls = done ? 'g-done' : seen ? 'g-seen' : 'g-new';
+          const tip = !p ? '' : done ? '已掌握' : seen ? `學過 ${p.started}/${p.total}` : '還沒開始';
+          return `<button class="g-cell ${cls}" data-pron="${esc(x)}" title="${esc(x)}　${tip}">${esc(x)}</button>`;
+        }).join('')}</span>`;
       }).join('')}
     </div>`).join('');
 
