@@ -89,20 +89,20 @@ def rows_for(L):
         'romanization': L['romaji'],
         'type': 'word',
         'note': compose_note(L)[0],
-        'tags': f"清音,平假名,{L['row']}",
+        'tags': f"清音,平假名,{L['row']},{L['kana']}",
     })
     # ② 單字
     for ja, ro, zh, topic in L['words']:
         rows.append({
             'ko': ja, 'zh': zh, 'romanization': ro, 'type': 'word',
-            'note': '', 'tags': f"清音,{L['row']},{topic}",
+            'note': '', 'tags': f"清音,{L['row']},{L['kana']},{topic}",
         })
     # ③ 對話。說話者 A/B 交替；情境名稱是我下的標籤，書上只給句子
     for i, (ja, ro, zh) in enumerate(L['dialogue']):
         rows.append({
             'ko': ja, 'zh': zh, 'romanization': ro, 'type': 'sentence',
             'note': f"對話 {'AB'[i % 2]}｜{L['scene']}｜",
-            'tags': f"清音,{L['row']},會話",
+            'tags': f"清音,{L['row']},{L['kana']},會話",
         })
     return rows
 
@@ -272,6 +272,25 @@ def main():
         for k, a, b in merges:
             print(f"   「{k}」  {a}  ＋  {b}")
     assert total == len(merged), f"對帳不符：寫出 {total} 條，去重後應為 {len(merged)} 條"
+
+    # ── 產生課程定義給前端 ──
+    # 口訣同時是「卡片上的記憶法」與「這一課的導言」。
+    # 它只能有一份 —— 抄到 taxonomy.js 去，兩邊遲早會漂移，
+    # 而漂移的症狀是「卡片上寫的和開始上課時看到的不一樣」。
+    lessons_js = os.path.join(os.path.dirname(os.path.dirname(HERE)), 'kana-lessons.js')
+    with open(lessons_js, 'w', encoding='utf-8') as f:
+        f.write('// ⚠️ 本檔由 japanese/data/kana-01/build.py 產生，不要手改。\n')
+        f.write('// 改口訣請改 _source_*.py，再重跑 build.py。\n')
+        f.write('//\n')
+        f.write('// 課程單位是「一個音」，與書的模組一致（一個音＝口訣＋單字＋對話）。\n')
+        f.write('// 一行一課（40 條）對初學者太大塊，進度條幾乎不動；\n')
+        f.write('// 一個音 8 條，走得完，也看得到自己在前進。\n\n')
+        f.write('export const KANA_LESSONS = [\n')
+        for L in LESSONS:
+            intro = L['mnemonic'].replace('\\', '\\\\').replace("'", "\\'")
+            f.write(f"  {{ kana: '{L['kana']}', row: '{L['row']}', intro: '{intro}' }},\n")
+        f.write('];\n')
+    print(f"\n  ✅ 課程定義 → kana-lessons.js（{len(LESSONS)} 課，導言即口訣）")
 
     rv = os.path.join(HERE, '_romaji_review.md')
     with open(rv, 'w', encoding='utf-8') as f:
