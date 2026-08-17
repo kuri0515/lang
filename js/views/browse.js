@@ -53,7 +53,7 @@ export async function open() {
       // 想找「食物」得先滑過「收音ㄼ」。分組與順序的判準在 core/taxonomy.js
       const g = groupTags(tags);
       const btn = ([t, n]) => `<button class="tag" data-tag="${esc(t)}">${esc(t)} ${n}</button>`;
-      $('b-tags').innerHTML = '<button class="tag on" data-tag="">全部</button>'
+      $('b-tags').innerHTML = '<div class="tag-row"><button class="tag on" data-tag="">全部</button></div>'
         + GROUPS.filter((x) => g[x.key].length).map((x) =>
             `<div class="tag-group"><div class="tag-group-h">${esc(x.label)}`
             + `<span>${esc(x.hint)}</span></div>`
@@ -62,6 +62,9 @@ export async function open() {
         b.onclick = () => {
           tag = b.dataset.tag;
           qsa('.tag', $('b-tags')).forEach((x) => x.classList.toggle('on', x === b));
+          // 選完就收起 —— 篩選的目的是看結果，讓人自己再點一次收合是多一步
+          $('b-filter').open = false;
+          $('b-filter-now').textContent = tag || '全部';
           render();
         };
       });

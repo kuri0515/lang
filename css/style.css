@@ -837,3 +837,22 @@ kbd {
 .dlg-mark { font-size: 11px; margin-top: 5px; }
 .dlg-mark.ok { color: var(--ok-fg); }
 .dlg-mark.no { color: var(--no-fg); }
+
+/* ---------- 詞庫篩選：可收合 ----------
+   標籤有近百個，全部攤開會把整個畫面推下去，而這張卡還是 sticky ——
+   等於永遠佔著螢幕頂端。預設收起，摘要顯示目前篩選的是哪一組。 */
+.filter-box { margin-top: 10px; }
+.filter-box summary {
+  cursor: pointer; font-size: 12.5px; color: var(--muted);
+  display: flex; align-items: center; gap: 7px; list-style: none;
+  padding: 6px 0;
+}
+.filter-box summary::-webkit-details-marker { display: none; }
+.filter-box summary b {
+  color: var(--accent); font-weight: 600;
+  background: var(--accent-soft); padding: 2px 10px; border-radius: 999px;
+}
+.filter-box summary::after { content: '▾'; margin-left: auto; opacity: .6; }
+.filter-box[open] summary::after { content: '▴'; }
+/* 展開時給高度上限，長標籤清單不會把結果擠出畫面 */
+.filter-box[open] #b-tags { max-height: 46vh; overflow-y: auto; padding-right: 2px; }

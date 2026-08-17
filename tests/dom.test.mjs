@@ -349,5 +349,28 @@ console.log('\n【情境對話】');
   chk('朗讀按鈕存在', !!$('dlg-play'));
 }
 
+// ---------------------------------------------------------------------
+// 詞庫篩選：近百個標籤必須收得起來
+// ---------------------------------------------------------------------
+console.log('\n【詞庫篩選收合】');
+{
+  const box = $('b-filter');
+  chk('篩選區是可收合的', box && box.tagName === 'DETAILS',
+      '標籤有近百個，全攤開會把 sticky 卡片撐滿整個螢幕頂端');
+  chk('★ 預設收起', box.open === false,
+      '一進詞庫看到的應該是結果，不是一整頁篩選鈕');
+  chk('摘要顯示目前篩選', $('b-filter-now').textContent === '全部');
+
+  // 模擬選標籤：照 browse.js 的契約，選完要收起並更新摘要
+  box.open = true;
+  const pick = (t) => { box.open = false; $('b-filter-now').textContent = t || '全部'; };
+  pick('食物');
+  chk('★ 選完自動收起', box.open === false,
+      '篩選的目的是看結果，讓人自己再點一次收合是多一步');
+  chk('摘要跟著更新', $('b-filter-now').textContent === '食物');
+  pick('');
+  chk('回到全部時摘要復原', $('b-filter-now').textContent === '全部');
+}
+
 console.log(f?`\n❌ 失敗 ${f} 項`:'\n✅ 全部通過');
 process.exit(f?1:0);
