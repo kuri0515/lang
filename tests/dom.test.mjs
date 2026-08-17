@@ -168,27 +168,29 @@ const PRON_ORDER = pronOrder();
 console.log('\n【發音課程進度】');
 {
   const { nextLesson, LESSON_DONE } = await import(SHARED+'/js/core/taxonomy.js');
-  const r = (tag, total, mastered) => ({ tag, total, mastered, started: mastered });
+  // started = 碰過幾條（決定能不能前進）；mastered = 掌握幾條（只影響顯示）
+  const r = (tag, total, started, mastered = 0) => ({ tag, total, started, mastered });
 
-  // 第一課碰過但沒掌握 → 下一課仍是它，不能往前跳
-  let g = nextLesson([r('收音ㄱ',4,1), r('收音ㄴ',4,0)]);
-  chk('★ 碰過但沒掌握牢，下一課仍是同一課', g.next.tag==='收音ㄱ',
-      '判準是「還沒掌握牢」而非「還沒碰過」——發音夾生，後面的音變規則全聽不懂');
+  // 沒走完 → 不能往前跳。這條守的是「一路夾生」那個風險：
+  // 碰過兩條就算過關的話，整條發音路線會全部半生不熟。
+  let g = nextLesson([r('收音ㄱ',4,2), r('收音ㄴ',4,0)]);
+  chk('★ 課裡還有沒碰過的條目，下一課仍是同一課', g.next.tag==='收音ㄱ',
+      '碰過兩條就算過關，等於整條路線一路夾生');
 
-  // 達標就前進
-  g = nextLesson([r('收音ㄱ',4,4), r('收音ㄴ',4,0)]);
-  chk('達標後前進到下一課', g.next.tag==='收音ㄴ' && g.done===1);
+  // 走完就前進 —— 即使一條都還沒「掌握」
+  g = nextLesson([r('收音ㄱ',4,4,0), r('收音ㄴ',4,0)]);
+  chk('★ 走完全部條目就前進，不必等到掌握', g.next.tag==='收音ㄴ' && g.done===1,
+      '掌握的定義是隔 21 天還記得 —— 拿它擋人往前走，學完當下畫面毫無反應，讀起來就是壞掉');
 
-  // 門檻 80%：4 條掌握 3 條（75%）不算過
-  g = nextLesson([r('收音ㄱ',4,3), r('收音ㄴ',4,0)]);
-  chk('75% 未達 80% 門檻，仍停在該課', g.next.tag==='收音ㄱ');
-  g = nextLesson([r('收音ㄱ',5,4), r('收音ㄴ',4,0)]);
-  chk('80% 剛好達標，可以前進', g.next.tag==='收音ㄴ',
-      '要求 100% 會讓人為了一兩條特別難的卡在原地出不去');
+  // 掌握是另一個指標，不影響前進
+  g = nextLesson([r('收音ㄱ',4,4,4), r('收音ㄴ',4,4,0)]);
+  chk('掌握數獨立計算，不與前進綁在一起',
+      g.next===null && g.done===2 && g.mastered===1,
+      '走完 2 課、其中 1 課達到掌握門檻');
 
-  // 全部達標
+  // 全部走完 → 不硬塞下一件事
   g = nextLesson([r('收音ㄱ',4,4), r('收音ㄴ',4,4)]);
-  chk('全部達標時 next 為 null，不硬塞下一件事', g.next===null && g.done===2);
+  chk('全部走完時 next 為 null', g.next===null && g.done===2);
 
   // 順序照教學序列，不照傳入順序
   g = nextLesson([r('激音化',4,0), r('收音ㄱ',4,0)]);
@@ -196,7 +198,8 @@ console.log('\n【發音課程進度】');
 
   // 空資料不炸
   chk('沒有資料時不炸', nextLesson([]).next===null && nextLesson([]).total===0);
-  chk('門檻是 0.8', LESSON_DONE===0.8);
+  chk('掌握門檻仍是 0.8（只用於顯示）', LESSON_DONE===0.8,
+      '要求 100% 才算掌握，會讓人為了一兩條特別難的永遠標不上');
 }
 
 // ---------------------------------------------------------------------

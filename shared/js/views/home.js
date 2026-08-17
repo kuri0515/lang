@@ -212,7 +212,7 @@ async function renderDecks(decks) {
  *   低於 80% 又太鬆。全部達標就恭喜，不硬塞下一件事。
  */
 function renderPron(rows) {
-  const { next, done: doneCount, total, ordered } = nextLesson(rows);
+  const { next, done: doneCount, mastered: masteredCount, total, ordered } = nextLesson(rows);
   $('pron-count').textContent = total;
   if (!total) {
     $('pron-card').classList.add('hidden');
@@ -220,26 +220,38 @@ function renderPron(rows) {
   }
   const rate = (r) => r.mastered / r.total;
 
+  // 「走完」與「掌握」是兩件事，分開講。
+  // 只顯示掌握數的話，剛學完的人看到的是 0 —— 那等於告訴他剛才白做了。
+  const sub = (r) =>
+    r.started >= r.total ? `${r.total} 條 · 已全部學過`
+    : r.started > 0 ? `${r.total} 條 · 學過 ${r.started}`
+    : `${r.total} 條 · 還沒開始`;
+
   $('pron-next').innerHTML = next
     ? `<div class="pron-next">
          <div class="n-body">
            <div class="n-label">下一課 ${doneCount + 1} / ${total}</div>
            <div class="n-title">${esc(next.tag)}</div>
-           <div class="n-sub">${next.total} 條 · 已掌握 ${next.mastered}</div>
+           <div class="n-sub">${sub(next)}</div>
          </div>
          <button class="primary small" data-pron="${esc(next.tag)}">開始</button>
        </div>`
     : `<div class="pron-next"><div class="n-body">
-         <div class="n-title">🎉 發音課程全部達標</div>
-         <div class="n-sub">${total} 課都掌握了八成以上</div>
+         <div class="n-title">🎉 ${total} 課全部走過一遍了</div>
+         <div class="n-sub">已掌握 ${masteredCount} / ${total} 課 ——
+           掌握是「隔三週還記得」，剩下的交給複習慢慢長上來。</div>
        </div></div>`;
 
+  // 進度條分兩層：淺色＝走過的、深色＝已掌握的。
+  // 只畫掌握的話，剛學完的一課看起來和從沒碰過的一模一樣。
   $('pron-list').innerHTML = ordered.map((r) => {
-    const p = Math.round(rate(r) * 100);
-    return `<div class="pron-row${rate(r) >= LESSON_DONE ? ' done' : ''}">
+    const walked = Math.round((r.started / r.total) * 100);
+    const mast = Math.round(rate(r) * 100);
+    const cls = rate(r) >= LESSON_DONE ? ' done' : (r.started >= r.total ? ' walked' : '');
+    return `<div class="pron-row${cls}">
       <span class="p-name">${esc(r.tag)}</span>
-      <span class="p-bar"><i style="width:${p}%"></i></span>
-      <span class="p-num">${r.mastered}/${r.total}</span>
+      <span class="p-bar"><b style="width:${walked}%"></b><i style="width:${mast}%"></i></span>
+      <span class="p-num" title="學過 ${r.started} · 掌握 ${r.mastered}（共 ${r.total} 條）">${r.started}/${r.total}</span>
       <button data-pron="${esc(r.tag)}">學</button>
     </div>`;
   }).join('');

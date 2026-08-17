@@ -99,10 +99,22 @@ export function nextLesson(rows) {
   const ordered = tx().pronOrder
     .map((t) => rows.find((r) => r.tag === t))
     .filter((r) => r && r.total > 0);
-  const rate = (r) => r.mastered / r.total;
+
+  // 「這一課走完了沒」＝ 課裡每一條都碰過。
+  // 不是「碰過幾條就算過關」—— 那會讓整條路線一路夾生；
+  // 也不是「掌握了才算」—— 掌握的定義是隔 21 天還記得，
+  // 那是長期記憶的指標，不該拿來擋人往前走。
+  //
+  // ★ 這兩件事被混在一起過：原本 next 找的是「掌握率 <80% 的第一課」，
+  //   於是學完第一課之後，下一課仍然指回同一課，而且要等三週才會變。
+  //   使用者的感受是「我學完了，但它沒有反應」—— 讀起來就是壞掉。
+  //   前進看「走完沒」，鞏固看「掌握」，兩個指標各自顯示，不互相綁架。
+  const walked = (r) => r.started >= r.total;
+
   return {
-    next: ordered.find((r) => rate(r) < LESSON_DONE) ?? null,
-    done: ordered.filter((r) => rate(r) >= LESSON_DONE).length,
+    next: ordered.find((r) => !walked(r)) ?? null,
+    done: ordered.filter(walked).length,
+    mastered: ordered.filter((r) => r.mastered / r.total >= LESSON_DONE).length,
     total: ordered.length,
     ordered,
   };
