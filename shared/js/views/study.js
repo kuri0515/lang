@@ -11,6 +11,7 @@ import * as content from '../data/content.js';
 import * as speech from '../core/speech.js';
 import { openEditor } from './editor.js';
 import { lessonOutro } from '../core/taxonomy.js';
+import { parseLine } from '../core/dialogue.js';
 import { hasRuby, rubyHTML, stripRuby } from '../core/ruby.js';
 import { lang } from '../core/lang.js';
 
@@ -146,7 +147,6 @@ export function render(state) {
   els.prog.style.width = `${(idx / total) * 100}%`;
   els.pos_.textContent = `${idx + 1} / ${total}`;
   els.dir.textContent = dirLabel()[direction];
-  els.type.textContent = TYPE_LABEL[item.item_type] || '單字';
 
   const ko2zh = direction === 'ko2zh';
   // hanja 欄在日文站存的是「ko 的注音版本」（駅[えき]は…）。
@@ -175,8 +175,17 @@ export function render(state) {
     els.flag.title = on ? '已在回顧清單（點一下移除）' : '加入回顧清單';
     els.flag.onclick = () => deps.onToggleRecall?.(item);
   }
-  els.note.textContent = item.note || '';
-  els.note.classList.toggle('hidden', !item.note);
+  // ★ 對話行的 note 是「對話 A｜情境｜語法說明」—— 前兩段是給程式歸組用的
+  //   中繼資料，不是給學生看的。原本整串直接顯示，於是 188 張句子卡
+  //   每一張都印著「對話 A｜刷牙｜」。資料完全正確，畫面在漏內部細節。
+  //   情境改成小標籤（那對學生有意義：知道這句用在哪），
+  //   說話者代號丟掉（在單卡情境下它沒有意義）。
+  const parsed = parseLine(item.note);
+  els.note.textContent = parsed ? parsed.grammar : (item.note || '');
+  els.note.classList.toggle('hidden', !els.note.textContent);
+  els.type.textContent = parsed
+    ? `${TYPE_LABEL[item.item_type] || '句子'} · ${parsed.scene}`
+    : (TYPE_LABEL[item.item_type] || '單字');
   els.hanja.classList.add('hidden');
   els.hanjaRel.classList.add('hidden');
   els.same.classList.add('hidden');
