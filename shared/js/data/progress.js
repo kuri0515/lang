@@ -487,38 +487,37 @@ export async function clearResume(userId, mode) {
   } catch { /* 同上 */ }
 }
 
-/**
- * 今天已經答對的條目 id。
- *
- * 【給自由練習用：讓開位置，而不是「練過就消失」】
- *   使用者要的是一直練下去。翻來覆去都是同幾個，
- *   他的感覺會是「這個 App 只有這些詞」。
- *
- * 【★ 為什麼只算答對的】
- *   答錯的詞正是最需要再練的 —— 把它一起藏起來，
- *   等於「今天答錯的今天不准再練」，剛好與目的相反。
- *   答對的才算告一段落：它已經進了複習循環，
- *   到期時自然會回來，不必占著自由練習的位置。
- *
- * 【為什麼是「今天」而不是「這一輪」】
- *   跨輪也要記得：做完一輪按「再多練一些」，
- *   不該又看到剛剛才答對的那幾個。
- *   隔天重來是對的 —— 那時候再看到它反而是複習。
- *
- * 【為什麼不看 user_cards】
- *   自由練習不建卡（它不動排程），所以那裡查不到。
- *   reviews 才是「答過什麼、答得怎麼樣」的完整記錄。
- */
-export async function correctToday(userId) {
-  if (!userId) return new Set();
-  const since = new Date();
-  since.setHours(0, 0, 0, 0);
+
+// ---------------------------------------------------------------------
+// 輪次池
+//
+// 【它與複習池的分工】
+//   複習池（user_cards）回答「哪些快忘了」—— 由到期日決定順序。
+//   輪次池回答「我掃到哪了」—— 由一個固定的打散順序決定。
+//   兩者互不干涉：輪次池不看到期日，複習池不看輪次進度。
+//
+//   使用者已經學完第一輪，現在要的是「不斷地把全部內容輪過」。
+//   那件事光靠到期日做不到 —— 到期日只端出「該複習的」，
+//   永遠不保證每個詞都輪得到。
+// ---------------------------------------------------------------------
+
+/** 讀輪次狀態。沒有就回 null（呼叫端會開第一輪） */
+export async function loadRound(userId) {
+  if (!userId) return null;
   try {
-    const rows = await fetchAll(() => sb.from('reviews')
-      .select('item_id')
-      .eq('user_id', userId)
-      .gte('reviewed_at', since.toISOString())
-      .gte('rating', 3));                    // 記得／很簡單 —— 有點難與忘了不算
-    return new Set(rows.map((r) => r.item_id));
-  } catch { return new Set(); }
+    const { data, error } = await sb.from('study_rounds')
+      .select('round_no, queue, pos').eq('user_id', userId).maybeSingle();
+    if (error || !data) return null;
+    return { roundNo: data.round_no, queue: data.queue || [], pos: data.pos || 0 };
+  } catch { return null; }
+}
+
+export async function saveRound(userId, { roundNo, queue, pos }) {
+  if (!userId) return;
+  try {
+    await sb.from('study_rounds').upsert({
+      user_id: userId, round_no: roundNo, queue, pos,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' });
+  } catch { /* 存不上去頂多是下次從同一組重來，不該擋住學習 */ }
 }

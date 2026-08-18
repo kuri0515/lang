@@ -248,58 +248,48 @@ console.log('\n【卡片內容】');
 
 
 // =====================================================================
-// 【自由練習的取材規則】
+// 【輪次池：把全部內容掃過一遍】
 //
-// 使用者要的是「一直練下去」：
-//   · 複習池優先（已經學過、還需鞏固的，邊際效益最高）
-//   · 今天練過的先讓開 —— 否則翻來覆去都是同幾個，
-//     而他的感覺會是「這個 App 只有這些詞」
-//   · 不夠就補新詞，而新詞要打散（同一課的詞往往共用主題，猜得出來）
-//   · 全部練過了就不再排除 —— 「今天練完了」不該是死路，
-//     那是使用者最投入的時刻
+// 使用者已經學完第一輪，現在要的是「不斷地把全部內容輪過」。
+// 那件事光靠到期日做不到 —— 到期日只端出「該複習的」，
+// 永遠不保證每個詞都輪得到。
 //
-// 這裡用純函式的方式驗規則本身（取材需要網路，動線測試不打網路）。
+// 【為什麼「今天答對的隱藏」那條規則被刪掉了】
+//   輪次機制本身就保證一輪內每個詞只出現一次，那條規則變成多餘。
+//   多餘的規則不是無害的：它會在某天與輪次順序打架，
+//   而那時沒有人記得它為什麼存在。
 // =====================================================================
-console.log('\n【自由練習的取材規則】');
+console.log('\n【輪次池】');
 {
-  const BATCH = 40;
-  const mkPool = (duePool, practiced, newPool) => {
-    const done = new Set(practiced);
-    const fresh = (l) => l.filter((x) => !done.has(x.id));
-    let items = fresh(duePool);
-    if (items.length < BATCH) items = items.concat(fresh(newPool));
-    return items.slice(0, BATCH);
+  // 用純函式模擬輪次的推進，驗的是規則本身（取材需要網路）
+  const mkRound = (ids) => ({ roundNo: 1, queue: [...ids], pos: 0 });
+  const take = (r, n) => {
+    if (r.pos >= r.queue.length) {           // 走完 → 下一輪，全部重新打散
+      r.roundNo += 1; r.pos = 0;
+      r.queue = [...r.queue].reverse();      // 這裡用反轉代表「重新打散」
+    }
+    const got = r.queue.slice(r.pos, r.pos + n);
+    r.pos += got.length;
+    return got;
   };
-  const ids = (n, p = 'd') => Array.from({ length: n }, (_, i) => ({ id: `${p}${i}` }));
 
-  const a = mkPool(ids(5), [], ids(3, 'n'));
-  chk('複習池排在新詞前面', a.slice(0, 5).every((x) => x.id.startsWith('d')),
-      a.map((x) => x.id).join(','));
-  chk('複習池不夠時補新詞', a.length === 8);
+  const r = mkRound(['a', 'b', 'c', 'd', 'e']);
+  chk('第一組取 2 個', take(r, 2).join('') === 'ab');
+  chk('進度會前進', r.pos === 2);
+  take(r, 2);
+  const last = take(r, 2);
+  chk('最後一組不足也照給', last.join('') === 'e', last.join(''));
+  chk('★ 這一輪走完了', r.pos === r.queue.length);
 
-  const b = mkPool(ids(5), ['d0', 'd1'], []);
-  chk('★ 今天答對的不再出現', b.every((x) => !['d0', 'd1'].includes(x.id)),
-      b.map((x) => x.id).join(','));
-  chk('其餘照常出現', b.length === 3);
+  const next = take(r, 2);
+  chk('★ 走完自動進入下一輪', r.roundNo === 2, `第 ${r.roundNo} 輪`);
+  chk('★ 下一輪重新打散', next.join('') !== 'ab', next.join(''));
 
-  // ★ 排除的判準是「答對」，不是「練過」。
-  //   答錯的詞正是最需要再練的 —— 把它一起藏起來，
-  //   等於「今天答錯的今天不准再練」，剛好與目的相反。
-  //   （這一條是資料層的查詢條件 rating >= 3 決定的，在這裡驗它有沒有被改掉。）
-  const src = fs.readFileSync(SHARED + '/js/data/progress.js', 'utf8');
-  chk('★ 只排除答對的（rating >= 3）', /\.gte\('rating', 3\)/.test(src),
-      '沒有這個條件的話，今天答錯的詞會被藏到明天 —— 與目的相反');
-
-  const c = mkPool(ids(60), [], []);
-  chk(`一次最多端 ${BATCH} 個（做完可以再多練一些）`, c.length === BATCH);
-
-  // 全部練過 → 程式會改用「不排除」的路徑，這裡驗的是它確實走得到
-  const d = mkPool(ids(3), ['d0', 'd1', 'd2'], []);
-  chk('★ 全部練過時會是空的（觸發不排除的路徑）', d.length === 0,
-      '而那條路徑會端出全部並提示「再來一輪加深印象」—— 死路才是最糟的結果');
+  // ★ 一輪之內不會重複 —— 這正是「今天答對的隱藏」那條規則變多餘的原因
+  const r2 = mkRound(['a', 'b', 'c', 'd']);
+  const seen = [...take(r2, 2), ...take(r2, 2)];
+  chk('★ 一輪之內每個詞只出現一次', new Set(seen).size === seen.length, seen.join(','));
 }
-
-
 // =====================================================================
 // 【自由練習會把詞送進複習循環】
 //

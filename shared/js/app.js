@@ -67,6 +67,7 @@ const session = createSession({
     const extra = [...lastBatchIds, ...reviewQueue.map((e) => e.item.id)];
     study.renderDone(stats, free, free ? '' : currentLesson,
                      reviewQueue.length, extra.length > 0);
+    home.refreshRoundLabel();      // 這一組做完了，按鈕上的剩餘數要跟著動
     show('view-done');
   },
   onError: (e) => msg('儲存失敗：' + (e.message || e)),
@@ -362,64 +363,62 @@ async function startScene(scene) {
  *   一般練習照原順序會讓人靠位置記答案，但對話照順序是刻意的：
  *   那練的是「這句接哪句」，順序本身就是內容。
  */
-const FREE_BATCH = 40;      // 一次端多少上來。做完可以按「再多練一些」繼續
+// ---------------------------------------------------------------------
+// 輪次池：把全部內容掃過一遍，一輪接一輪
+//
+// 【與複習池的分工】
+//   複習池看到期日 —— 端出「哪些快忘了」。
+//   輪次池看一個固定的打散順序 —— 回答「我掃到哪了」。
+//   兩者互不干涉。使用者已經學完第一輪，要的是「不斷地把全部內容輪過」，
+//   而那件事光靠到期日做不到：到期日永遠不保證每個詞都輪得到。
+//
+// 【為什麼一輪的順序在開始時就固定】
+//   中途插入新詞會讓「還剩多少」跳動，而那個數字是這個模式唯一的進度感。
+//   新詞加入下一輪。
+//
+// 【答題仍然寫排程】
+//   「獨立」指的是出題順序，不是不記錄。
+//   輪次池練到的詞照樣進複習循環 —— 否則它們永遠不會被複習帶回來。
+// ---------------------------------------------------------------------
+let round = null;          // { roundNo, queue, pos }
 
-/**
- * 自由練習要練的內容。
- *
- * 【順序：複習池優先，不夠才補新詞】
- *   複習池是「已經學過、但還需要鞏固」的那些 —— 練它們的邊際效益最高。
- *   全部練完了才引進沒學過的，而新詞要打散：
- *   照資料庫的順序端上來會讓同一課的詞連在一起，
- *   而同一課的詞往往共用一個主題，猜得出來。
- *
- * 【今天答對的先讓開】
- *   使用者想一直練下去時，翻來覆去都是同幾個會讓他以為
- *   「這個 App 只有這些詞」。
- *
- *   ★ 只讓開「答對的」—— 答錯的正是最需要再練的，
- *   把它一起藏起來等於「今天答錯的今天不准再練」，剛好與目的相反。
- *   答對的已經進了複習循環，到期時自然會回來。
- *
- * 【真的沒得練了怎麼辦】
- *   全部都練過的話就不再排除，讓他繼續練 ——
- *   「今天已經練完了」不該是一個死路，那是使用者最投入的時刻。
- */
-async function freePool() {
-  const dir = home.effectiveDir();
-  const [due, done] = await Promise.all([
-    progress.fetchDue(user.id, [dir], 200).catch(() => []),
-    progress.correctToday(user.id),
-  ]);
+/** 讀（或開）輪次狀態。queue 空了就開下一輪，全部重新打散 */
+async function ensureRound() {
+  if (!round) round = await progress.loadRound(user.id);
+  if (round && round.pos < round.queue.length) return round;
 
-  const fresh = (list) => list.filter((x) => !done.has(x.id));
-  let items = fresh(due.map((c) => c.items).filter(Boolean));
+  const deck = (await content.listDecks()).find((d) => d.slug === lang().roundDeck);
+  const items = await content.pickItems({ deckId: deck?.id ?? null, limit: 5000 });
+  round = {
+    roundNo: (round?.roundNo ?? 0) + 1,
+    queue: shuffle(items.map((i) => i.id)),
+    pos: 0,
+  };
+  await progress.saveRound(user.id, round);
+  return round;
+}
 
-  if (items.length < FREE_BATCH) {
-    const deck = (await content.listDecks())[0]?.id ?? null;
-    const more = await progress
-      .fetchNewItems(user.id, deck, [dir], FREE_BATCH - items.length)
-      .catch(() => []);
-    items = items.concat(shuffle(fresh(more.map((r) => r.item ?? r))));
-  }
-
-  // 全部都練過 → 不再排除。「今天練完了」不該是死路。
-  if (!items.length) {
-    const all = await content.pickItems({ limit: FREE_BATCH });
-    items = shuffle(all);
-    if (all.length) msg('今天的詞都練過一遍了，再來一輪加深印象', 'ok');
-  }
-  return items.slice(0, FREE_BATCH);
+/** 這一輪的進度，給首頁顯示用 */
+export function roundProgress() {
+  if (!round) return null;
+  return { roundNo: round.roundNo, done: round.pos, total: round.queue.length };
 }
 
 async function startFree({ ids = null, tag = '', deckId = null,
                            kind = 'free', keepOrder = false } = {}) {
   try {
-    // 沒有指定範圍時（首頁的「自由練習」）走複習池，而不是整個詞庫抓 60 個
     const pooled = !ids && !tag && !deckId;
-    const items = pooled
-      ? await freePool()
-      : await content.pickItems({ ids, tag, deckId, limit: 60 });
+    let items;
+    if (pooled) {
+      const r = await ensureRound();
+      const take = r.queue.slice(r.pos, r.pos + ROUND_SIZE);
+      items = await content.pickItems({ ids: take, limit: ROUND_SIZE });
+      // 先推進指標再開始 —— 中途離開也算走過，否則同一組會無限重來
+      r.pos += take.length;
+      await progress.saveRound(user.id, r);
+    } else {
+      items = await content.pickItems({ ids, tag, deckId, limit: 60 });
+    }
     if (!items.length) return msg('沒有符合的內容');
 
     // 已經有卡的要帶著卡進來 —— 沒帶的話排程會從頭算起，
@@ -432,23 +431,14 @@ async function startFree({ ids = null, tag = '', deckId = null,
       item, direction: dir, card: byItem[item.id]?.[dir] ?? null,
     }));
 
-    // ★ 首頁的「自由練習」會寫排程（freeMode: false）。
-    //
-    //   使用者的定義：「練習過之後，這些詞就會進入到循環池中」。
-    //   那與「只記錄成績、不動排程」是互斥的 —— 不動排程就永遠進不了循環。
-    //
-    //   所以它現在是一條無上限的學習流：練到的詞進循環，答對的當天讓開，
-    //   隔天由複習把它們帶回來。
-    //
-    //   指定範圍的練習（詞庫選標籤、弱項修復）維持不動排程 ——
-    //   那是「臨時翻出來看一下」，不該打亂長期的節奏。
+    const r = roundProgress();
     await begin(keepOrder ? entries : orderForDiscrimination(entries, confusableOf),
                 { freeMode: !pooled, kind, lesson: tag,
                   criterion: getMode(home.studyMode()).criterion,
                   note: kind === 'drill'
                     ? '弱項修復 · 只記錄成績，不影響複習排程'
                     : (pooled
-                      ? '自由練習 · 練到的詞會進入複習循環'
+                      ? `第 ${r.roundNo} 輪 · 還剩 ${r.total - r.done} / ${r.total}`
                       : '練習這一組 · 只記錄成績，不影響複習排程') });
   } catch (e) { msg(e.message || e); }
 }
@@ -517,6 +507,7 @@ home.initHome({
   onResumeRound: () => resumeRound(),
   onReview: startReview,
   onFree: () => startFree({}),
+  roundProgress,
   onNewDeck: (deckId) => startNew(deckId),
   onDrillWeak: (ids) => startFree({ ids, kind: 'drill' }),
   // 發音課程的「開始」走與詞庫瀏覽的「學這組」同一條路 ——

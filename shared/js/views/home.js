@@ -132,6 +132,9 @@ export function initHome(d) {
     + `<span>${esc(m.label)}</span></label>`).join('');
   $('btn-primary').onclick = () => primaryAction?.();
   $('btn-free').onclick = () => deps.onFree();
+  // 輪次進度寫在按鈕上 —— 這個模式沒有到期日，
+  // 「第幾輪、還剩多少」是它唯一的進度感。不寫的話按下去像在抽籤。
+  refreshRoundLabel();
   // 首頁的按鈕一律在這裡綁。先前「學習新的」綁在 app.js ——
   // 同一個畫面的按鈕分兩處綁，日後改一處漏一處，
   // 而漏掉的那顆不會報錯，只是點下去沒反應。
@@ -169,6 +172,7 @@ export async function refreshDue() {
     // 少了這一行，切換方向之後環會停在舊目標 —— 兩個數字互相矛盾，
     // 而使用者不會知道該信哪一個。
     renderRing(masteredToday(), dailyTarget(due.total));
+    refreshRoundLabel();
     dueNow = due.total;
   } catch (e) { msg('載入失敗：' + (e.message || e)); }
 }
@@ -267,6 +271,16 @@ function renderStreak(daily) {
  *   而且要回答的問題是「今天做了沒」，不是「這個月表現如何」——
  *   後者在記錄分頁有完整的圖。
  */
+/** 自由練習鈕上的輪次進度：第 N 輪 · 還剩 X */
+export function refreshRoundLabel() {
+  const btn = $('btn-free');
+  if (!btn) return;
+  const r = deps?.roundProgress?.();
+  btn.textContent = r && r.total
+    ? `自由練習（第 ${r.roundNo} 輪 · 還剩 ${r.total - r.done}）`
+    : '自由練習';
+}
+
 export function renderWeek(daily) {
   const box = $('week');
   if (!box) return;
