@@ -96,14 +96,22 @@
       </div>
 
       <div id="suggest" class="suggest"></div>
-      <!-- 首頁只留三個入口：複習、學習新的、自由練習。
+      <!-- 首頁只留三個入口：複習、新課、輪練。
            先前有五個「開始學」的入口（主按鈕、發音課程、生活場景、詞庫、弱項），
            而它們多半指向同一批內容 —— 多一個入口不是多一個選擇，是多一次猶豫。
            分工：挑內容 → 詞庫分頁；看記錄 → 記錄分頁；調設定 → 我的。 -->
-      <button id="btn-primary" class="primary block big">開始複習</button>
-      <div class="row2" style="margin-top:8px">
-        <button id="btn-new" class="ghost">學習新的</button>
-        <button id="btn-free" class="ghost">自由練習</button>
+      <!-- 三個入口，各自回答「按下去會拿到什麼」：
+             複習 = 系統說該練的（到期日決定）
+             新課 = 往前走（課本順序）
+             輪練 = 全部再過一遍（每輪重新打散）
+           副標寫的是當下的數字 —— 名字不必自己解釋全部，旁邊那行字會做這件事。
+           「自由練習」這個舊名字是錯的：它暗示隨意沒章法，
+           而它其實是三個裡面最有系統的一個。 -->
+      <button id="btn-primary" class="primary block big hidden"></button>
+      <div class="entries">
+        <button id="btn-review" class="entry"><b>複習</b><small id="e-review">–</small></button>
+        <button id="btn-new" class="entry"><b>新課</b><small id="e-new">–</small></button>
+        <button id="btn-free" class="entry"><b>輪練</b><small id="e-free">–</small></button>
       </div>
     </div>
 

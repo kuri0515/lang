@@ -318,8 +318,8 @@ console.log('\n【順延的可見性】');
   //   這兩個數字原本散在三個檔案，改一處漏兩處不會報錯 ——
   //   只會讓畫面寫「一輪 20 題」而實際做 10 題。
   chk(`畫面寫的題數＝實際的一輪（${ROUND_SIZE}）`,
-    box.textContent.includes(`一輪 ${ROUND_SIZE} 個詞`)
-    && $('btn-primary').textContent.includes(`一輪 ${ROUND_SIZE} 個詞`));
+    box.textContent.includes(`一輪 ${ROUND_SIZE} 個詞`),
+    '寫死的數字會過期 —— 改了一輪的長度而文案沒跟著改，兩個數字互相矛盾');
 }
 
 
@@ -369,7 +369,11 @@ console.log('\n【每日複習任務】');
 
   set(0);
   home.renderSuggestion(60, { reviewed: 0 }, [], 0);
-  chk('首頁顯示掌握進度', /0\/20/.test($('suggest').textContent), $('suggest').textContent.slice(0, 40));
+  // ★ 三個入口各自的副標才是進度：複習看到期數、輪練看第幾輪。
+  //   先前把「今日任務 x/20」當成主要進度 —— 那是限制時期的說法，
+  //   而限制已經拿掉了：現在的問題不是「今天要做多少」，是「該做哪一種」。
+  chk('複習入口顯示到期數', /60/.test($('e-review').textContent), $('e-review').textContent);
+  chk('有到期時推薦複習', $('btn-review').classList.contains('on'));
   localStorage.removeItem(key);
 }
 
@@ -682,7 +686,8 @@ console.log('\n【離開再回來要接得上】');
     roundLeft: () => 0, onResumeRound: () => {},
   });
   home.renderSuggestion(30, { reviewed: 0 }, [], 0);
-  chk('沒有進行中的一輪就不顯示', !/繼續這一輪/.test(btn.textContent), btn.textContent);
+  chk('沒有進行中的一輪就不顯示', $('btn-primary').classList.contains('hidden'),
+      '那顆大按鈕不是第四個入口，是一個狀態：你剛才在做的事還沒做完');
   void box;
 }
 
@@ -770,6 +775,65 @@ console.log('\n【練習方式要記住】');
   home.applyPrefs('壞掉的字串');
   chk('壞掉的偏好不會炸，也不會亂改', home.readPrefs().type === 'sentence',
       '找不到對應選項就不動 —— 題型可能已經被本站關掉');
+}
+
+
+// =====================================================================
+// 【三個入口】
+//
+// 三種不同的練習，各自回答「按下去會拿到什麼」：
+//   複習 = 系統說該練的（到期日決定）
+//   新課 = 往前走（課本順序）
+//   輪練 = 全部再過一遍（每輪重新打散）
+//
+// ★「自由練習」這個舊名字是錯的：它暗示隨意沒章法，
+//   而改完之後它是三個裡面最有系統的一個 ——
+//   全部內容、固定順序、有輪次、有進度。
+//   名字和行為相反，會讓人不敢按，或按了不知道自己在做什麼。
+// =====================================================================
+console.log('\n【三個入口】');
+{
+  const home = await import(SHARED + '/js/views/home.js');
+  let round = { roundNo: 2, done: 60, total: 400 };
+  home.initHome({
+    user: () => ({ id: 'u' }), isAdmin: () => false,
+    onStudyTag: () => {}, onRecall: () => {}, onReview: () => {},
+    onFree: () => {}, onNewDeck: () => {}, onPrefsChange: () => {},
+    roundLeft: () => 0, onResumeRound: () => {},
+    roundProgress: () => round,
+  });
+
+  for (const id of ['btn-review', 'btn-new', 'btn-free']) {
+    chk(`${id} 存在`, !!$(id));
+  }
+  chk('三個入口都有副標', ['e-review', 'e-new', 'e-free'].every((i) => !!$(i)));
+
+  home.renderSuggestion(12, { reviewed: 0 }, [{ id: 'd' }], 0);
+  chk('複習副標寫到期數', /12/.test($('e-review').textContent), $('e-review').textContent);
+  chk('★ 輪練副標寫第幾輪與剩餘', /第 2 輪/.test($('e-free').textContent)
+      && /340/.test($('e-free').textContent), $('e-free').textContent);
+  chk('有到期時推薦「複習」', $('btn-review').classList.contains('on'));
+
+  home.renderSuggestion(0, { reviewed: 5 }, [{ id: 'd' }], 0);
+  chk('複習清空時該入口停用', $('btn-review').disabled);
+  chk('★ 清空後推薦別的（不會沒有出路）',
+      $('btn-new').classList.contains('on') || $('btn-free').classList.contains('on'),
+      '三個都不推薦的話，使用者不知道接下來該做什麼');
+
+  // 沒有輪次資料時也要有話說 —— 空白的副標看起來像壞掉
+  round = null;
+  home.renderSuggestion(0, { reviewed: 0 }, [{ id: 'd' }], 0);
+  chk('還沒開始輪練時副標不空白', $('e-free').textContent.trim().length > 0,
+      $('e-free').textContent);
+
+  // 舊名字不該再出現在畫面上
+  // 剝掉註解再驗 —— 註解裡提到舊名字是正常的（那是在解釋為什麼改名），
+  // 而「畫面上」指的是使用者看得到的字。連註解一起算會逼人刪掉有用的說明。
+  const html = fs.readFileSync(`${SITE_DIR}/index.html`, 'utf8')
+    .replace(/<!--[\s\S]*?-->/g, '');
+  chk('★ 畫面上沒有「自由練習」這個舊名字', !/自由練習/.test(html),
+      '名字和行為相反比沒有名字更糟：它暗示隨意沒章法，'
+      + '而它其實是三個裡面最有系統的一個');
 }
 
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');

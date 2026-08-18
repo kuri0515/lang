@@ -1088,3 +1088,22 @@ ruby rt { line-height: 1; }
   background: var(--accent); color: #fff; font-size: 15px; font-weight: 600;
 }
 .sp-next:active { transform: translateY(1px); }
+
+/* 三個入口。平等呈現 —— 它們是三種不同的練習，沒有主次；
+   系統推薦的那一個用顏色標出來，而不是用大小。 */
+.entries { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.entry {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 12px 6px; border: 1px solid var(--border); border-radius: var(--r-sm);
+  background: var(--surface); color: var(--text);
+}
+.entry b { font-size: 15px; font-weight: 650; }
+/* 副標是「當下的數字」，比名字更常變 —— 給它固定高度，換數字時版面不跳 */
+.entry small {
+  font-size: 11px; color: var(--faint); min-height: 15px; line-height: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.entry.on { border-color: var(--accent); background: var(--accent-soft); }
+.entry.on b { color: var(--accent); }
+.entry:disabled { opacity: .45; }
+.entry:active { transform: translateY(1px); }

@@ -131,6 +131,7 @@ export function initHome(d) {
     `<label><input type="radio" name="mode" value="${esc(m.id)}"${i === 0 ? ' checked' : ''}>`
     + `<span>${esc(m.label)}</span></label>`).join('');
   $('btn-primary').onclick = () => primaryAction?.();
+  $('btn-review').onclick = () => deps.onReview();
   $('btn-free').onclick = () => deps.onFree();
   // 輪次進度寫在按鈕上 —— 這個模式沒有到期日，
   // 「第幾輪、還剩多少」是它唯一的進度感。不寫的話按下去像在抽籤。
@@ -273,12 +274,12 @@ function renderStreak(daily) {
  */
 /** 自由練習鈕上的輪次進度：第 N 輪 · 還剩 X */
 export function refreshRoundLabel() {
-  const btn = $('btn-free');
-  if (!btn) return;
+  const el = $('e-free');
+  if (!el) return;
   const r = deps?.roundProgress?.();
-  btn.textContent = r && r.total
-    ? `自由練習（第 ${r.roundNo} 輪 · 還剩 ${r.total - r.done}）`
-    : '自由練習';
+  // 這個模式沒有到期日，「第幾輪、還剩多少」是它唯一的進度感。
+  // 不寫的話按下去像在抽籤。
+  el.textContent = r && r.total ? `第 ${r.roundNo} 輪 · 剩 ${r.total - r.done}` : '全部輪一遍';
 }
 
 export function renderWeek(daily) {
@@ -430,79 +431,62 @@ export function startNext() {
 
 export function renderSuggestion(dueCount, today, decks, carried = 0) {
   const box = $('suggest');
-  const btn = $('btn-primary');
+  const big = $('btn-primary');
   box.classList.remove('done');
   firstDeckId = decks[0]?.id ?? null;
 
-  // ★ 有做到一半的一輪就先給回去的路。
-  //   分頁列在學習中也顯示了（見 router.js），所以人隨時可能離開 ——
-  //   離開不會弄丟進度（每答一題就存），但沒有入口就等於把自己鎖在外面。
-  //   這一條排在最前面：它是此刻最該做的事，其餘建議都排在它後面。
+  // ── 三個入口的副標 ──────────────────────────────────────
+  $('e-review').textContent = dueCount ? `到期 ${dueCount} 個` : '已清空';
+  $('btn-review').disabled = dueCount === 0;
+  $('e-new').textContent = nextLessonTag
+    ? `第 ${nextLessonNo} 課：${nextLessonTag}`
+    : (firstDeckId ? '學幾個新詞' : '沒有詞庫');
+  $('btn-new').disabled = !nextLessonTag && !firstDeckId;
+  refreshRoundLabel();
+
+  // ── 推薦哪一個 ─────────────────────────────────────────
+  //   用顏色標出來，不用大小 —— 三者是三種不同的練習，沒有主次，
+  //   把其中一個做大會讓另外兩個看起來像次要功能。
+  const rec = dueCount > 0 ? 'btn-review' : (nextLessonTag ? 'btn-new' : 'btn-free');
+  ['btn-review', 'btn-new', 'btn-free'].forEach((id) => {
+    $(id).classList.toggle('on', id === rec);
+  });
+
+  // ── 大按鈕只在「有一輪做到一半」時出現 ──────────────────
+  //   它不是第四個入口，是一個狀態：你剛才在做的事還沒做完。
+  //   排在最前面因為那是此刻最該做的。
   const left = deps?.roundLeft?.() ?? 0;
+  big.classList.toggle('hidden', left === 0);
   if (left > 0) {
-    box.innerHTML = `這一輪還有 <b>${left}</b> 題沒做完。`;
-    btn.textContent = `繼續這一輪（還有 ${left} 題）`;
-    btn.disabled = false;
+    big.textContent = `繼續這一輪（還有 ${left} 題）`;
+    big.disabled = false;
     primaryAction = () => deps.onResumeRound();
+    box.innerHTML = `這一輪還有 <b>${left}</b> 題沒做完。`;
     return;
   }
 
-  if (dueCount > 0) {
-    // 超過兩輪就把「做不完沒關係」講清楚 ——
-    // 看到 63 而不知道可以分次做，很多人會直接關掉。
-    const rounds = Math.ceil(dueCount / ROUND_SIZE);
-    const target = dailyTarget(dueCount);
-    const got = masteredToday();
-    box.innerHTML = `今天的複習任務 <b>${Math.min(got, target)}/${target}</b> 個已掌握`
-      + `（連續答對 ${ROUND_CRITERION} 次才算）<br>還有 <b>${dueCount}</b> 個詞到期`
-      + (carried ? `（其中 <b>${carried}</b> 條是之前順延過來的）` : '')
-      + '，先把複習做完最划算 —— 間隔重複的效果全靠準時複習。'
-      + (rounds > 2
-        ? `<br><span class="muted">一輪 ${ROUND_SIZE} 個詞，做不完沒關係：`
-          + '沒做到的會排到明天最前面，複習間隔不會因此變長。'
-          + (carried > dueCount / 2
-            ? '<br>★ 順延的已經超過一半，先暫停學新課幾天，讓它降下來。'
-            : '')
-          + '</span>'
-        : '');
-    btn.textContent = `開始複習（一輪 ${ROUND_SIZE} 個詞，共 ${dueCount}）`;
-    btn.disabled = false;
-    primaryAction = () => deps.onReview();
-    return;
-  }
-
-  // ★ 有課程就走課程，不要走「整個詞庫抓 20 張」。
-  //   兩條路的差別對初學者很大：
-  //     走課程 → 範圍是一課、開頭會顯示這一課的口訣（書上最有價值的東西）
-  //     走詞庫 → 一次 20 張橫跨兩三課，而且沒有任何導言
-  //   原本的大按鈕指向後者，等於把新手帶到比較差的那條路，
-  //   而他不會知道另一條存在。
-  if (nextLessonTag) {
-    box.classList.add('done');
+  if (dueCount === 0) {
     box.innerHTML = today.reviewed
-      ? `✓ 今日複習已清空，答了 <b>${today.reviewed}</b> 題。接著上第 ${nextLessonNo} 課。`
-      : `✓ 今天沒有到期的複習。接著上第 ${nextLessonNo} 課 —— 一課約 8 條，一次坐下來走得完。`;
-    btn.textContent = `開始第 ${nextLessonNo} 課：${nextLessonTag}`;
-    btn.disabled = false;
-    primaryAction = () => startLesson(() => deps.onStudyTag(nextLessonTag));
+      ? `✓ 今日複習已清空，答了 <b>${today.reviewed}</b> 題。`
+      : '✓ 今天沒有到期的複習。';
     return;
   }
 
-  if (firstDeckId) {
-    box.classList.add('done');
-    box.innerHTML = today.reviewed
-      ? `✓ 今日複習已清空，答了 <b>${today.reviewed}</b> 題。想再前進就學幾個新詞。`
-      : '✓ 今天沒有到期的複習。要不要學幾個新詞？';
-    btn.textContent = '學新的詞';
-    btn.disabled = false;
-    primaryAction = () => deps.onNewDeck(firstDeckId);
-    return;
-  }
-
-  box.innerHTML = '還沒有詞庫。到「我的 → 批次匯入」貼上你的詞表。';
-  btn.textContent = '沒有可學的內容';
-  btn.disabled = true;
-  primaryAction = null;
+  // 順延的條數要說出來 —— 學習者只看到「到期 63」，
+  // 不知道其中 40 條是上週的，也就不知道該調整的是新課的速度。
+  const rounds = Math.ceil(dueCount / ROUND_SIZE);
+  box.innerHTML = `今天已掌握 <b>${masteredToday()}</b> 個`
+    + (carried ? `，其中 <b>${carried}</b> 條是之前順延過來的` : '')
+    + (rounds > 2
+      // ★ 「間隔不會因此變長」是使用者最容易誤解的一句：
+      //   他會以為拖到明天是一種懲罰，於是硬撐或乾脆放棄。
+      ? `<br><span class="muted">一輪 ${ROUND_SIZE} 個詞，做不完沒關係：`
+        + '沒做到的會排到明天最前面，複習間隔不會因此變長。'
+        + (carried > dueCount / 2
+          ? '<br>★ 順延的已經超過一半，先暫停學新課幾天，讓它降下來。'
+          : '')
+        + '</span>'
+      : '');
 }
 
 // 首頁不再有「詞庫」卡 —— 它是第三個「開始學」的入口，
