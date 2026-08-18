@@ -330,5 +330,41 @@ console.log('\n【複習階梯（費氏）】');
       '階梯是固定的；ease 仍記錄下來當難度訊號，日後換演算法用得上');
 }
 
+
+// =====================================================================
+// 【一輪的產出是固定的：ROUND_SIZE 個掌握】
+//
+// 每輪從複習池順選 ROUND_SIZE 個詞，沒達標的一直循環到達標，
+// 所以一輪結束時必定剛好掌握 ROUND_SIZE 個 —— 解鎖新課需要的輪數是可預測的
+// （目標 20、一輪 10 → 固定兩輪）。
+//
+// 這件事一旦被改壞（例如某個分支讓沒達標的卡提早離開佇列），
+// 使用者會看到「做了三輪還是 18/20」，而完全不知道為什麼。
+// =====================================================================
+console.log('\n【一輪的產出】');
+{
+  const mk = (n) => Array.from({ length: n }, (_, i) => ({
+    item: { id: 'r' + i, ko: 'w' + i, zh: 'z' + i }, direction: 'ko2zh',
+    card: { state: 'review', interval_days: 8, ease_factor: 2.5,
+            repetitions: 4, lapses: 0 },
+  }));
+  let rng = 3;
+  const rand = () => ((rng = (rng * 1103515245 + 12345) % 2147483648) / 2147483648);
+
+  for (const acc of [1, 0.8, 0.5]) {
+    let got = 0, answers = 0;
+    const S = createSession({ save: async () => {}, onChange: () => {},
+                              onFinish: (st) => { got = st.mastered; } });
+    S.start(mk(10), { mode: 'flip', kind: 'review' });
+    while (answers < 2000) {
+      S.grade(rand() < acc ? RATING.GOOD : RATING.AGAIN);
+      answers++;
+      if (S.state().idx >= S.state().total) break;
+    }
+    chk(`正確率 ${acc * 100}%：一輪 10 個詞，掌握 10 個（答了 ${answers} 題）`,
+        got === 10, '沒達標的會一直循環到達標，所以產出是固定的');
+  }
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);
