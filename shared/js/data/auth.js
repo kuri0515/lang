@@ -53,8 +53,16 @@ export async function currentUser() {
   return data?.user ?? null;
 }
 
+/**
+ * 登入狀態變化。
+ *
+ * ★ 把事件名一起交出去。onAuthStateChange 不只在登入登出時觸發 ——
+ *   TOKEN_REFRESHED（約每小時一次）與分頁重新取得焦點也會觸發。
+ *   把事件丟掉的話，呼叫端無從分辨「使用者換人了」與「只是換了一張 token」，
+ *   只能每次都重跑一遍啟動流程。
+ */
 export const onChange = (cb) =>
-  sb.auth.onAuthStateChange((_e, s) => cb(s?.user ?? null));
+  sb.auth.onAuthStateChange((event, s) => cb(s?.user ?? null, event));
 
 export const displayName = (u) =>
   u?.user_metadata?.display_name || u?.user_metadata?.username || toUsername(u?.email);
@@ -79,9 +87,18 @@ export async function myProfile(userId) {
  *   存不上去頂多是下次要重設一次，不該讓它擋住學習。
  *   本機那一份仍然有效，同一台裝置照樣記得。
  */
+/**
+ * 存練習偏好到雲端。
+ *
+ * ★ 失敗要說出來。原本 catch {} 全吞，理由是「存不上頂多下次重設」——
+ *   但實際發生的是欄位層權限少授一欄（0017 加欄位、忘了補 0002 的 grant），
+ *   寫入被拒了整整一段時間而沒有任何地方會提。
+ *   本機那份仍然有效，所以不擋使用者；只在主控台留一行，
+ *   讓下次有人查「設定為什麼不同步」時看得到線索。
+ */
 export async function savePrefs(userId, prefs) {
   if (!userId) return;
-  try {
-    await sb.from('profiles').update({ study_prefs: prefs }).eq('id', userId);
-  } catch { /* 見上 */ }
+  const { error } = await sb.from('profiles')
+    .update({ study_prefs: prefs }).eq('id', userId);
+  if (error) console.warn('[prefs] 雲端同步失敗，本機那份仍然有效：', error.message);
 }

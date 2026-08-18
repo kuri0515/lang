@@ -389,5 +389,48 @@ console.log('\n【兩台裝置的進度取捨】');
       pick({ idx: 2, savedAt: now - 10 }, { idx: 5, savedAt: now }).idx === 5);
 }
 
+// ---------------------------------------------------------------------
+// 2026-08-19 修的三個 bug —— 寫成斷言免得再回來
+// ---------------------------------------------------------------------
+console.log('\n【回歸：輪練／偏好】');
+{
+  // ① 空佇列不能開新的一輪，否則輪數每點一次就 +1 而一題都沒練到
+  const ensure = (cur, items) => {
+    if (cur && cur.pos < cur.queue.length) return cur;
+    if (!items.length) return cur;                       // ★ 這一行是修法
+    return { roundNo: (cur?.roundNo ?? 0) + 1, queue: [...items], pos: 0 };
+  };
+  let r = { roundNo: 5, queue: [], pos: 0 };             // 壞掉的狀態：空佇列
+  for (let i = 0; i < 10; i++) r = ensure(r, []);
+  chk('★ 撈不到內容時輪數不會暴衝', r.roundNo === 5,
+      `點十次之後是第 ${r.roundNo} 輪（修法前每點一次 +1）`);
+  chk('有內容時照樣開下一輪', ensure(r, ['a', 'b']).roundNo === 6);
+  chk('還沒跑完就不換輪',
+      ensure({ roundNo: 3, queue: ['a', 'b'], pos: 1 }, ['x']).roundNo === 3);
+
+  // ② 雲端偏好是空物件時要退回本機 —— ?? 不會處理 {}
+  const pickPrefs = (cloud, local) => {
+    const has = cloud && typeof cloud === 'object' && Object.keys(cloud).length > 0;
+    return has ? cloud : local;
+  };
+  chk('★ 雲端 {} 要退回本機', pickPrefs({}, { dir: 'zh2ko' })?.dir === 'zh2ko',
+      '?? 只在 null/undefined 才回退，{} 兩者都不是 —— 本機那份永遠用不到');
+  chk('雲端有值時以雲端為準',
+      pickPrefs({ dir: 'ko2zh' }, { dir: 'zh2ko' }).dir === 'ko2zh');
+  chk('兩邊都沒有時不炸', pickPrefs(null, null) === null);
+
+  // ③ 只有換人才重跑啟動流程；換 token 不算
+  let boots = 0, bootedFor = null;
+  const onUser = (u) => { if (u && bootedFor === u.id) return; bootedFor = u?.id ?? null; boots++; };
+  onUser({ id: 'A' });                    // 登入
+  onUser({ id: 'A' });                    // TOKEN_REFRESHED
+  onUser({ id: 'A' });                    // 分頁回到前景
+  chk('★ token 換了不重跑啟動流程', boots === 1,
+      `跑了 ${boots} 次（修法前每次 token 刷新都會切回學習畫面，看起來像自動刷新）`);
+  onUser(null);                           // 登出
+  onUser({ id: 'B' });                    // 換人
+  chk('登出與換人仍會重跑', boots === 3);
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);

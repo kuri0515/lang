@@ -55,8 +55,9 @@ const session = createSession({
   },
   onChange: (state) => { study.render(state); saveResume(); },
   // 收尾話要知道剛練的是哪一課；自由練習不算推進課程，所以不帶
-  onFinish: (stats, free) => {
+  onFinish: async (stats, free) => {
     clearResume();          // 這一輪結束了，沒有東西要續跑
+    await commitRound();    // 答完了，輪次池的指標才往前推（發牌時不推，見 commitRound）
     // 這一輪掌握了幾個，累加到今天的進度。
     // 「哪一種輪次算數」的規則在 home.addMasteredToday 裡（那裡驗得到）。
     home.addMasteredToday(stats.mastered || 0, currentKind);
@@ -78,7 +79,12 @@ async function ensurePool() {
 }
 
 /** 開始一輪：依題型過濾佇列，過濾後沒東西就別進去 */
-async function begin(entries, { freeMode = false, kind = 'review', note = '', lesson = '' } = {}) {
+// roundOf：這一輪是從輪次池發出來的幾個。由 begin 統一持有，
+// 其他入口不傳就自動歸零 —— 免得某一條路徑忘了清，
+// 讓複習做完時去推進輪次池的指標。
+async function begin(entries, { freeMode = false, kind = 'review', note = '', lesson = '',
+                                roundOf = 0 } = {}) {
+  roundPending = roundOf;
   // 導言與收尾話每輪都要重設 —— 不清掉的話，下一輪會掛著上一課的內容
   currentLesson = lesson;
   currentKind = kind;
@@ -397,11 +403,22 @@ async function startScene(scene) {
 //   輪次池練到的詞照樣進複習循環 —— 否則它們永遠不會被複習帶回來。
 // ---------------------------------------------------------------------
 let round = null;          // { roundNo, queue, pos }
+let roundPending = 0;      // 這一組發出去幾個、還沒答完
 
-/** 讀（或開）輪次狀態。queue 空了就開下一輪，全部重新打散 */
+/** 讀（或開）輪次狀態。走完一輪才開下一輪，全部重新打散 */
 async function ensureRound() {
   if (!round) round = await progress.loadRound(user.id);
-  if (round && round.pos < round.queue.length) return round;
+
+  // ★ 「走完」只有一種定義：queue 有內容，而且 pos 走到底。
+  //
+  //   舊寫法是 `if (round.pos < round.queue.length) return round`，
+  //   把 queue 為空也算成走完。於是只要有一次建輪撈不到內容
+  //   （登入還沒接上就按下去就會這樣），就存下一個 queue=[] 的輪次，
+  //   而之後每按一次輪練都會：重建一輪 → roundNo +1 → 發出一組空的牌 →
+  //   停在「沒有符合的內容」。畫面像是沒反應，輪數卻一路往上跳。
+  //   實際發生過：韓文站有使用者跑到第 17 輪，而 pos 只有 70／801。
+  const usable = round && round.queue.length > 0;
+  if (usable && round.pos < round.queue.length) return round;
 
   const deck = (await content.listDecks()).find((d) => d.slug === lang().roundDeck);
   // ★ 不給 limit —— pickItems 沒有 limit 時會分頁撈完。
@@ -410,19 +427,48 @@ async function ensureRound() {
   //   而「還剩多少」看起來完全正常（它算的是那份殘缺清單）。
   //   實測韓文站的詞庫目前 801 條 —— 還沒撞到，但正在往那裡長。
   const items = await content.pickItems({ deckId: deck?.id ?? null });
+  // 撈不到內容就讓呼叫端看見錯誤，絕不存下一個空的輪次 ——
+  // 存下去的話它會被下一次讀成「該開新的一輪」（見上面那段）。
+  if (!items.length) {
+    throw new Error(`讀不到「${lang().roundDeck}」的內容，請確認連線後再試一次`);
+  }
   round = {
-    roundNo: (round?.roundNo ?? 0) + 1,
+    // 只有真的走完才進下一輪。修掉一個壞掉的空輪次不算走完，
+    // 輪數維持原樣 —— 否則修復本身又在推高輪數。
+    roundNo: usable ? round.roundNo + 1 : (round?.roundNo || 1),
     queue: shuffle(items.map((i) => i.id)),
     pos: 0,
   };
+  roundPending = 0;
   await progress.saveRound(user.id, round);
   return round;
 }
 
-/** 這一輪的進度，給首頁顯示用 */
+/**
+ * 這一組答完了，才把指標往前推。
+ *
+ * 【為什麼不在發牌時就推】
+ *   原本是發出去就 pos += 10，理由是「中途離開也算走過」。
+ *   但那讓「按一下輪練」變成有代價的動作：使用者以為沒反應而多按幾次，
+ *   詞庫就被吃掉幾十個，而那些詞這一輪再也不會出現。
+ *   輪次池的約定是「每個詞這一輪都輪得到」，發牌即消費會直接違背它。
+ *   改成答完才推：中途離開下次拿到同一組，重按也不會有任何損失。
+ */
+async function commitRound() {
+  if (!roundPending || !round) return;
+  round.pos = Math.min(round.pos + roundPending, round.queue.length);
+  roundPending = 0;
+  await progress.saveRound(user.id, round);
+}
+
+/** 這一輪的進度，給首頁顯示用。發出去還沒答完的也算進去，數字才不會停著不動 */
 export function roundProgress() {
   if (!round) return null;
-  return { roundNo: round.roundNo, done: round.pos, total: round.queue.length };
+  return {
+    roundNo: round.roundNo,
+    done: Math.min(round.pos + roundPending, round.queue.length),
+    total: round.queue.length,
+  };
 }
 
 async function startFree({ ids = null, tag = '', deckId = null,
@@ -430,13 +476,13 @@ async function startFree({ ids = null, tag = '', deckId = null,
   try {
     const pooled = !ids && !tag && !deckId;
     let items;
+    let dealt = 0;
     if (pooled) {
       const r = await ensureRound();
+      if (!r || !r.queue.length) return msg('這個詞庫還沒有內容');
       const take = r.queue.slice(r.pos, r.pos + ROUND_SIZE);
       items = await content.pickItems({ ids: take, limit: ROUND_SIZE });
-      // 先推進指標再開始 —— 中途離開也算走過，否則同一組會無限重來
-      r.pos += take.length;
-      await progress.saveRound(user.id, r);
+      dealt = take.length;          // 答完才算消費掉，見 commitRound
     } else {
       items = await content.pickItems({ ids, tag, deckId, limit: 60 });
     }
@@ -454,7 +500,7 @@ async function startFree({ ids = null, tag = '', deckId = null,
 
     const r = roundProgress();
     await begin(keepOrder ? entries : orderForDiscrimination(entries, confusableOf),
-                { freeMode: !pooled, kind, lesson: tag,
+                { freeMode: !pooled, kind, lesson: tag, roundOf: dealt,
                   criterion: getMode(home.studyMode()).criterion,
                   note: kind === 'drill'
                     ? '弱項修復 · 只記錄成績，不影響複習排程'
@@ -683,7 +729,25 @@ on(EVENTS.ITEM_UPDATED, (saved) => {
 // ---------------------------------------------------------------------
 // 登入狀態
 // ---------------------------------------------------------------------
-async function onUser(u) {
+/**
+ * 啟動流程。★ 只在「使用者換人」時整套重跑。
+ *
+ * 【為什麼要擋】
+ *   onAuthStateChange 不只在登入登出時觸發 —— token 大約每小時自動換一次，
+ *   分頁重新取得焦點也會觸發。原本每次都整套重跑，
+ *   而這套的最後一步是 tryResume()：它會切到學習畫面、重建佇列。
+ *   於是練到一半時 token 一換，畫面就自己重來 ——
+ *   使用者看到的是「輪練會自動刷新」。
+ *
+ *   token 換了不代表使用者換了，帳號沒變就什麼都不必做。
+ */
+let bootedFor = null;      // 已經完成啟動流程的使用者 id
+
+async function onUser(u, event) {
+  // 同一個人、已經啟動過 → 這只是換了張 token 或分頁回到前景，不動畫面。
+  // 登出（u 為 null）一定要放行，否則登出後畫面還停在學習頁。
+  if (u && bootedFor === u.id) return;
+  bootedFor = u?.id ?? null;
   user = u;
   $('whoami').textContent = u ? auth.displayName(u) : '';
   if (!u) {
@@ -706,7 +770,15 @@ async function onUser(u) {
   //   雲端優先是為了「換裝置登入要拿得到」；
   //   而本機那一份的意義是離線與零延遲，不是真理來源。
   //   兩者都沒有就維持畫面預設。
-  home.applyPrefs(profile?.study_prefs ?? home.loadPrefsLocal(u.id));
+  // ★ 空物件不算「雲端有設定」。
+  //   0017 加了 study_prefs 卻沒補 UPDATE 權限（見 0020），
+  //   雲端那份一直是 '{}' —— 而 ?? 只在 null/undefined 才回退，
+  //   {} 兩者都不是，於是本機存的偏好永遠用不到，
+  //   方向只好退回硬編碼預設值。使用者看到的是「設了又跳回去」。
+  const cloudPrefs = profile?.study_prefs;
+  const hasCloud = cloudPrefs && typeof cloudPrefs === 'object'
+                   && Object.keys(cloudPrefs).length > 0;
+  home.applyPrefs(hasCloud ? cloudPrefs : home.loadPrefsLocal(u.id));
 
   refreshRecall();          // 清單與首頁其他區塊並行載入，不互相擋
 

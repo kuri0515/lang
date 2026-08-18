@@ -1091,10 +1091,19 @@ ruby rt { line-height: 1; }
 
 /* 三個入口。平等呈現 —— 它們是三種不同的練習，沒有主次；
    系統推薦的那一個用顏色標出來，而不是用大小。 */
-.entries { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+/* 三個入口。
+   ★ 一定要有上緣間距：上面那顆「繼續這一輪」是不同層級的東西
+   （一個狀態，不是第四個入口），貼在一起會讓四顆看起來是同一組。
+   間距 10px 而不是 8：三顆並排時字距本來就緊，再密會黏成一塊。 */
+.entries {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  margin-top: 12px;
+}
+/* 大按鈕存在時再多留一點 —— 那是視覺上的分層，不只是間距 */
+#btn-primary:not(.hidden) + .entries { margin-top: 14px; }
 .entry {
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  padding: 12px 6px; border: 1px solid var(--border); border-radius: var(--r-sm);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 13px 6px; border: 1px solid var(--border); border-radius: var(--r-sm);
   background: var(--surface); color: var(--text);
 }
 .entry b { font-size: 15px; font-weight: 650; }
