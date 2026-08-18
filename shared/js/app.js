@@ -60,7 +60,12 @@ const session = createSession({
     // 自由練習不算 —— 它不動排程，也不該讓人靠它解鎖新課。
     if (!free) home.addMasteredToday(stats.mastered || 0);
     // 只有複習才有「還剩多少」—— 學新課、自由練習都是一次一批，沒有續攤的概念
-    study.renderDone(stats, free, free ? '' : currentLesson, reviewQueue.length);
+    // 可練的內容＝剛做完那一輪 ＋ 今天還沒做的。
+    // 刻意不從整個詞庫抓 —— 那會把還沒學過的詞端出來，
+    // 等於繞過「先複習完才能學新的」那道閘門，而使用者會很自然地一直用它。
+    const extra = [...lastBatchIds, ...reviewQueue.map((e) => e.item.id)];
+    study.renderDone(stats, free, free ? '' : currentLesson,
+                     reviewQueue.length, extra.length > 0);
     show('view-done');
   },
   onError: (e) => msg('儲存失敗：' + (e.message || e)),
@@ -112,6 +117,7 @@ async function begin(entries, { freeMode = false, kind = 'review', note = '', le
 // ---------------------------------------------------------------------
 // 一輪的題數定義在 study/session.js（單一來源，首頁的提示文字也讀它）
 let reviewQueue = [];        // 這一批還沒做的（分輪用）
+let lastBatchIds = [];       // 剛做完那一輪的條目，供「再多練一些」使用
 
 async function startReview() {
   try {
@@ -154,6 +160,7 @@ async function startReview() {
  */
 async function nextRound() {
   const batch = orderForDiscrimination(reviewQueue.splice(0, ROUND_SIZE), confusableOf);
+  lastBatchIds = batch.map((e) => e.item.id);
   if (!batch.length) return msg('複習已清空 ✓', 'ok');
   await begin(batch, { kind: 'review' });
 }
@@ -385,6 +392,11 @@ function initImporterAndAdmin() {
     show('view-home');
   };
   $('btn-again').onclick = () => nextRound().catch((e) => msg(e.message || e));
+  $('btn-extra').onclick = () => {
+    const ids = [...new Set([...lastBatchIds, ...reviewQueue.map((e) => e.item.id)])];
+    if (!ids.length) return msg('沒有可以練的內容');
+    startFree({ ids });
+  };
 }
 
 // 內容變動 → 干擾項池失效，下輪重抓

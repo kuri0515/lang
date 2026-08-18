@@ -336,6 +336,7 @@ async function showHanja(item) {
 
 /**
  * @param remaining 這一批還沒做完的數量。0 表示今天的複習清空了。
+ * @param canPractice 有沒有東西可以再多練（決定「再多練一些」顯不顯示）
  *
  * 【為什麼要分輪，而不是一次全部做完】
  *   模擬一個每天學 8 條的學習者：第 82 天要複習 75 條（正確率 85%），
@@ -349,7 +350,7 @@ async function showHanja(item) {
  *   一輪做得完，做完告訴你還剩幾條、要不要接著來。
  *   決定權在學習者，而他看到的是真實的數字。
  */
-export function renderDone(stats, free, lesson = '', remaining = 0) {
+export function renderDone(stats, free, lesson = '', remaining = 0, canPractice = false) {
   $('done-text').textContent = stats.n
     ? `本輪答了 ${stats.n} 題，正確率 ${pct(stats.correct / stats.n)}。`
       + (free ? '（自由練習：已記錄成績，複習排程未變動）' : '')
@@ -368,6 +369,16 @@ export function renderDone(stats, free, lesson = '', remaining = 0) {
   const again = $('btn-again');
   again.textContent = remaining ? `再來一輪（還有 ${remaining} 條）` : '';
   again.classList.toggle('hidden', !remaining);
+  // 「再多練一些」：想多學但今天的複習已經做完的人，唯一的正確出口。
+  //
+  // 它走自由練習 —— 只記錄成績、完全不動排程。
+  // 這一點很重要：間隔還沒走完就提前答對，那次回憶的價值本來就比較低，
+  // 讓它把下次複習推遠會灌水（跟「連對三次抹掉剛才忘了」是同一類錯）。
+  //
+  // 藏在詞庫的標籤裡沒有人找得到 —— 而「今天做完了還想再練」正是
+  // 最該給出口的時刻，錯過了他就去學新課，或是關掉。
+  $('btn-extra').classList.toggle('hidden', !canPractice);
+
   // 還有剩時「返回」退居次要；清空了就讓「返回」回到主要按鈕
   $('btn-back').classList.toggle('primary', !remaining);
 }

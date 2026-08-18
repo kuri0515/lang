@@ -254,6 +254,17 @@ console.log('\n【複習分輪】');
   study.renderDone(done, false, '', 0);           // 清空
   chk('清空後不再出現「再來一輪」', again.classList.contains('hidden'));
   chk('清空後「返回」回到主要按鈕', $('btn-back').classList.contains('primary'));
+
+  // ★「再多練一些」：今天做完了還想練的人，唯一的正確出口。
+  //   它走自由練習（不動排程）—— 間隔還沒走完就提前答對，
+  //   那次回憶的價值本來就比較低，讓它把下次複習推遠會灌水。
+  //   沒有這顆按鈕的話，那個人會去學新課，或是關掉。
+  study.renderDone(done, false, '', 0, true);
+  chk('有內容可練時出現「再多練一些」', !$('btn-extra').classList.contains('hidden'));
+  chk('按鈕上寫明不影響排程', /不影響複習排程/.test($('btn-extra').textContent),
+      '不寫的話沒人敢按 —— 學習者最怕的就是「多練反而害到自己」');
+  study.renderDone(done, false, '', 0, false);
+  chk('沒有內容可練時不顯示', $('btn-extra').classList.contains('hidden'));
 }
 
 
