@@ -117,6 +117,28 @@ export function speak(text, audioUrl = null, opts = {}) {
  *   一輪要唸三十到八十次。每次都彈訊息會把畫面洗掉，
  *   而第二次之後也不帶新資訊。
  */
+/**
+ * 失敗時把現場狀態一起說出來。
+ *
+ * 【為什麼要這麼囉嗦】
+ *   「朗讀失敗」四個字對使用者沒有用，對我也沒有用 ——
+ *   我在本機重現不出來（替身不會模擬瀏覽器的語音競態），
+ *   而使用者能給我的只有畫面上的字。
+ *   把語音數量、選中的是哪一個、引擎當下的狀態一起印出來，
+ *   一句訊息就能定位，不必來回猜好幾輪。
+ */
+function diagnosis() {
+  try {
+    const list = targetVoices();
+    const v = currentVoice();
+    const ss = window.speechSynthesis || {};
+    return `［可用語音 ${list.length}／選中 ${v ? v.name : '無'}`
+      + `／引擎 speaking=${!!ss.speaking} pending=${!!ss.pending} paused=${!!ss.paused}`
+      + `／全部語音 ${(ss.getVoices?.() || []).length}］`
+      + '把這一段截圖給開發者最快。';
+  } catch (e) { return `［診斷失敗：${e.message}］`; }
+}
+
 let warned = false;
 function speakWarn(msg) {
   if (warned) return;
@@ -125,7 +147,7 @@ function speakWarn(msg) {
   import('./dom.js').then((d) => d.msg?.(msg)).catch(() => {});
 }
 
-function speakTTS(text, { rate: override, slow = false } = {}) {
+function speakTTS(text, { rate: override, slow = false, retry = false } = {}) {
   if (!('speechSynthesis' in window)) {
     return speakWarn('這個瀏覽器不支援朗讀。換 Safari 或 Chrome 試試。');
   }
@@ -156,8 +178,25 @@ function speakTTS(text, { rate: override, slow = false } = {}) {
   u.pitch = 1;
   const v = currentVoice();
   if (v) u.voice = v;
-  u.onerror = (e) => speakWarn(`朗讀失敗（${e.error || '未知原因'}）。`
-    + '到「我的 → 語音」換一個聲音試試。');
+  // ★ canceled / interrupted 不是錯誤，是我們自己造成的：
+  //   換頁會 cancel()、下一句也會蓋掉上一句。把它們報成失敗是噪音，
+  //   而噪音會讓真正的錯誤被忽略。
+  //
+  //   但「按一次、沒有別人要蓋掉它、卻仍然被取消」是真的失敗 ——
+  //   Safari 與 Chrome 都有這個狀況（尤其是頁面載入後的第一次朗讀）。
+  //   那一種重試一次就會過，所以先重試，重試還是不行才說出來。
+  u.onerror = (e) => {
+    const why = e.error || '未知原因';
+    if (why === 'canceled' || why === 'interrupted') {
+      // 重試那一次又被取消 → 這不是偶發的競態，把現場狀態說出來。
+      // 換一個聲音、重新整理都試過還是不行時，需要的是資料不是安慰。
+      if (retry) return speakWarn(`朗讀被取消，重試也一樣。${diagnosis()}`);
+      // 延到下一個 tick 再試 —— 同一個 tick 內重送會被同樣的競態吃掉
+      setTimeout(() => speakTTS(text, { rate: override, slow, retry: true }), 60);
+      return;
+    }
+    speakWarn(`朗讀失敗（${why}）。${diagnosis()}`);
+  };
   speechSynthesis.speak(u);
 }
 
