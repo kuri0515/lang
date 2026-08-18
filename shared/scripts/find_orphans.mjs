@@ -87,3 +87,49 @@ else {
   console.log('  ★ 逐一判斷是「真孤兒」還是「本來該呼叫卻漏了」——');
   console.log('    後者是 bug，刪掉等於把 bug 藏起來。');
 }
+
+// =====================================================================
+// CSS：定義了但沒有人用的 class
+//
+// 移除畫面時最容易留下的東西。移掉首頁的詞庫卡之後，.deck-row 那一整組
+// 樣式就沒有任何人用了 —— 而 CSS 不會報錯，它只是靜靜地變大。
+//
+// 【★ 三個一定要處理的誤判，我都踩過】
+//   ① 動態組出來的 class：`class="acc-${cls}"` 會生出 acc-good/acc-mid/acc-low。
+//      照字面找找不到，刪掉就是把正常的樣式弄壞。
+//   ② 子字串誤配：找 .deck-row 會撞到 e-deck-row，找 .m-row 會撞到 sm-row，
+//      於是死碼被當成活的留下來。
+//   ③ 多行宣告：規則體跨好幾行時，用單行正則切會漏掉基礎規則，
+//      只刪掉 :first-child 那些衍生的，留下一個沒人用的孤兒。
+//
+//   所以這裡只「報告」，不自動刪 —— 前兩種誤判都會讓自動刪除弄壞畫面。
+// =====================================================================
+{
+  const css = fs.readFileSync(`${ROOT}/shared/css/style.css`, 'utf8');
+  const classes = [...new Set([...css.matchAll(/\.([a-z][a-z0-9-]{1,})/g)].map((m) => m[1]))];
+  const body = own.map(read).join('\n')
+    + fs.readFileSync(`${ROOT}/shared/index.template.html`, 'utf8');
+
+  // 【比對規則：寧可漏報，不可誤報】
+  //   誤報的代價是「人不再細看這份報告」，那會讓真正的死碼也一起被忽略。
+  //   漏報的代價只是「一段死 CSS 多留一陣子」。所以規則往寬鬆的方向設。
+  //
+  //   用「整個詞」比對（前後不能是字母、數字或連字號）：
+  //     class="pron-row${cls}"  → 前面是引號、後面是 $，算用到 ✅
+  //     sm-row 裡找 m-row       → 前面是 s（字母），不算 ✅ 避開子字串誤配
+  const used = (c) => {
+    if (new RegExp(`(?<![\\w-])${c}(?![\\w-])`).test(body)) return true;
+    // 動態拼接：`class="acc-${cls}"` 會生出 acc-good / acc-mid / acc-low，
+    // 照字面永遠找不到 —— 比對到最後一個連字號為止的前綴
+    const prefix = c.replace(/-[^-]+$/, '-');
+    return prefix !== c && body.includes(prefix + '${');
+  };
+
+  const deadCss = classes.filter((c) => !used(c));
+  console.log('\n【CSS 裡沒有人用的 class】');
+  if (!deadCss.length) console.log('  ✅ 沒有');
+  else {
+    deadCss.forEach((c) => console.log('  · .' + c));
+    console.log(`\n  共 ${deadCss.length} 個。★ 刪之前逐一確認不是動態組出來的`);
+  }
+}
