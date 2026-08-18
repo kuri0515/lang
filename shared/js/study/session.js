@@ -274,7 +274,11 @@ export function createSession({ save, onChange, onFinish, onError }) {
      */
     snapshot() {
       flush();
-      return { queue, idx, stats, free, modeId, activity,
+      // ★ criterion 也要存。漏了它的話，中斷續跑之後
+      //   「拼出來」的達標次數會從 2 悄悄變回預設的 3 ——
+      //   使用者重新整理一次，規則就變了，而畫面上沒有任何提示。
+      //   （新功能與既有機制的交界最容易漏：續跑先做，達標次數後加。）
+      return { queue, idx, stats, free, modeId, activity, criterion,
                mastered: [...mastered], sessionId };
     },
 
@@ -287,6 +291,7 @@ export function createSession({ save, onChange, onFinish, onError }) {
       free = !!s.free;
       modeId = s.modeId || 'flip';
       activity = s.activity || 'review';
+      criterion = Number(s.criterion) || ROUND_CRITERION;
       sessionId = s.sessionId || null;
       mastered.clear();
       (s.mastered || []).forEach((id) => mastered.add(id));

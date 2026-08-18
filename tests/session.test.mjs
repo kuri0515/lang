@@ -424,6 +424,30 @@ console.log('\n【中斷續跑】');
 
   chk('壞掉的快照安靜拒絕，不炸',
       B.resume(null) === false && B.resume({ queue: [] }) === false);
+
+  // ★ 快照要涵蓋所有「會影響這一輪怎麼跑」的狀態。
+  //   實際漏過一個：criterion 沒存，於是中斷續跑之後
+  //   「拼出來」的達標次數從 2 悄悄變回預設的 3 ——
+  //   使用者重新整理一次，規則就變了，而畫面上沒有任何提示。
+  //   續跑先做、達標次數後加，交界處就是這樣漏的。
+  const E = createSession({ save: async () => {}, onChange: () => {}, onFinish: () => {} });
+  E.start([{ item: { id: 'p', ko: 'あ', zh: 'a' }, direction: 'zh2ko',
+             card: { state: 'review', interval_days: 3, ease_factor: 2.5,
+                     repetitions: 2, lapses: 0 } }],
+          { mode: 'spell', kind: 'review', criterion: 2 });
+  E.grade(RATING.GOOD);                       // 已連對 1 次，還需 1 次
+  const F = createSession({ save: async () => {}, onChange: () => {}, onFinish: () => {} });
+  F.resume(JSON.parse(JSON.stringify(E.snapshot())));
+  let more = 0;
+  while (more < 10 && F.state().idx < F.state().total) { F.grade(RATING.GOOD); more += 1; }
+  chk('★ 續跑後達標次數不變（拼出來仍是兩次）', more === 1,
+      `續跑後還要答 ${more} 次，應該是 1 次 —— 大於 1 表示 criterion 掉回預設的 3`);
+
+  // 快照的欄位不能少：漏一個就是一種「續跑後行為悄悄改變」
+  const keys = Object.keys(E.snapshot()).sort();
+  chk(`快照涵蓋整輪狀態（${keys.length} 個欄位）`,
+      ['activity', 'criterion', 'free', 'idx', 'mastered', 'modeId', 'queue',
+       'sessionId', 'stats'].every((k) => keys.includes(k)), keys.join(', '));
 }
 
 
