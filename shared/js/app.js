@@ -53,9 +53,10 @@ const session = createSession({
     if (p.activity === 'drill') return progress.logRecall(args);
     return p.free ? progress.logPractice(args) : progress.saveReview(args);
   },
-  onChange: (state) => study.render(state),
+  onChange: (state) => { study.render(state); saveResume(); },
   // 收尾話要知道剛練的是哪一課；自由練習不算推進課程，所以不帶
   onFinish: (stats, free) => {
+    clearResume();          // 這一輪結束了，沒有東西要續跑
     // 這一輪掌握了幾個，累加到今天的進度。
     // 自由練習不算 —— 它不動排程，也不該讓人靠它解鎖新課。
     if (!free) home.addMasteredToday(stats.mastered || 0);
@@ -118,6 +119,52 @@ async function begin(entries, { freeMode = false, kind = 'review', note = '', le
 // 一輪的題數定義在 study/session.js（單一來源，首頁的提示文字也讀它）
 let reviewQueue = [];        // 這一批還沒做的（分輪用）
 let lastBatchIds = [];       // 剛做完那一輪的條目，供「再多練一些」使用
+
+// ---------------------------------------------------------------------
+// 中斷續跑
+//
+// 【要解決的事】
+//   網址的 hash 只記得「在哪一頁」，不記得「做到第幾題」。
+//   重新整理、切到別的 App 再回來、手機把分頁回收 ——
+//   這三件事在手機上每天都會發生，而目前的結果都是整輪重來。
+//   一輪要答三十到八十題，重來一次的代價足以讓人今天不想再開。
+//
+// 【為什麼存在瀏覽器而不是雲端】
+//   這是「做到一半」的暫存，不是學習記錄（那個每答一題就寫進 reviews）。
+//   換裝置接不上的代價只是重做一輪；為它多一張表、多一次網路往返不值得。
+//
+// 【為什麼要有時效】
+//   三天前中斷的那一輪，卡片的到期日早就變了，接回去會用過期的資料
+//   去覆蓋雲端。過期就丟掉，回到正常流程重新算。
+// ---------------------------------------------------------------------
+const RESUME_KEY = 'session-resume-v1';
+const RESUME_MAX_AGE = 12 * 3600 * 1000;   // 超過 12 小時就當作是「另一天的事」
+
+function saveResume() {
+  try {
+    const snap = session.snapshot();
+    // 已經做完的不必存 —— 存了會在下次開啟時彈出一個空的學習畫面
+    if (!snap.queue.length || snap.idx >= snap.queue.length) return clearResume();
+    localStorage.setItem(RESUME_KEY, JSON.stringify({
+      ...snap, reviewQueue, lastBatchIds, lesson: currentLesson, savedAt: Date.now(),
+    }));
+  } catch { /* 容量滿或隱私模式：續跑是加分功能，不該讓它擋住學習 */ }
+}
+function clearResume() {
+  try { localStorage.removeItem(RESUME_KEY); } catch { /* 同上 */ }
+}
+/** 有沒有可續跑的一輪？有就接回去並回傳 true */
+function tryResume() {
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem(RESUME_KEY) || 'null'); } catch { return false; }
+  if (!s || Date.now() - (s.savedAt || 0) > RESUME_MAX_AGE) { clearResume(); return false; }
+  reviewQueue = Array.isArray(s.reviewQueue) ? s.reviewQueue : [];
+  lastBatchIds = Array.isArray(s.lastBatchIds) ? s.lastBatchIds : [];
+  currentLesson = s.lesson || '';
+  if (!session.resume(s)) { clearResume(); return false; }
+  study.setLesson(currentLesson, '');
+  return true;
+}
 
 async function startReview() {
   try {
@@ -429,8 +476,25 @@ async function onUser(u) {
     + `<span class="hint">${esc(u.email)}</span>`;
   // 重新整理後回到原本那一頁
   refreshRecall();          // 清單與首頁其他區塊並行載入，不互相擋
+
+  // ★ 有沒有做到一半的一輪？有就直接接回去。
+  //   放在 show() 之前 —— 先閃一下首頁再跳進學習畫面，
+  //   會讓人以為自己按錯了，而且那一閃會在每次重新整理時出現。
+  if (tryResume()) {
+    await show('view-study');
+    msg('接著上次的進度繼續', 'ok');
+    return;
+  }
   await show(viewFromHash());
 }
+
+// 切到別的 App、鎖螢幕、關分頁 —— 手機上這些比「按下一題」更常發生。
+// onChange 已經每答一題存一次，這兩個事件是保險：
+// 停在「已翻面但還沒評分」的狀態時，只有它們會存到。
+window.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') saveResume();
+});
+window.addEventListener('pagehide', saveResume);
 
 auth.onChange(onUser);
 (async () => { await onUser(await auth.currentUser()); })();

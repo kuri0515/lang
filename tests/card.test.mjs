@@ -340,13 +340,13 @@ console.log('\n【每日複習任務】');
   set(5);
   chk('已掌握的算進目標基數', home.dailyTarget(3) === 8,
       '掌握過的已經不在待複習裡了，不加回去的話目標會越做越小');
-  chk('沒達標時擋住新課', /還沒完成/.test(home.newLessonBlocked(3) || ''));
-  chk('訊息裡有進度數字', /5\/8/.test(home.newLessonBlocked(3) || ''),
-      home.newLessonBlocked(3));
-
+  // ★ 目前不擋 —— 使用者的決定（2026-08-18）。
+  //   進度照算、照顯示，只是不再限制什麼時候可以學新的。
+  //   斷言留著並且反過來寫：日後若有人「順手」把閘門加回去，
+  //   這裡會紅，而不是靜靜地改變產品行為。
+  chk('沒達標也放行', home.newLessonBlocked(3) === null);
   set(20);
-  chk('★ 達標後放行，即使還有沒複習完的', home.newLessonBlocked(40) === null,
-      '剩下的照順延排到明天最前面，間隔不變 —— 把人留在「還沒做完」只會讓他明天不想打開');
+  chk('達標後當然也放行', home.newLessonBlocked(40) === null);
 
   set(0);
   home.renderSuggestion(60, { reviewed: 0 }, [], 0);

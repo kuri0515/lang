@@ -237,6 +237,44 @@ export function createSession({ save, onChange, onFinish, onError }) {
 
     quit() { flush(); onFinish?.(stats, free); },
 
+    /**
+     * 把這一輪的狀態拍成可序列化的快照，供中斷後續跑。
+     *
+     * 【為什麼需要】
+     *   網址的 hash 只記得「在哪一頁」，不記得「做到第幾題」。
+     *   重新整理、切到別的 App 再回來、手機把分頁回收 ——
+     *   這三件事在手機上每天都會發生，而目前的結果都是整輪重來。
+     *   一輪要答三十到八十題，重來一次的代價足以讓人今天不想再開。
+     *
+     * 【為什麼先 flush()】
+     *   pending 是「最近一題還可以撤銷」的暫存。不落定就拍快照的話，
+     *   續跑後那一題會消失 —— 使用者明明答過了，回來卻要再答一次。
+     */
+    snapshot() {
+      flush();
+      return { queue, idx, stats, free, modeId, activity,
+               mastered: [...mastered], sessionId };
+    },
+
+    /** 從快照續跑。回傳是否成功 —— 資料壞掉時要能安靜地回到正常流程 */
+    resume(s) {
+      if (!s || !Array.isArray(s.queue) || !s.queue.length) return false;
+      queue = s.queue;
+      idx = Math.min(Number(s.idx) || 0, queue.length);
+      stats = s.stats || { n: 0, correct: 0, mastered: 0 };
+      free = !!s.free;
+      modeId = s.modeId || 'flip';
+      activity = s.activity || 'review';
+      sessionId = s.sessionId || null;
+      mastered.clear();
+      (s.mastered || []).forEach((id) => mastered.add(id));
+      graded.clear();
+      shownAt = Date.now();
+      pending = null;
+      onChange?.(this.state());
+      return true;
+    },
+
     /** 離開頁面前把還沒定案的那題寫掉 */
     flushNow() { flush(true); },
 

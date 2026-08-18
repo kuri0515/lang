@@ -379,5 +379,52 @@ console.log('\n【一輪的產出】');
   }
 }
 
+
+// =====================================================================
+// 【中斷續跑】
+//
+// 網址的 hash 只記得「在哪一頁」，不記得「做到第幾題」。
+// 重新整理、切到別的 App 再回來、手機把分頁回收 ——
+// 這三件事在手機上每天都會發生，而原本的結果都是整輪重來。
+// 一輪要答三十到八十題，重來一次的代價足以讓人今天不想再開。
+// =====================================================================
+console.log('\n【中斷續跑】');
+{
+  const mk = () => Array.from({ length: 5 }, (_, i) => ({
+    item: { id: 's' + i, ko: 'w' + i, zh: 'z' + i }, direction: 'ko2zh',
+    card: { state: 'review', interval_days: 8, ease_factor: 2.5,
+            repetitions: 4, lapses: 0 },
+  }));
+  const A = createSession({ save: async () => {}, onChange: () => {}, onFinish: () => {} });
+  A.start(mk(), { mode: 'flip', kind: 'review' });
+  A.grade(RATING.GOOD); A.grade(RATING.GOOD); A.grade(RATING.AGAIN);
+
+  // 一定要能過 JSON —— 存進 localStorage 就是這樣來回一趟
+  const snap = JSON.parse(JSON.stringify(A.snapshot()));
+  const before = A.state();
+
+  const B = createSession({ save: async () => {}, onChange: () => {}, onFinish: () => {} });
+  chk('快照可以續跑', B.resume(snap) === true);
+  chk('★ 回到中斷的那一題，不是從頭', B.state().idx === before.idx,
+      `續跑後在第 ${B.state().idx + 1} 題，中斷時在第 ${before.idx + 1} 題`);
+  chk('佇列長度一致（答錯排回隊尾的也在）', B.state().total === before.total);
+
+  // ★ 連續答對的次數要一起帶過去。不帶的話，中斷前已經連對兩次的詞
+  //   會從零重數 —— 使用者會覺得「明明剛才答對過了」。
+  const C = createSession({ save: async () => {}, onChange: () => {}, onFinish: () => {} });
+  C.start([{ item: { id: 'k', ko: 'あ', zh: 'a' }, direction: 'ko2zh',
+             card: { state: 'review', interval_days: 8, ease_factor: 2.5,
+                     repetitions: 4, lapses: 0 } }], { mode: 'flip', kind: 'review' });
+  C.grade(RATING.GOOD); C.grade(RATING.GOOD);          // 已連對兩次
+  const D = createSession({ save: async () => {}, onChange: () => {}, onFinish: () => {} });
+  D.resume(JSON.parse(JSON.stringify(C.snapshot())));
+  D.grade(RATING.GOOD);                                 // 第三次 → 該畢業
+  chk('★ 續跑後連對次數不歸零', D.state().idx >= D.state().total,
+      '中斷前已連對兩次，續跑後再答對一次就該過關；歸零的話要再答三次');
+
+  chk('壞掉的快照安靜拒絕，不炸',
+      B.resume(null) === false && B.resume({ queue: [] }) === false);
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);

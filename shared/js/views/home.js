@@ -220,15 +220,23 @@ function startLesson(run) {
   run();
 }
 
-/** 現在可以學新的嗎？回傳 null 表示可以，否則回傳擋下來的理由 */
-export function newLessonBlocked(dueCount) {
-  const target = dailyTarget(dueCount);
-  const got = masteredToday();
-  if (got >= target) return null;
-  return `今天的複習還沒完成（已掌握 ${got}/${target}）。`
-    + '先把複習做完再學新的 —— 一直學新的、舊的不回頭，'
-    + '兩週後會變成「學過三百個詞、一個都想不起來」。'
-    + `\n一個詞要在同一輪之內連續答對 ${ROUND_CRITERION} 次才算掌握。`;
+/**
+ * 現在可以學新的嗎？回傳 null 表示可以，否則回傳擋下來的理由。
+ *
+ * ★ 目前一律放行 —— 使用者的決定（2026-08-18）。
+ *
+ * 【原本擋著的理由，留在這裡供日後參考】
+ *   學新的比複習有成就感，新東西一直進來、舊的一直沒回頭，
+ *   兩週後就是「學過三百個詞、一個都想不起來」。
+ *   準時複習沒有即時回饋，靠自制力打不過新鮮感。
+ *
+ * 【為什麼保留這個函式而不是整段刪掉】
+ *   進度本身還在算（首頁照樣顯示 x/20 已掌握），只是不再擋人。
+ *   把判斷留在一個地方、只改回傳值，日後要恢復或改成「軟提醒」
+ *   都只動這裡；散掉的話下次要重找一遍所有入口。
+ */
+export function newLessonBlocked(dueCount) {   // eslint-disable-line no-unused-vars
+  return null;
 }
 
 export function carriedOver(due) {
