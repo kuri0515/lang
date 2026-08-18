@@ -57,7 +57,16 @@ export function currentVoice() {
   const list = targetVoices();
   if (!list.length) return null;
   const saved = localStorage.getItem(lsVoice());
-  return list.find((v) => v.name === saved) || list[0];
+  const pick = list.find((v) => v.name === saved);
+  // ★ 存下來的如果是網路語音，而本機有可用的，就忽略它。
+  //   使用者在選單裡看不出哪個是網路語音（名字只差「Online」兩個字），
+  //   隨手換一個就可能換到永遠不出聲的那種 —— 而且會被記住，
+  //   於是「換了也沒用」，怎麼換都在網路語音之間換。
+  if (pick && pick.localService === false) {
+    const local = list.find((v) => v.localService);
+    if (local) return local;
+  }
+  return pick || list[0];
 }
 
 export function setVoice(name) { localStorage.setItem(lsVoice(), name); }
@@ -261,9 +270,17 @@ function speakTTS(text, { rate: override, slow = false, retry = false, bare = fa
     speakWarn(`朗讀失敗（${why}）。${diagnosis()}`);
   };
 
-  // 卡住過就等一拍 —— cancel() 是非同步的，同一個 tick 送出會被一起清掉
-  if (wedged) setTimeout(() => ss.speak(u), 120);
-  else ss.speak(u);
+  // ★ 一律立刻送出，不延遲。
+  //
+  //   我曾經在 wedged 時改成 setTimeout(…, 120) 再送 —— 那是個迴歸：
+  //   學習流程裡，朗讀之後緊接著是評分 → 重繪 →（有時）換頁，
+  //   而換頁會呼叫 cancel()。延遲送出等於讓取消跑在送出前面，
+  //   那一句就永遠不會響 —— 症狀是「早上還會唸，現在都不唸了」。
+  //
+  //   卡死的情況不需要靠延遲處理：真的被吃掉時 onerror 會收到 canceled，
+  //   那裡已經有重試（延到下一個 tick 再送一次）。
+  //   讓正常路徑保持最短，異常路徑才付延遲的代價。
+  ss.speak(u);
 }
 
 /**
