@@ -249,7 +249,7 @@ function speakTTS(text, { rate: override, slow = false, retry = false, bare = fa
         return speakWarn(locals === 0
           ? `系統裡的${L2.langLabel}語音全是「Online」網路語音，`
             + '這個瀏覽器送不出聲音。請安裝本機語音：'
-            + 'Mac：系統設定 → 輔助使用 → 朗讀內容 → 系統聲音 → 管理聲音 → 下載日文/韓文語音；'
+            + `Mac：系統設定 → 輔助使用 → 朗讀內容 → 系統聲音 → 管理聲音 → 下載${L2.langLabel}語音；`
             + 'Windows：設定 → 時間與語言 → 語音 → 新增語音。'
             + '或改用 Microsoft Edge（它支援 Online 語音）。'
           : `朗讀被取消，重試也一樣。${diagnosis()}`);
