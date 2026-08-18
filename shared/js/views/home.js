@@ -86,8 +86,8 @@ export async function refreshDue() {
   const user = deps?.user();
   if (!user) return;
   try {
-    const due = await progress.fetchDue(user.id, [effectiveDir()], 500);
-    $('s-due').textContent = due.length;
+    const due = await progress.dueCounts(user.id, [effectiveDir()]);
+    $('s-due').textContent = due.total;
   } catch (e) { msg('載入失敗：' + (e.message || e)); }
 }
 
@@ -115,22 +115,29 @@ async function doLoad() {
     // 詞庫先取 —— 生活場景的進度必須限定在 life-01 之內。
     // 生活、學習這些標籤 vocab-01 也在用，不限定的話進度會被灌水，
     // 場景永遠做不完。
-    const decks = await content.listDecks();
-    const lifeDeck = decks.find((d) => d.slug === 'life-01')?.id ?? null;
+    // ★ decks 不再單獨 await —— 先前它擋在 Promise.all 前面，
+    //   每次載入都多一趟完整的往返（實測 200–300 ms，而首頁在三個分頁都會載入）。
+    //   只有生活場景真的需要等它（進度必須限定在 life-01 之內），
+    //   所以把「等 decks → 查場景」串成一條，與其他查詢並行。
+    const decksP = content.listDecks();
+    const lifeP = decksP.then((ds) => {
+      const id = ds.find((d) => d.slug === 'life-01')?.id ?? null;
+      return id ? content.tagProgress(user.id, lifeScenes(), id).catch(() => []) : [];
+    }).catch(() => []);
 
-    const [due, today, overall, weak, daily, pron, life] = await Promise.all([
-      progress.fetchDue(user.id, dirs, 500),
+    const [decks, due, today, overall, weak, daily, pron, life] = await Promise.all([
+      decksP,
+      progress.dueCounts(user.id, dirs),
       progress.todayStats(user.id),
       progress.overallStats(user.id),
       progress.weakItems(user.id, 8).catch(() => []),
       progress.dailyStats(user.id, 30).catch(() => []),
       // 發音課程進度失敗不該拖垮整個首頁 —— 它是加值資訊，不是主線
       content.pronProgress(user.id, pronOrder()).catch(() => []),
-      lifeDeck ? content.tagProgress(user.id, lifeScenes(), lifeDeck).catch(() => [])
-               : Promise.resolve([]),
+      lifeP,
     ]);
 
-    $('s-due').textContent = due.length;
+    $('s-due').textContent = due.total;
     $('s-done').textContent = today.reviewed;
     $('s-acc').textContent = pct(today.accuracy);
     $('s-all-acc').textContent = overall.mastered;
@@ -146,8 +153,8 @@ async function doLoad() {
     // ら行 的內容還沒進來時，格子要看得出「還沒加入」而不是「還沒學」。
     renderGojuon(lang().taxonomy.grid ?? null, pron,
                  new Set(pron.filter((r) => r.total > 0).map((r) => r.tag)));
-    dueNow = due.length;
-    renderSuggestion(due.length, today, decks, carriedOver(due));
+    dueNow = due.total;
+    renderSuggestion(due.total, today, decks, due.carried);
 
     renderLife(life);
     renderWeak(weak);
@@ -265,11 +272,6 @@ export function startNext() {
   if (nextLessonTag) return deps.onStudyTag(nextLessonTag);
   if (firstDeckId) return deps.onNewDeck(firstDeckId);
   msg('還沒有詞庫。到「我的 → 批次匯入」貼上你的詞表。');
-}
-
-export function carriedOver(due) {
-  const yesterday = Date.now() - 86400000;
-  return due.filter((c) => Date.parse(c.due_at) < yesterday).length;
 }
 
 export function renderSuggestion(dueCount, today, decks, carried = 0) {

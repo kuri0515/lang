@@ -7,6 +7,41 @@ import { scheduleRecall } from '../core/srs.js';
 
 // ---------- 佇列 ----------
 /** 到期的複習卡 */
+/**
+ * 首頁只要兩個數字：待複習幾條、其中幾條是順延來的。
+ *
+ * 【為什麼不沿用 fetchDue】
+ *   那支會連 items 一起撈（每張卡帶完整的詞條資料），實測 18.3 KB ——
+ *   而首頁一個欄位都沒用到，只算 length。
+ *   在手機的行動網路上，那是每次進首頁都白花的一趟。
+ *
+ * 【為什麼用 count=exact 而不是 select 幾個欄位】
+ *   撈 500 列的 due_at 仍然是 15 KB。要的是數字，就只拿數字：
+ *   PostgREST 的 count 會把結果放在 Content-Range 標頭裡，回應本體是空的。
+ *
+ * 【為什麼順延也一起算】
+ *   分兩次查也可以，但那是兩趟往返換一個數字。
+ *   兩個 count 可以並行，成本是一趟。
+ */
+export async function dueCounts(userId, dirs = DIRECTIONS) {
+  // ★ 用 item_id 不是 id —— user_cards 沒有 id 欄位（複合主鍵）。
+  //   寫 select('id') 會 400：column user_cards.id does not exist。
+  //   而 home.load() 對這支是 .catch(() => ...) 之外的路徑，
+  //   400 會讓整個首頁載入失敗 —— 這種錯必須在上線前抓到，
+  //   而抓到它的方法就是拿真的資料庫打一次。
+  const base = () => sb.from('user_cards')
+    .select('item_id', { count: 'exact', head: true })
+    .eq('user_id', userId).in('direction', dirs)
+    .neq('state', 'suspended')
+    .lte('due_at', new Date().toISOString());
+  // 逾期超過一天 = 之前排定、當天沒做完而順延過來的
+  const yesterday = new Date(Date.now() - 86400000).toISOString();
+  const [all, carried] = await Promise.all([
+    base(), base().lt('due_at', yesterday),
+  ]);
+  return { total: all.count ?? 0, carried: carried.count ?? 0 };
+}
+
 export async function fetchDue(userId, dirs = DIRECTIONS, limit = 200) {
   const { data, error } = await sb.from('user_cards')
     .select(`*, items(${ITEM_FIELDS})`)

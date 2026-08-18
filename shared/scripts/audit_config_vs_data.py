@@ -69,6 +69,50 @@ def fetch_tags(url, key):
     return rows, Counter(t for r in rows for t in (r.get('tags') or []))
 
 
+def check_queries(url, key):
+    """首頁真的會打的那幾個查詢，拿真資料庫試一次。
+
+    【為什麼需要】
+      前端寫錯欄位名不會有任何靜態檢查抓得到 ——
+      supabase-js 只是把字串送出去，錯的欄位要到伺服器才會被拒絕。
+
+      實際發生過（2026-08-18）：我把待複習改成只取計數，寫了
+      select('id')，而 user_cards 是複合主鍵、根本沒有 id 欄位。
+      結果是 400 column user_cards.id does not exist，
+      而那支查詢在首頁載入的主路徑上 —— 整個首頁會載不出來。
+      單元測試抓不到（替身不驗欄位），只有打真的資料庫才會現形。
+
+    【為什麼查詢字串寫在這裡而不是從前端讀】
+      從前端剖析出查詢等於再寫一個 supabase-js。
+      這裡只挑「壞掉會讓畫面整個載不出來」的那幾支，手寫、明確。
+      新增這類查詢時要記得補一行 —— 漏補的代價是這道稽核少守一個點，
+      而不是誤導（它不會假裝檢查過）。
+    """
+    checks = [
+        ('待複習計數', 'user_cards?select=item_id&state=neq.suspended&limit=1'),
+        ('待複習明細', 'user_cards?select=*,items(id,ko,zh,tags)&limit=1'),
+        ('今日統計', 'reviews?select=rating,reviewed_at&limit=1'),
+        ('整體統計', 'user_cards?select=state,mastered_at&limit=1'),
+        ('詞庫清單', 'decks?select=id,slug,title&limit=1'),
+        ('條目查詢', 'items?select=id,ko,zh,pos,hanja,tags&limit=1'),
+        ('續跑狀態', 'study_resume?select=state,saved_at&limit=1'),
+    ]
+    print('【首頁查詢】')
+    bad = 0
+    for name, q in checks:
+        try:
+            req = urllib.request.Request(url + '/rest/v1/' + q,
+                headers={'apikey': key, 'Authorization': 'Bearer ' + key})
+            urllib.request.urlopen(req)
+            print(f'  ✅ {name}')
+        except Exception as e:
+            detail = getattr(e, 'read', lambda: b'')().decode('utf-8', 'replace')[:90]
+            print(f'  ❌ {name} → {detail or e}')
+            bad += 1
+    print()
+    return bad
+
+
 def check_duplicates(url, key):
     """完全重複的條目：ko 與 zh 都一樣。
 
@@ -235,6 +279,7 @@ def main():
 
     bad += check_pos(url, key, a.site)
     bad += check_duplicates(url, key)
+    bad += check_queries(url, key)
 
     if bad:
         print(f"❌ 有 {bad} 項問題（標籤沒有內容，或詞性缺漏／打錯字）。")

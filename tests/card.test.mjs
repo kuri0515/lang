@@ -289,9 +289,10 @@ console.log('\n【順延的可見性】');
     due_at: new Date(now - ageDays * day).toISOString(),
   }));
 
-  // ① 判準：只有逾期超過一天的才算順延
-  chk('今天才到期的不算順延', home.carriedOver(due(8, 0)) === 0);
-  chk('逾期三天的算順延', home.carriedOver(due(8, 3)) === 8);
+  // 「逾期超過一天才算順延」這條規則現在只存在於 data/progress.js 的
+  // dueCounts()（用兩個 count 查詢算，不再把 500 張卡撈到前端）。
+  // 這裡不重複驗規則本身 —— 驗它有沒有正確顯示在畫面上就夠了，
+  // 而規則放兩處必然漂移。
 
   // ② 少量時不囉嗦
   home.renderSuggestion(ROUND_SIZE, { reviewed: 0 }, [], 0);
