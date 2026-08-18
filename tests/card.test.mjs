@@ -446,9 +446,17 @@ console.log('\n【拼出來】');
       $('sp-keys').querySelector(`[data-c="${c}"]`).click();
     }
     $('sp-keys').querySelector('[data-done]').click();
-    chk('拼對 → 自動記為答對', graded === 3, `grade=${graded}`);
+    // ★ 答完不立刻前進。
+    //   答完之後才是看卡片的時候：漢字讀音、例句、備註、過往正確率。
+    //   自動跳走等於把最該看的那一秒拿掉 ——
+    //   而拼對一個詞的當下，正是最有動機多看兩眼的時刻。
+    chk('★ 答完先不記分、不前進', graded === null, `grade=${graded}`);
+    chk('卡片完全展開（背面出現）', !$('c-back').classList.contains('hidden'));
+    chk('有「下一個」可以按', !!$('sp-result').querySelector('[data-next]'));
     chk('★ 不出現自評按鈕', $('grade').classList.contains('hidden'),
         '客觀題的價值就在沒有自評的空間');
+    $('sp-result').querySelector('[data-next]').click();
+    chk('按下一個才記為答對', graded === 3, `grade=${graded}`);
 
     // 拼錯 → 逐字標出錯在哪
     graded = null;
@@ -458,10 +466,29 @@ console.log('\n【拼出來】');
     const wrong = keys2.find((c) => c !== target.ko[0]);
     $('sp-keys').querySelector(`[data-c="${wrong}"]`).click();
     $('sp-keys').querySelector('[data-done]').click();
-    chk('拼錯 → 記為忘了', graded === 1);
+    chk('拼錯也是先展開', graded === null);
+    $('sp-result').querySelector('[data-next]').click();
+    chk('按下一個才記為忘了', graded === 1);
     chk('★ 逐字標出錯的位置', !!$('sp-typed').querySelector('.no'),
         '只說「錯了」的話，學習者不知道自己錯在哪一個字');
     chk('顯示正解', /正確答案/.test($('sp-result').textContent));
+
+    // ★ → 與 Enter 也能前進 —— 桌面上手在鍵盤上，不該被逼著去點按鈕。
+    //   而題型的攔截必須排在通用鍵之前，否則 → 會先被「回看上一題」吃掉。
+    {
+      let g = null;
+      const m = spell.mount({ ...ctx, grade: (r) => { g = r; } });
+      for (const c of target.ko) $('sp-keys').querySelector(`[data-c="${c}"]`).click();
+      $('sp-keys').querySelector('[data-done]').click();
+      chk('→ 之前還沒記分', g === null);
+      chk('★ → 可以前進', m.onKey('ArrowRight') === true && g === 3, `grade=${g}`);
+      const before = g;
+      m.onKey('ArrowRight');
+      chk('★ 連按 → 不會跳兩題', g === before,
+          '交出去一次就好 —— 連按會讓下一題被當成已答');
+      chk('還沒作答時不攔 →', spell.mount({ ...ctx, grade: () => {} }).onKey('ArrowRight') === false,
+          '否則作答前按 → 會沒反應，而那是回看上一題的操作');
+    }
 
     // ★ 每次呈現都要重新排列。
     //   一個詞要連對兩次才算掌握，所以它至少出現兩次 ——

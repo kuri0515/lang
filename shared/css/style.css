@@ -1088,3 +1088,12 @@ ruby rt { line-height: 1; }
 }
 .week i.on { background: var(--accent); }
 .week i.today-mark { box-shadow: 0 0 0 2px var(--accent-soft); }
+
+/* 拼出來的「下一個」。放在結果那一行的右側 ——
+   答完之後視線就在那裡，不必再往下找。 */
+.sp-next {
+  display: block; margin: 12px auto 0; padding: 10px 22px;
+  border: 0; border-radius: var(--r-sm);
+  background: var(--accent); color: #fff; font-size: 15px; font-weight: 600;
+}
+.sp-next:active { transform: translateY(1px); }

@@ -31,7 +31,6 @@ import { esc, shuffle } from '../../core/dom.js';
 import { lang } from '../../core/lang.js';
 import { stripRuby } from '../../core/ruby.js';
 import { confusableOf } from '../../core/taxonomy.js';
-import * as speech from '../../core/speech.js';
 
 /** 這個條目拼得出來嗎 —— 由站台宣告哪些字是「鍵盤打得出來的」 */
 const target = (item) => stripRuby(item?.ko || '');
@@ -93,6 +92,7 @@ export default {
     const keys = buildKeys(item, pool);
     let typed = '';
     let answered = false;
+    let committed = false;   // 成績交出去了沒（避免 → 連按兩次跳兩題）
 
     setFront(item.zh, (item.zh || '').length > 12);
 
@@ -131,15 +131,45 @@ export default {
       if (!correct) els.spell.classList.add('shake');
 
       els.spResult.className = `sp-result ${correct ? 'right' : 'wrong'}`;
-      els.spResult.innerHTML = correct
+      els.spResult.innerHTML = (correct
         ? '✓ 正確'
         : `正確答案　<b>${[...answer].map((c, i) =>
-             `<span class="${typed[i] === c ? '' : 'miss'}">${esc(c)}</span>`).join('')}</b>`;
-      speech.speak(answer);
-      reveal();
-      els.grade.classList.add('hidden');
-      // 客觀題不讓人自評 —— 自評的空間正是這一題要消滅的東西
-      grade(correct ? 3 : 1);
+             `<span class="${typed[i] === c ? '' : 'miss'}">${esc(c)}</span>`).join('')}</b>`)
+        + '<button class="sp-next" data-next="1">下一個 →</button>';
+
+      // ★ 不自動朗讀。
+      //   先前答完就唸出答案，但這一題的重點是「你寫不寫得出來」，
+      //   而聲音會在下一次遇到同一個詞時變成提示。
+      //   要聽隨時可以按 🔊 朗讀（或按 s）—— 主動聽是複習，被動聽是干擾。
+
+      // ★ 也不自動跳到下一題。
+      //   答完之後才是看卡片的時候：漢字讀音、例句、備註、過往正確率。
+      //   自動跳走等於把最該看的那一秒拿掉，而拼對一個詞的當下
+      //   正是最有動機多看兩眼的時刻。
+      reveal();                                   // 完全展開這張卡
+      els.grade.classList.add('hidden');           // 客觀題不自評
+
+      els.spResult.querySelector('[data-next]').onclick = () => next();
     }
+
+    /** 把成績交出去並前進。由使用者按「下一個」或 → 觸發 */
+    function next() {
+      if (!answered || committed) return;
+      committed = true;
+      grade(typed === answer ? 3 : 1);
+    }
+
+    return {
+      // → 與 Enter 都當「下一個」；還沒作答時不攔，讓 → 維持原本的回看行為
+      onKey: (key) => {
+        if (!answered || committed) return false;
+        if (key === 'ArrowRight' || key === 'Enter') { next(); return true; }
+        return false;
+      },
+      teardown: () => {
+        els.spell.classList.add('hidden');
+        els.spell.classList.remove('shake');
+      },
+    };
   },
 };

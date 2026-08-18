@@ -114,14 +114,20 @@ function onKey(e) {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
   if (e.code === 'Escape') { session.quit(); onQuit?.(); return; }
+
+  // ★ 題型先攔，包含方向鍵。
+  //   「拼出來」答完之後不自動前進，要由使用者按 → 或「下一個」——
+  //   而 → 原本在這一行之前就被 session.go(1) 吃掉了，題型永遠看不到。
+  //   攔截順序決定了題型能不能定義自己的操作，所以它必須排在通用鍵之前。
+  //   Escape（結束本輪）例外：任何時候都該離得開。
+  if (active?.onKey?.(e.key)) { e.preventDefault(); return; }
+
   if (e.code === 'ArrowLeft')  { e.preventDefault(); session.go(-1); return; }
   if (e.code === 'ArrowRight') { e.preventDefault(); session.go(1); return; }
   if (e.code === 'Space') { e.preventDefault(); reveal(); return; }
 
   const k = e.key.toLowerCase();
   if (k === 'u') { session.undo(); return; }
-  // 題型先攔（選擇題的 1-4 是選項），沒攔就當評分
-  if (active?.onKey?.(e.key)) return;
   if (k === 's') { const en = session.state().entry; if (en) speech.speak(en.item.ko, en.item.audio_url); return; }
   if (['1', '2', '3', '4'].includes(e.key) && !els.grade.classList.contains('hidden')) {
     session.grade(Number(e.key));
