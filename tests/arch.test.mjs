@@ -482,5 +482,109 @@ for (const f of files) {
 chk('localStorage 的鍵都經過 lsKey()（帶站台前綴）', bareKeys,
   '兩站同網域、localStorage 共用 —— 裸鍵會讓一站讀到另一站的資料，而且不報錯');
 
+// 【模組寫到哪個分頁，那個分頁進入時就要呼叫它】
+//
+// 這一天之內我漏了三次同樣的事：把畫面搬到別的分頁，
+// 但它的內容仍由原本的模組產生，而新分頁的 onEnter 沒有呼叫那個模組 ——
+// 結果是一張空卡片。不會報錯，看起來只是「還沒載入」。
+//
+//   · 發音課程、生活場景搬到詞庫分頁 → 直接開 #browse 會是空的
+//   · 回顧清單、我的弱項搬到記錄分頁 → 同上
+//   · 練習方式搬到「我的」→ 摘要列是空的（使用者問「設定在哪」才發現）
+//
+// home.js 現在寫到四個分頁的元素，這個結構本身就容易漏。
+// 與其每次靠記得，不如讓它在漏的時候紅起來。
+//
+// 【只看「一進來就該看得到」的元素】
+//   第一版把所有元素都算進去，於是報了三個誤報：
+//     dialogue 寫 view-browse → 但它在隱藏的對話面板裡，點分頁才載入
+//     voice / edits 寫 view-me → 一個在啟動時初始化、一個由按鈕開啟
+//   全都是正確的行為。而誤報的閘門比沒有閘門更糟 ——
+//   紅字變成雜訊之後，真的漏接那天也一樣被略過。
+//
+//   所以只看「進入分頁時直接可見」的元素：
+//   排除 class 含 hidden 的容器之內，以及 <details> 之內（預設收合）。
+//   我漏掉的那三次，全都是一進去就該看到卻空著的區塊。
+//
+//   editor 是頂層覆蓋層（在所有 section 之外），本來就不屬於任何分頁。
+{
+  const htmlSrc = fs.readFileSync(`${SITE_DIR}/index.html`, 'utf8');
+  // 用深度配對找每個 view 的範圍：靠猜 </section> 會在巢狀時切錯
+  const owner = {};
+  for (const m of htmlSrc.matchAll(/<section id="(view-[a-z]+)"/g)) {
+    let depth = 0, end = m.index;
+    for (const t of htmlSrc.slice(m.index).matchAll(/<\/?section\b/g)) {
+      depth += t[0].startsWith('</') ? -1 : 1;
+      if (depth === 0) { end = m.index + t.index; break; }
+    }
+    const body = htmlSrc.slice(m.index, end);
+    for (const idm of body.matchAll(/id="([a-z0-9-]+)"/g)) {
+      // 這個 id 前面有沒有「還沒關掉的」hidden 容器或 details？
+      const before = body.slice(0, idm.index);
+      const depth = (tag) => {
+        let d = 0;
+        for (const t of before.matchAll(new RegExp(`<\\/?${tag}\\b[^>]*>`, 'g'))) {
+          if (t[0].startsWith('</')) d = Math.max(0, d - 1);
+          else if (tag !== 'div' || /class="[^"]*\bhidden\b/.test(t[0])) d++;
+          else if (d > 0) d++;                 // 已在隱藏容器內，巢狀 div 也算
+        }
+        return d;
+      };
+      // ★ <summary> 裡的東西看得見 —— details 收合時仍然顯示摘要列。
+      //   把整個 details 當成不可見的話，會漏掉「摘要列是空的」這種缺陷，
+      //   而那正是我實際漏掉的那一次（練習方式搬到「我的」，摘要沒接上）。
+      const inSummary = /<summary\b[^>]*>(?:(?!<\/summary>)[\s\S])*$/.test(before);
+      if (!inSummary && (depth('details') > 0 || depth('div') > 0)) continue;
+      owner[idm[1]] = m[1];
+    }
+  }
+
+  const appSrc = fs.readFileSync(`${ROOT}/app.js`, 'utf8');
+  const hooks = {};
+  for (const m of appSrc.matchAll(/onEnter\('(view-[a-z]+)',\s*([^\n]*)/g)) {
+    hooks[m[1]] = (hooks[m[1]] || '') + m[2];
+  }
+
+  // 例外：不是靠「進入分頁」渲染的模組。
+  //   voice 在啟動時 initVoiceUI() 就掛好，實際填內容是等瀏覽器
+  //   非同步回報可用語音（onVoicesReady）—— 那個時機與分頁無關，
+  //   綁到 onEnter 反而會在語音還沒載入時把清單清空。
+  //   寫成清單而不是放寬規則：放寬會讓 home.initHome 之類的
+  //   啟動期呼叫也算數，那道閘門就守不住任何東西了。
+  // 三條例外，都是真的正確行為 —— 寫明理由而不是放寬規則。
+  //
+  // ★ 我試過「猜哪些元素一進來就看得見」（排除 hidden 容器與 details 之內）。
+  //   那條路在誤報與漏報之間來回兩次都沒收斂：
+  //   summary 裡的看得見、details 裡的看不見、hidden 容器又可能被 JS 打開，
+  //   每補一個規則就換一種錯法。不可靠的閘門比沒有閘門更糟。
+  const EXEMPT = new Set([
+    // 啟動時 initVoiceUI() 就掛好，實際填內容是等瀏覽器非同步回報可用語音。
+    // 那個時機與分頁無關，綁到 onEnter 反而會在語音還沒載入時把清單清空。
+    'voice',
+    // 對話面板預設隱藏，點「情境對話」子分頁才載入（browse.js 的 initTabs）。
+    // 一進詞庫就載入對話是白花一次查詢。
+    'dialogue',
+    // 編輯記錄由「我的」裡的按鈕開啟，不是一進去就顯示。
+    'edits',
+  ]);
+
+  const gaps = [];
+  for (const f of files.filter((f) => /\/views\/\w+\.js$/.test(f))) {
+    const mod = path.basename(f, '.js');
+    if (EXEMPT.has(mod)) continue;
+    const views = new Set();
+    for (const m of read(f).matchAll(/\$\('([a-z0-9-]+)'\)\s*\.(?:innerHTML|textContent)\s*=/g)) {
+      if (owner[m[1]]) views.add(owner[m[1]]);
+    }
+    for (const v of views) {
+      // view-study / view-done 由學習流程主動 show()，沒有 onEnter，跳過
+      if (!hooks[v]) continue;
+      if (!hooks[v].includes(mod + '.')) gaps.push(`${v} 進入時沒有呼叫 ${mod}（它寫這一頁的元素）`);
+    }
+  }
+  chk('搬過去的畫面都有接上載入', gaps,
+    '內容留在原本的模組、新分頁沒呼叫它 —— 結果是一張空卡片，而且不報錯');
+}
+
 console.log(fails ? `\n❌ ${fails} 項約束被違反` : '\n✅ 所有架構約束通過');
 process.exit(fails ? 1 : 0);

@@ -130,5 +130,37 @@ console.log('\n【干擾項池的最小欄位】');
       bad.slice(0, 3).map((x) => x.ko).join('／'));
 }
 
+
+// =====================================================================
+// 【重複出現時選項要重排】
+//
+// 一個詞在同一輪要連續答對三次才算掌握，所以它至少會出現三次。
+// 如果選項的順序固定，第二、三次就變成「記位置」——
+// 學習者答對了，但練到的是「答案在第三個」，不是那個詞。
+//
+// 目前是每次呈現都重新產生（buildChoices 在 mount 裡呼叫），
+// 但沒有任何東西守著這個性質：哪天有人為了效能把結果快取起來，
+// 它會靜靜地變成記位置，而測試全綠。
+// =====================================================================
+console.log('\n【重複出現時選項要重排】');
+{
+  const item = pool.find((x) => x.item_type === 'word'
+    && buildChoices(x, 'ko2zh', pool).filled === 3);
+  const N = 12;
+  const positions = new Set();
+  const sets = new Set();
+  for (let i = 0; i < N; i++) {
+    const r = buildChoices(item, 'ko2zh', pool);
+    positions.add(r.options.indexOf(r.answer));
+    sets.add(r.options.join('|'));
+  }
+  // 四個位置全都出現的機率不高，但「只出現一個位置」十二次幾乎不可能
+  // （每次 1/4，連續十二次同一格約 6×10⁻⁸）—— 所以這條不會偶發性地紅。
+  chk(`答案位置會變（${N} 次出現 ${positions.size} 種位置）`, positions.size >= 2,
+      '固定位置的話，第二三次練到的是「答案在第幾個」，不是那個詞');
+  chk(`選項組合也會變（${sets.size} 種）`, sets.size >= 2,
+      '干擾項每次重新挑，所以不只順序變，內容也變');
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);
