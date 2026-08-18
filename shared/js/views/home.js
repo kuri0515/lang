@@ -326,7 +326,9 @@ function renderLife(scenes) {
          <div class="n-sub">想複習的話，下面任何一個場景都可以再點</div>
        </div></div>`;
 
-  $('life-list').innerHTML = scenes.map((s) => {
+  // total 0 的場景不印 —— 一列「0/0 [學]」點下去是空的學習階段，
+  // 使用者只會以為壞了。標籤還沒有內容是內容的問題，不該變成畫面上的死按鈕。
+  $('life-list').innerHTML = scenes.filter((s) => s.total > 0).map((s) => {
     const p = s.total ? Math.round((s.mastered / s.total) * 100) : 0;
     return `<div class="pron-row${p >= LESSON_DONE * 100 ? ' done' : ''}">
       <span class="p-name">${esc(s.label)}</span>
