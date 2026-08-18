@@ -3,6 +3,7 @@
 // 換 SRS 演算法只改 srs.js，換詞表只動 content.js，兩者互不影響。
 // =====================================================================
 import { sb, ITEM_FIELDS, DIRECTIONS, fetchAll } from './client.js';
+import { dayKey } from '../core/dom.js';
 import { scheduleRecall } from '../core/srs.js';
 
 // ---------- 佇列 ----------
@@ -177,7 +178,9 @@ export async function dailyStats(userId, days = 30) {
     .eq('user_id', userId).gte('reviewed_at', from.toISOString());
   if (error) throw error;
 
-  const key = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  // 用共用的 dayKey —— 「一天」的定義只能有一份。
+  // 先前這裡用本地、首頁用 UTC，而兩者的結果要互相比對。
+  const key = dayKey;
   const byDay = {};
   for (const r of data ?? []) {
     const k = key(new Date(r.reviewed_at));

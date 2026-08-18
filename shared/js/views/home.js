@@ -1,5 +1,5 @@
 // 學習首頁：今日統計、連續天數、練習方式、詞庫、弱項
-import { $, opt, esc, pct, msg, emptyState, qs, qsa } from '../core/dom.js';
+import { $, opt, esc, pct, msg, emptyState, qs, qsa, dayKey } from '../core/dom.js';
 import { wordHTML } from '../core/ruby.js';
 import { on, EVENTS } from '../core/bus.js';
 import { dirShort } from '../data/client.js';
@@ -288,7 +288,7 @@ export function renderWeek(daily) {
   const has = new Set((daily || []).filter((d) => d.n > 0).map((d) => d.day));
   const out = [];
   for (let i = 6; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+    const d = dayKey(new Date(Date.now() - i * 86400000));
     out.push(`<i class="${has.has(d) ? 'on' : ''}${i === 0 ? ' today-mark' : ''}"></i>`);
   }
   box.innerHTML = out.join('');
@@ -357,7 +357,7 @@ let deckCounts = null;
 let dueNow = 0;        // 這次載入時的待複習量，按鈕據此判斷擋不擋
 const DAILY_MASTERY_TARGET = 20;
 
-const todayKey = () => lsKey('mastered-' + new Date().toISOString().slice(0, 10));
+const todayKey = () => lsKey('mastered-' + dayKey());
 
 export function masteredToday() {
   return Number(localStorage.getItem(todayKey()) || 0);

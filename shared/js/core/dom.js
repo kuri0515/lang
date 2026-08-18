@@ -95,3 +95,21 @@ export function createPager({ list, footer, pageSize = 60, render, afterRender }
     get visible() { return rows.slice(0, shown); },
   };
 }
+
+/**
+ * 一天的代號（YYYY-MM-DD），用**本地時區**。
+ *
+ * 【為什麼不能用 toISOString().slice(0, 10)】
+ *   那個是 UTC 日期。在台北（UTC+8），早上 8 點以前的 UTC 日期是「昨天」——
+ *   於是：
+ *     · 七天條的「今天」那一格不會亮（它比對的是 UTC 的今天，
+ *       而作答記錄是按本地日期分組的）
+ *     · 「今日已掌握」的計數會在早上 8 點自己歸零
+ *   兩者都不會報錯，而使用者的體感是「這個 App 有時候會忘記我學過」。
+ *
+ * 【為什麼統一在這裡】
+ *   先前 dailyStats 用本地、首頁用 UTC —— 兩個地方各自定義「一天」，
+ *   而它們的結果要互相比對。定義只能有一份。
+ */
+export const dayKey = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

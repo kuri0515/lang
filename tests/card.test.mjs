@@ -596,7 +596,30 @@ console.log('\n【今日進度環】');
 
   // 最近七天：「昨天有、今天空著」一眼看得到，
   // 而那比任何一句文案都更能讓人現在就打開。
-  const day = (i) => new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+  // ★ 用與程式相同的「本地日期」定義。
+  //   先前這裡寫 toISOString().slice(0,10)（UTC）—— 在 UTC+8 的早上 8 點以前
+  //   它與程式算出來的差一天，於是「今天」那一格永遠不會亮，
+  //   而測試在 UTC 機器上跑起來是綠的。
+  const { dayKey } = await import(SHARED + '/js/core/dom.js');
+  const day = (i) => dayKey(new Date(Date.now() - i * 86400000));
+
+  // ★ 用固定時刻驗「一天」的定義，而不是靠現在幾點。
+  //   UTC+8 的凌晨三點，UTC 日期還是前一天 ——
+  //   用 toISOString().slice(0,10) 的話，那時候：
+  //     · 七天條的「今天」不會亮（作答記錄按本地日期分組）
+  //     · 「今日已掌握」會在早上 8 點自己歸零
+  //   兩者都不報錯，而使用者的體感是「這個 App 有時候會忘記我學過」。
+  //   這條斷言在任何時區、任何時刻都成立 —— 靠現在幾點的話，
+  //   白天跑是綠的，凌晨跑才會紅。
+  {
+    const t = new Date('2026-08-18T03:00:00+08:00');
+    const utc = t.toISOString().slice(0, 10);
+    const local = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}`
+      + `-${String(t.getDate()).padStart(2, '0')}`;
+    chk('★ dayKey 用的是本地日期，不是 UTC', dayKey(t) === local,
+        `dayKey=${dayKey(t)}／本地=${local}／UTC=${utc}`
+        + '（在 UTC+8 的凌晨，兩者差一天）');
+  }
   home.renderWeek([{ day: day(1), n: 5 }, { day: day(3), n: 2 }]);
   const cells = [...$('week').children];
   chk('七天條有七格', cells.length === 7, `${cells.length} 格`);
