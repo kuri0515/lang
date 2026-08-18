@@ -416,17 +416,40 @@ async function startFree({ ids = null, tag = '', deckId = null,
                            kind = 'free', keepOrder = false } = {}) {
   try {
     // 沒有指定範圍時（首頁的「自由練習」）走複習池，而不是整個詞庫抓 60 個
-    const items = (!ids && !tag && !deckId)
+    const pooled = !ids && !tag && !deckId;
+    const items = pooled
       ? await freePool()
       : await content.pickItems({ ids, tag, deckId, limit: 60 });
     if (!items.length) return msg('沒有符合的內容');
+
+    // 已經有卡的要帶著卡進來 —— 沒帶的話排程會從頭算起，
+    // 一個學了三週的詞會被當成新詞，間隔掉回一天。
+    const byItem = pooled
+      ? await progress.cardsByItem(user.id, items.map((i) => i.id)).catch(() => ({}))
+      : {};
     const dir = home.effectiveDir();
-    const entries = items.map((item) => ({ item, direction: dir, card: null }));
+    const entries = items.map((item) => ({
+      item, direction: dir, card: byItem[item.id]?.[dir] ?? null,
+    }));
+
+    // ★ 首頁的「自由練習」會寫排程（freeMode: false）。
+    //
+    //   使用者的定義：「練習過之後，這些詞就會進入到循環池中」。
+    //   那與「只記錄成績、不動排程」是互斥的 —— 不動排程就永遠進不了循環。
+    //
+    //   所以它現在是一條無上限的學習流：練到的詞進循環，答對的當天讓開，
+    //   隔天由複習把它們帶回來。
+    //
+    //   指定範圍的練習（詞庫選標籤、弱項修復）維持不動排程 ——
+    //   那是「臨時翻出來看一下」，不該打亂長期的節奏。
     await begin(keepOrder ? entries : orderForDiscrimination(entries, confusableOf),
-                { freeMode: true, kind, lesson: tag,
+                { freeMode: !pooled, kind, lesson: tag,
+                  criterion: getMode(home.studyMode()).criterion,
                   note: kind === 'drill'
                     ? '弱項修復 · 只記錄成績，不影響複習排程'
-                    : '自由練習 · 只記錄成績，不影響複習排程' });
+                    : (pooled
+                      ? '自由練習 · 練到的詞會進入複習循環'
+                      : '練習這一組 · 只記錄成績，不影響複習排程') });
   } catch (e) { msg(e.message || e); }
 }
 

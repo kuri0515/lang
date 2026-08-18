@@ -299,5 +299,58 @@ console.log('\n【自由練習的取材規則】');
       '而那條路徑會端出全部並提示「再來一輪加深印象」—— 死路才是最糟的結果');
 }
 
+
+// =====================================================================
+// 【自由練習會把詞送進複習循環】
+//
+// 使用者的定義：「練習過之後，這些詞就會進入到循環池中」。
+// 那與原本的「只記錄成績、不動排程」是互斥的 ——
+// 不動排程就永遠進不了循環，隔天不會有人把它帶回來。
+//
+// 所以首頁的「自由練習」現在會寫排程；
+// 而指定範圍的練習（詞庫選標籤、弱項修復）維持不動 ——
+// 那是「臨時翻出來看一下」，不該打亂長期的節奏。
+// =====================================================================
+console.log('\n【自由練習與循環池】');
+{
+  const item = pool.find((x) => x.item_type === 'word');
+  // ★ 要做完整輪再看。答第一題時卡還在學習階段（間隔 0 天）——
+  //   那時收手會讓斷言看起來過了，卻沒有驗到「真的畢業進循環」。
+  const run = (freeMode) => {
+    let saved = null, done = false;
+    const S = createSession({ save: async (p2) => { saved = p2; },
+                              onChange: () => {}, onFinish: () => { done = true; } });
+    S.start([{ item, direction: 'ko2zh', card: null }],
+            { freeMode, mode: 'flip', kind: 'free' });
+    let n = 0;
+    while (n < 40 && !done) { S.grade(RATING.GOOD); n += 1; }
+    return saved;
+  };
+
+  const pooled = run(false);
+  chk('★ 自由練習做完會進循環（畢業成複習卡）',
+      pooled?.free === false && pooled?.next?.state === 'review'
+      && pooled?.next?.interval_days >= 1,
+      `free=${pooled?.free}／狀態 ${pooled?.next?.state}／下次 ${pooled?.next?.interval_days} 天`);
+
+  const scoped = run(true);
+  chk('指定範圍的練習仍然不動排程', scoped?.free === true,
+      '「臨時翻出來看一下」不該打亂長期的節奏');
+
+  // ★ 已經有卡的詞要帶著卡進來 —— 不帶的話排程從頭算起，
+  //   一個學了三週的詞會被當成新詞，間隔掉回一天。
+  const src = fs.readFileSync(`${SITE_DIR}/../shared/js/app.js`, 'utf8');
+  chk('★ 自由練習會帶上已有的卡', /cardsByItem\(user\.id, items\.map/.test(src),
+      '不帶的話，學了三週的詞會被當成新詞，間隔掉回一天');
+
+  // ★ 上面那兩條驗的是 session 層（它本來就對）。真正改動的是接線：
+  //   startFree 要在「走複習池」時傳 freeMode: false，才寫得了排程。
+  //   我第一版只驗 session，把 app.js 改回 freeMode: true 也照樣綠 ——
+  //   驗錯了層，斷言就守不到剛改的東西。
+  chk('★ 走複習池時才寫排程（freeMode: !pooled）',
+      /freeMode: !pooled/.test(src),
+      '寫死 true 的話「練過就進循環」永遠不會發生，而測試不會告訴你');
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);
