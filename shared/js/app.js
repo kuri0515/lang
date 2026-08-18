@@ -500,9 +500,6 @@ function initImporterAndAdmin() {
     reviewQueue = [];
     show('view-home');
   };
-  // 「學習新的」：與主按鈕在「今天沒有到期」時的行為同一條路 ——
-  // 同一件事只能有一個實作，兩份必然漂移。
-  $('btn-new').onclick = () => home.startNext();
   $('btn-again').onclick = () => nextRound().catch((e) => msg(e.message || e));
   $('btn-extra').onclick = () => {
     const ids = [...new Set([...lastBatchIds, ...reviewQueue.map((e) => e.item.id)])];

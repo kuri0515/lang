@@ -58,9 +58,12 @@ export function syncModeUI() {
 
 export function initHome(d) {
   deps = d;
-  $('btn-review').onclick = () => deps.onReview();
   $('btn-primary').onclick = () => primaryAction?.();
   $('btn-free').onclick = () => deps.onFree();
+  // 首頁的按鈕一律在這裡綁。先前「學習新的」綁在 app.js ——
+  // 同一個畫面的按鈕分兩處綁，日後改一處漏一處，
+  // 而漏掉的那顆不會報錯，只是點下去沒反應。
+  $('btn-new').onclick = () => startNext();
   $('btn-drill-weak').onclick = () => {
     if (!weakIds.length) return msg('還沒有足夠的資料判斷弱項');
     deps.onDrillWeak(weakIds);
@@ -85,12 +88,26 @@ export async function refreshDue() {
   try {
     const due = await progress.fetchDue(user.id, [effectiveDir()], 500);
     $('s-due').textContent = due.length;
-    $('btn-review').disabled = due.length === 0;
-    $('btn-review').textContent = due.length ? `開始複習（${due.length}）` : '今日複習已清空 ✓';
   } catch (e) { msg('載入失敗：' + (e.message || e)); }
 }
 
-export async function load() {
+// 進行中的載入。詞庫、記錄兩個分頁進入時也會呼叫 load()
+// （課程選擇與學習記錄已經搬到那兩頁，但內容仍由這裡產生），
+// 所以快速切分頁會同時觸發三輪、每輪七個查詢。
+// 共用同一個 promise：多按幾下只算一次。
+let loading = null;
+
+// ★ 刻意不是 async。async function 會把回傳值再包一層新的 promise，
+//   於是三次呼叫拿到三個不同的物件 —— 雖然 doLoad 只跑一次，
+//   但呼叫端拿到的不是同一個，任何「是不是同一輪」的判斷都會失準。
+//   （測試就是這樣抓到的：斷言 a === b 紅了，功能卻是對的。）
+export function load() {
+  if (loading) return loading;
+  loading = doLoad().finally(() => { loading = null; });
+  return loading;
+}
+
+async function doLoad() {
   const user = deps?.user();
   if (!user) return;
   try {
@@ -119,8 +136,6 @@ export async function load() {
     $('s-all-acc').textContent = overall.mastered;
     renderStreak(daily);
 
-    $('btn-review').disabled = due.length === 0;
-    $('btn-review').textContent = due.length ? `複習 ${due.length}` : '複習已清空';
 
     // ★ 順序有意義：renderPron 會算出「下一課」，
     //   而建議區的大按鈕要指向它。反過來的話，第一次載入時

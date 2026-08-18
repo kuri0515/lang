@@ -450,5 +450,26 @@ console.log('\n【拼出來】');
   }
 }
 
+
+// =====================================================================
+// 【首頁載入：三個分頁共用，不能重複打】
+//
+// 課程選擇（發音課程、生活場景）搬到詞庫分頁、學習記錄搬到記錄分頁之後，
+// 那兩頁的內容仍由 home.load() 產生 —— 所以三個分頁的 onEnter 都會呼叫它。
+// 快速切分頁＝同時觸發三輪、每輪七個查詢。
+// 這不會出錯，只是白花三倍的網路 —— 在手機的行動網路上，那是看得出來的延遲。
+// =====================================================================
+console.log('\n【首頁載入】');
+{
+  const home = await import(SHARED + '/js/views/home.js');
+  const a = home.load(); const b = home.load(); const c = home.load();
+  chk('★ 同時呼叫三次共用同一個 promise', a === b && b === c,
+      '否則切一次分頁就打三輪查詢');
+  await Promise.all([a, b, c]);
+  const d = home.load();
+  chk('前一輪結束後可以再載入', d !== a);
+  await d;
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);
