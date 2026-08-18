@@ -104,16 +104,49 @@ export function speak(text, audioUrl = null, opts = {}) {
   speakTTS(text, opts);
 }
 
+/**
+ * 朗讀失敗時要說出來，而不是靜靜地什麼都不做。
+ *
+ * 【為什麼】
+ *   先前失敗一律 return —— 使用者按下去沒反應，也沒有任何線索：
+ *   是壞了？是沒有語音？是要開音量？他無從判斷，我也無從查
+ *   （實際發生過：使用者回報「完全按了之後沒有聲音」，
+ *    而我在測試環境怎麼跑都是正常的）。
+ *
+ * 【為什麼只講一次】
+ *   一輪要唸三十到八十次。每次都彈訊息會把畫面洗掉，
+ *   而第二次之後也不帶新資訊。
+ */
+let warned = false;
+function speakWarn(msg) {
+  if (warned) return;
+  warned = true;
+  // 動態載入避免 core → views 的反向相依（dom.js 是 core，msg 在那裡）
+  import('./dom.js').then((d) => d.msg?.(msg)).catch(() => {});
+}
+
 function speakTTS(text, { rate: override, slow = false } = {}) {
-  if (!('speechSynthesis' in window)) return;
+  if (!('speechSynthesis' in window)) {
+    return speakWarn('這個瀏覽器不支援朗讀。換 Safari 或 Chrome 試試。');
+  }
+  const L = lang();
+  // 系統一個目標語言的語音都沒有 → 唸出來的會是英文腔或完全沒聲音。
+  // 這不是程式的問題，但使用者只看得到「按了沒反應」，所以要指路。
+  if (!targetVoices().length) {
+    return speakWarn(`系統裡沒有${L.langLabel}語音。`
+      + 'iPhone：設定 → 輔助使用 → 朗讀內容 → 聲音；'
+      + 'Mac：系統設定 → 輔助使用 → 朗讀內容 → 系統聲音 → 管理聲音。');
+  }
   speechSynthesis.cancel();                    // 打斷上一句，避免排隊堆積
   const u = new SpeechSynthesisUtterance(text);
-  u.lang = lang().ttsLang;
+  u.lang = L.ttsLang;
   const base = override ?? autoRate(text, rate());
   u.rate = slow ? Math.max(0.4, base - 0.25) : base;
   u.pitch = 1;
   const v = currentVoice();
   if (v) u.voice = v;
+  u.onerror = (e) => speakWarn(`朗讀失敗（${e.error || '未知原因'}）。`
+    + '到「我的 → 語音」換一個聲音試試。');
   speechSynthesis.speak(u);
 }
 
