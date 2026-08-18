@@ -1,5 +1,5 @@
 // 學習首頁：今日統計、連續天數、練習方式、詞庫、弱項
-import { $, opt, esc, pct, msg, emptyState, qs, qsa, dayKey } from '../core/dom.js';
+import { $, opt, esc, pct, msg, emptyState, qs, qsa, dayKey, busy } from '../core/dom.js';
 import { wordHTML } from '../core/ruby.js';
 import { on, EVENTS } from '../core/bus.js';
 import { dirShort } from '../data/client.js';
@@ -130,20 +130,24 @@ export function initHome(d) {
   $('mode-pick').innerHTML = MODES.map((m, i) =>
     `<label><input type="radio" name="mode" value="${esc(m.id)}"${i === 0 ? ' checked' : ''}>`
     + `<span>${esc(m.label)}</span></label>`).join('');
-  $('btn-primary').onclick = () => primaryAction?.();
-  $('btn-review').onclick = () => deps.onReview();
-  $('btn-free').onclick = () => deps.onFree();
+  // ★ 這幾顆按下去都要等網路（輪練要撈整個詞庫，實測近 1 秒）。
+  //   不給忙碌回饋的話，使用者會以為沒反應而連按 —— 而那正是
+  //   「一按就吃掉 10 個詞」那個 bug 被觸發的方式（docs/LESSONS.md L-002）。
+  //   重按現在無害了，但沒有回饋的等待本來就不該存在。
+  $('btn-primary').onclick = (e) => busy(e.currentTarget, () => primaryAction?.());
+  $('btn-review').onclick = (e) => busy(e.currentTarget, () => deps.onReview());
+  $('btn-free').onclick = (e) => busy(e.currentTarget, () => deps.onFree());
   // 輪次進度寫在按鈕上 —— 這個模式沒有到期日，
   // 「第幾輪、還剩多少」是它唯一的進度感。不寫的話按下去像在抽籤。
   refreshRoundLabel();
   // 首頁的按鈕一律在這裡綁。先前「學習新的」綁在 app.js ——
   // 同一個畫面的按鈕分兩處綁，日後改一處漏一處，
   // 而漏掉的那顆不會報錯，只是點下去沒反應。
-  $('btn-new').onclick = () => startNext();
-  $('btn-drill-weak').onclick = () => {
+  $('btn-new').onclick = (e) => busy(e.currentTarget, () => startNext());
+  $('btn-drill-weak').onclick = (e) => busy(e.currentTarget, () => {
     if (!weakIds.length) return msg('還沒有足夠的資料判斷弱項');
-    deps.onDrillWeak(weakIds);
-  };
+    return deps.onDrillWeak(weakIds);
+  });
   // 改題型／方向只影響「待複習」數 —— 統計、詞庫、弱項與方向無關，
   // 全量重載會打 6+N 個查詢，切個選項就卡一下。
   $('mode-pick').addEventListener('change', () => { syncModeUI(); refreshDue(); deps.onPrefsChange?.(); });
@@ -156,7 +160,7 @@ export function initHome(d) {
   // 類型只影響「這輪抽什麼」，不影響到期張數的計算，所以不必 refreshDue()。
   // 但摘要要跟著變 —— 選項收合起來時，摘要是唯一看得到目前設定的地方。
   $('type-pick').addEventListener('change', () => { syncModeUI(); deps.onPrefsChange?.(); });
-  $('btn-recall').onclick = () => deps.onRecall?.();
+  $('btn-recall').onclick = (e) => busy(e.currentTarget, () => deps.onRecall?.());
   on(EVENTS.ITEMS_CHANGED, () => { deckCounts = null; load(); });
   on(EVENTS.PROGRESS_WRITTEN, () => load());
   syncModeUI();
@@ -393,7 +397,10 @@ export function dailyTarget(dueCount) {
 function startLesson(run) {
   const why = newLessonBlocked(dueNow);
   if (why) return msg(why);
-  run();
+  // ★ 一定要 return —— 呼叫端用 busy() 包著它等載入完成，
+  //   不回傳的話 busy 立刻就結束，忙碌指示閃一下就消失，
+  //   而按鈕在真正載入的那一秒裡又可以按了。
+  return run();
 }
 
 /**
@@ -555,7 +562,7 @@ function renderPron(rows) {
   }).join('');
 
   qsa('[data-pron]').forEach((b) => {
-    b.onclick = () => startLesson(() => deps.onStudyTag(b.dataset.pron));
+    b.onclick = (e) => busy(e.currentTarget, () => startLesson(() => deps.onStudyTag(b.dataset.pron)));
   });
 }
 
@@ -611,7 +618,7 @@ function renderLife(scenes) {
 
   qsa('[data-scene]').forEach((b) => {
     const s = scenes.find((x) => x.key === b.dataset.scene);
-    b.onclick = () => deps.onStudyScene(s);
+    b.onclick = (e) => busy(e.currentTarget, () => deps.onStudyScene(s));
   });
 }
 
@@ -659,7 +666,7 @@ export function renderRecall(rows) {
   }).join('') + (rows.length > 8 ? `<p class="hint nomargin">…另有 ${rows.length - 8} 條</p>` : '');
 
   qsa('[data-recall-del]').forEach((b) => {
-    b.onclick = () => deps.onRemoveRecall?.(b.dataset.recallDel);
+    b.onclick = (e) => busy(e.currentTarget, () => deps.onRemoveRecall?.(b.dataset.recallDel));
   });
 }
 
@@ -716,7 +723,7 @@ export function renderGojuon(grid, rows, available) {
   renderDakuon(lang().taxonomy.dakuon, by);
 
   qsa('#gojuon [data-pron], #dakuon [data-pron]').forEach((b) => {
-    b.onclick = () => startLesson(() => deps.onStudyTag(b.dataset.pron));
+    b.onclick = (e) => busy(e.currentTarget, () => startLesson(() => deps.onStudyTag(b.dataset.pron)));
   });
 }
 

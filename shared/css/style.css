@@ -1116,3 +1116,18 @@ ruby rt { line-height: 1; }
 .entry.on b { color: var(--accent); }
 .entry:disabled { opacity: .45; }
 .entry:active { transform: translateY(1px); }
+
+/* 等網路的按鈕（見 core/dom.js 的 busy）。
+   只加一圈轉動的指示，不動按鈕原本的文字與子元素 —— 換文字會把子元素清掉。 */
+button[aria-busy="true"] { position: relative; color: transparent !important; }
+button[aria-busy="true"] > * { visibility: hidden; }
+button[aria-busy="true"]::after {
+  content: ''; position: absolute; inset: 0; margin: auto;
+  width: 1.1em; height: 1.1em; border-radius: 50%;
+  border: 2px solid currentColor; border-top-color: transparent;
+  color: var(--fg, #333); animation: busy-spin .7s linear infinite;
+}
+@keyframes busy-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  button[aria-busy="true"]::after { animation-duration: 2.4s; }
+}

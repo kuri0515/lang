@@ -693,5 +693,22 @@ chk('app.js 不自己判斷輪次的邊界',
   /round\.pos\s*\+=|roundNo:\s*\(/.test(appR) ? ['app.js 又在自己算輪次'] : [],
   '規則放在 study/round.js，那裡是純函式、驗得到');
 
+
+// 【要等網路的入口按鈕，一律包 busy()】
+//   沒有忙碌回饋的等待會製造重試，而重試曾經是有代價的
+//   （一按就吃掉輪次池 10 個詞，見 docs/LESSONS.md L-002）。
+//   代價已經拿掉了，但「按了像沒反應」本身就是 bug。
+//
+//   查的是 home.js 裡直接呼叫 deps.onXxx() 的 onclick ——
+//   那些全都會打網路。包了 busy 的寫法是 busy(e.currentTarget, () => deps.onXxx())。
+const homeSrc = read(`${ROOT}/views/home.js`);
+const bare = [];
+for (const m of homeSrc.matchAll(/onclick\s*=\s*\(([^)]*)\)\s*=>\s*([^;]+);/g)) {
+  const body = m[2];
+  if (/deps\.on[A-Z]/.test(body) && !/busy\(/.test(body)) bare.push(m[0].slice(0, 60));
+}
+chk('要等網路的入口按鈕都有忙碌狀態', bare,
+  '按了沒反應時使用者會連按 —— 那正是輪次池被吃掉的觸發方式');
+
 console.log(fails ? `\n❌ ${fails} 項約束被違反` : '\n✅ 所有架構約束通過');
 process.exit(fails ? 1 : 0);

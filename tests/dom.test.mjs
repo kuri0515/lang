@@ -69,6 +69,46 @@ chk('只有登入頁不顯示', $('tabbar').classList.contains('hidden'),
       '學習中被關在裡面正是使用者回報的那個 bug');
 }
 
+
+// =====================================================================
+// 【等網路的按鈕要有忙碌狀態，而且重按不會排隊】
+//
+// 輪練第一次按下去要撈整個詞庫（韓文站 801 條，實測 964 ms），
+// 期間畫面若毫無變化，使用者的合理反應是再按幾下 ——
+// 而那正是「一按就吃掉 10 個詞」那個 bug 被觸發的方式（docs/LESSONS.md L-002）。
+// 重按現在是冪等的，但沒有回饋的等待本身就該消失。
+{
+  const { busy } = await import(SHARED + '/js/core/dom.js');
+  const btn = document.createElement('button');
+  btn.innerHTML = '<span>學新的</span>';
+  document.body.appendChild(btn);
+
+  let runs = 0, release;
+  const slow = () => { runs += 1; return new Promise((r) => { release = r; }); };
+
+  const p = busy(btn, slow);
+  chk('★ 載入中按鈕標成忙碌', btn.getAttribute('aria-busy') === 'true',
+      '沒有回饋的等待會製造重試');
+  chk('載入中按鈕按不下去', btn.disabled === true);
+  chk('★ 按鈕裡的子元素沒有被清掉', btn.querySelector('span')?.textContent === '學新的',
+      '改 textContent 的話課名會不見，而且回復不了');
+
+  busy(btn, slow); busy(btn, slow);
+  chk('★ 重按不排隊（只跑一次）', runs === 1, `跑了 ${runs} 次`);
+
+  release();
+  await p;
+  chk('載入完解除忙碌', btn.getAttribute('aria-busy') === null && btn.disabled === false);
+
+  // 本來就該是灰的按鈕，忙完不可以被點亮
+  const off = document.createElement('button');
+  off.disabled = true;
+  document.body.appendChild(off);
+  await busy(off, () => {});
+  chk('★ 原本停用的按鈕，忙完仍然停用', off.disabled === true,
+      '直接寫 disabled = false 會把一顆該灰的按鈕點亮');
+}
+
 // 🏠 與 ✕ 必須分開：一輪 30–80 題，只是想看一眼首頁不該付「結束本輪」的代價
 chk('學習頁有「離開但保留」的出口', !!$('btn-park'),
     '分頁列的「首頁」會跳回這一輪，少了這個出口就沒有路去真正的首頁');

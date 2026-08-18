@@ -113,3 +113,43 @@ export function createPager({ list, footer, pageSize = 60, render, afterRender }
  */
 export const dayKey = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+/**
+ * 按下去之後要等網路的按鈕，一律包這個。
+ *
+ * 【為什麼需要】
+ *   輪練第一次按下去要撈整個詞庫（韓文站 801 條，實測 964 ms），
+ *   期間畫面完全沒有變化 —— 使用者的合理反應是再按幾下。
+ *   而當時每按一下都會往前吃掉 10 個詞（見 docs/LESSONS.md L-002）。
+ *
+ *   那個 bug 已經修好了（重按現在是冪等的），但**原因還在**：
+ *   沒有回饋的等待會製造重試。讓重試無害是防守，
+ *   讓重試不必發生才是修好。
+ *
+ * 【為什麼用 class 而不是換文字】
+ *   有些按鈕裡有子元素（btn-new 裡有 #e-new 顯示課名），
+ *   改 textContent 會把它們整個清掉，回復時就回不來了。
+ *
+ * 【為什麼自己記 disabled】
+ *   首頁的 render 會依到期數重設 disabled。忙完直接寫 false 的話，
+ *   一顆本來就該是灰的按鈕會被點亮。
+ */
+export function busy(el, fn) {
+  if (!el) return Promise.resolve(fn());
+  if (el.dataset.busy) return Promise.resolve();   // 重按直接忽略，不排隊
+  const wasDisabled = el.disabled;
+  el.dataset.busy = '1';
+  el.disabled = true;
+  el.setAttribute('aria-busy', 'true');
+  const done = () => {
+    delete el.dataset.busy;
+    el.disabled = wasDisabled;
+    el.removeAttribute('aria-busy');
+  };
+  // ★ fn 要同步呼叫。用 Promise.resolve().then(fn) 的話，
+  //   工作被推遲一個微任務才開始 —— 沒有任何好處，
+  //   而且「按下去到工作真的開始」之間多了一段什麼都沒發生的空窗。
+  let out;
+  try { out = fn(); } catch (e) { done(); throw e; }
+  return Promise.resolve(out).finally(done);
+}
