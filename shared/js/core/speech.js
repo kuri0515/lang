@@ -280,6 +280,21 @@ function speakTTS(text, { rate: override, slow = false, retry = false, bare = fa
   //   卡死的情況不需要靠延遲處理：真的被吃掉時 onerror 會收到 canceled，
   //   那裡已經有重試（延到下一個 tick 再送一次）。
   //   讓正常路徑保持最短，異常路徑才付延遲的代價。
+  // ★ 偵測「沒有錯誤、也沒有聲音」。
+  //
+  //   Edge 實測：版本是最新的、選中的是本機語音、也沒有任何 onerror ——
+  //   就是不出聲。這種失敗現在完全偵測不到，使用者只看到什麼都沒發生。
+  //
+  //   utterance 真的開始唸時會觸發 onstart。等一秒半還沒開始，
+  //   就是引擎收下了卻沒有動 —— 把現場狀態說出來，至少查得下去。
+  let started = false;
+  u.onstart = () => { started = true; };
+  setTimeout(() => {
+    if (!started && !warned) {
+      speakWarn(`朗讀沒有開始（引擎收下了但沒有動）。${diagnosis()}`);
+    }
+  }, 1500);
+
   ss.speak(u);
 }
 
