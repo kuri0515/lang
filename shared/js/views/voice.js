@@ -17,9 +17,16 @@ export function initVoiceUI() {
       return;
     }
     const cur = speech.currentVoice();
-    sel.innerHTML = list.map((v, i) =>
-      `<option value="${esc(v.name)}"${v.name === cur?.name ? ' selected' : ''}>${esc(v.name)}${i === 0 ? '（推薦）' : ''}</option>`
-    ).join('');
+    // ★ 標出哪些要連網。
+    //   名字只差「Online」兩個字，選單上看不出差別 ——
+    //   而網路語音在某些瀏覽器完全不出聲。
+    //   使用者實際踩過：隨手換一個，換到不會出聲的那種，
+    //   然後「換了也沒用」，因為怎麼換都在網路語音之間換。
+    sel.innerHTML = list.map((v, i) => {
+      const tag = i === 0 ? '（推薦）' : (v.localService === false ? '（需連網）' : '');
+      return `<option value="${esc(v.name)}"${v.name === cur?.name ? ' selected' : ''}>`
+        + `${esc(v.name)}${tag}</option>`;
+    }).join('');
     // 試聽句由站台宣告 —— 曾經這裡寫死韓文問候語，
     // 於是日文站選日語語音、按下去唸出一句韓文。
     // 換語音的當下正是要聽「這個聲音唸我在學的語言好不好聽」，
