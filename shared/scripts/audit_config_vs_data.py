@@ -92,6 +92,69 @@ def declared_tags(site):
     return out
 
 
+VALID_POS_FILE = {
+    'japanese': 'data/kana-01/_pos.py',
+    'korean': 'data/_pos_backfill.py',
+}
+
+
+def valid_pos(site):
+    """各站合法的詞性集合。兩站用不同的語言寫詞性名 ——
+    韓文站是 명사／동사，日文站是 名詞／動詞。共用碼不該知道哪個是哪個。"""
+    import importlib.util
+    p = ROOT / site / VALID_POS_FILE[site]
+    spec = importlib.util.spec_from_file_location('_pos_' + site, p)
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m.VALID
+
+
+def check_pos(url, key, site):
+    """詞性的覆蓋率與合法性。
+
+    【為什麼要盯】
+      四選一挑干擾項時同詞性會加分。詞性空著或打錯字都不會報錯 ——
+      只是那個詞永遠配不到同類的干擾項，練了很多次沒練到會錯的那一下。
+      而這兩種情況在畫面上長得跟正常的一模一樣。
+
+    【句子與假名卡本來就不該有詞性】
+      一整句沒有單一詞性；假名不是單字，掛「名詞」會讓它跟幾百個名詞
+      互為干擾項 —— 問「あ」時選項出現「蘋果」，那不是在練假名。
+      所以只查 word / phrase，且日文站要扣掉假名卡（ko 本身就是課程標籤）。
+    """
+    rows, off = [], 0
+    while True:
+        req = urllib.request.Request(
+            f"{url}/rest/v1/items?select=ko,pos,item_type,tags&is_active=eq.true"
+            f"&limit=1000&offset={off}",
+            headers={'apikey': key, 'Authorization': 'Bearer ' + key})
+        b = json.load(urllib.request.urlopen(req))
+        rows += b
+        if len(b) < 1000:
+            break
+        off += 1000
+
+    def is_kana_card(x):
+        return len(x['ko']) == 1 and x['ko'] in (x['tags'] or [])
+
+    words = [x for x in rows if x['item_type'] in ('word', 'phrase')
+             and not is_kana_card(x)]
+    miss = [x['ko'] for x in words if not x['pos']]
+    valid = valid_pos(site)
+    illegal = sorted({x['pos'] for x in words if x['pos'] and x['pos'] not in valid})
+
+    print('【詞性】')
+    n = len(words) - len(miss)
+    print(f"  {'✅' if not miss else '❌'} 覆蓋 {n}/{len(words)}"
+          + (f"　缺：{'、'.join(miss[:8])}{' …' if len(miss) > 8 else ''}" if miss else ''))
+    if illegal:
+        print(f"  ❌ 不在白名單裡的詞性（打錯字？）：{'、'.join(illegal)}")
+    else:
+        print(f"  ✅ 詞性值都在白名單裡（{len(valid)} 種）")
+    print()
+    return len(miss) + len(illegal)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--site', required=True, choices=['korean', 'japanese'])
@@ -129,8 +192,10 @@ def main():
             print(f"  {mark} {t:<10} {n:>4} 條{note}")
         print()
 
+    bad += check_pos(url, key, a.site)
+
     if bad:
-        print(f"❌ {bad} 個標籤在雲端沒有任何內容。")
+        print(f"❌ 有 {bad} 項問題（標籤沒有內容，或詞性缺漏／打錯字）。")
         print("   設定指向不存在的標籤不會拋錯，只會讓那個功能默默不生效。")
         sys.exit(1)
     print("✅ 設定點名的標籤在雲端都有內容")
