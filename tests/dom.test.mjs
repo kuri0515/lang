@@ -46,34 +46,27 @@ await show('view-auth');
 chk('只有登入頁不顯示', $('tabbar').classList.contains('hidden'),
     '沒登入的話每個分頁都是空的，給了也只能點到空畫面');
 
-// ★ 學習中切到別的分頁，再點「首頁」要接回那一輪。
-//   使用者的期待是「回到那個分頁就接上」，不是「回到首頁再按一次繼續」——
-//   他離開正是因為分心，回來時不該再要求他想起自己在做什麼。
+// ★ 分頁按鈕不做任何攔截 —— 按「首頁」就是去首頁。
+//   這裡曾經驗的是相反的行為：「有進行中的一輪時，點首頁回到那一輪」。
+//   那個設計讓使用者在首頁以外的任何一頁都回不了首頁 ——
+//   唯一的出口是學習畫面裡那顆 🏠，沒有人找得到。使用者實際回報了。
+//   接回上一輪的入口改放在首頁上（那顆「繼續這一輪」）。
 {
-  const { setTabResume, initTabs: initT } = await import(SHARED + '/js/views/router.js');
-  let asked = 0, inRound = true;
-  setTabResume(() => { asked += 1; return inRound; });
+  const { initTabs: initT } = await import(SHARED + '/js/views/router.js');
   initT();
   const homeTab = $('tabbar').querySelector('[data-tab="view-home"]');
 
   await show('view-browse');            // 學到一半跑去查詞
   homeTab.click();
-  chk('★ 有進行中的一輪 → 點「首頁」回到那一輪', asked === 1,
-      '回來時不該要求他想起自己在做什麼');
+  await new Promise((r) => setTimeout(r, 0));
+  chk('★ 從詞庫點「首頁」就到首頁', !$('view-home').classList.contains('hidden'),
+      '導覽列是使用者對「我能去哪」的唯一保證，不該有例外');
 
-  inRound = false;
+  await show('view-study');             // 學習中也一樣
   homeTab.click();
   await new Promise((r) => setTimeout(r, 0));
-  chk('沒有進行中的一輪 → 正常進首頁', !$('view-home').classList.contains('hidden'));
-
-  // 已經在學習頁時不攔截 —— 否則按了沒反應，會以為壞了
-  inRound = true;
-  await show('view-study');
-  const before = asked;
-  homeTab.click();
-  chk('★ 已經在學習頁時不攔截', asked === before,
-      '攔截的話按了沒反應，使用者會以為壞了');
-  setTabResume(null);
+  chk('★ 學習中點「首頁」也到得了首頁', !$('view-home').classList.contains('hidden'),
+      '學習中被關在裡面正是使用者回報的那個 bug');
 }
 
 // 🏠 與 ✕ 必須分開：一輪 30–80 題，只是想看一眼首頁不該付「結束本輪」的代價

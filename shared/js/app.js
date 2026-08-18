@@ -13,8 +13,11 @@ import * as auth from './data/auth.js';
 import * as content from './data/content.js';
 import * as progress from './data/progress.js';
 import { createSession, orderForDiscrimination, ROUND_SIZE } from './study/session.js';
+// 別名：app.js 已經有一個 nextRound()，那是「複習的下一批」，與輪次池無關
+import { isUsable as roundUsable, nextRound as buildRound,
+         deal as dealRound, consume as consumeRound } from './study/round.js';
 import { getMode, needsPool } from './study/modes/index.js';
-import { show, onEnter, initTabs, viewFromHash, setTabResume } from './views/router.js';
+import { show, onEnter, initTabs, viewFromHash } from './views/router.js';
 import { initTheme } from './views/theme.js';
 import { initVoiceUI } from './views/voice.js';
 import { initAuth } from './views/auth.js';
@@ -275,7 +278,6 @@ async function resumeRound() {
   return true;
 }
 
-const tryResume = () => resumeRound();
 
 async function startReview() {
   try {
@@ -417,8 +419,7 @@ async function ensureRound() {
   //   而之後每按一次輪練都會：重建一輪 → roundNo +1 → 發出一組空的牌 →
   //   停在「沒有符合的內容」。畫面像是沒反應，輪數卻一路往上跳。
   //   實際發生過：韓文站有使用者跑到第 17 輪，而 pos 只有 70／801。
-  const usable = round && round.queue.length > 0;
-  if (usable && round.pos < round.queue.length) return round;
+  if (roundUsable(round) && round.pos < round.queue.length) return round;
 
   const deck = (await content.listDecks()).find((d) => d.slug === lang().roundDeck);
   // ★ 不給 limit —— pickItems 沒有 limit 時會分頁撈完。
@@ -432,13 +433,7 @@ async function ensureRound() {
   if (!items.length) {
     throw new Error(`讀不到「${lang().roundDeck}」的內容，請確認連線後再試一次`);
   }
-  round = {
-    // 只有真的走完才進下一輪。修掉一個壞掉的空輪次不算走完，
-    // 輪數維持原樣 —— 否則修復本身又在推高輪數。
-    roundNo: usable ? round.roundNo + 1 : (round?.roundNo || 1),
-    queue: shuffle(items.map((i) => i.id)),
-    pos: 0,
-  };
+  round = buildRound(round, items.map((i) => i.id), shuffle);
   roundPending = 0;
   await progress.saveRound(user.id, round);
   return round;
@@ -456,7 +451,7 @@ async function ensureRound() {
  */
 async function commitRound() {
   if (!roundPending || !round) return;
-  round.pos = Math.min(round.pos + roundPending, round.queue.length);
+  round = consumeRound(round, roundPending);
   roundPending = 0;
   await progress.saveRound(user.id, round);
 }
@@ -480,7 +475,7 @@ async function startFree({ ids = null, tag = '', deckId = null,
     if (pooled) {
       const r = await ensureRound();
       if (!r || !r.queue.length) return msg('這個詞庫還沒有內容');
-      const take = r.queue.slice(r.pos, r.pos + ROUND_SIZE);
+      const take = dealRound(r, ROUND_SIZE);
       items = await content.pickItems({ ids: take, limit: ROUND_SIZE });
       dealt = take.length;          // 答完才算消費掉，見 commitRound
     } else {
@@ -547,7 +542,6 @@ initVoiceUI();
 initImporterAndAdmin();
 
 // 分頁列的「首頁」：有進行中的一輪就回到那一輪
-setTabResume(resumeRound);
 
 /**
  * 練習方式改變時存起來。
@@ -735,7 +729,7 @@ on(EVENTS.ITEM_UPDATED, (saved) => {
  * 【為什麼要擋】
  *   onAuthStateChange 不只在登入登出時觸發 —— token 大約每小時自動換一次，
  *   分頁重新取得焦點也會觸發。原本每次都整套重跑，
- *   而這套的最後一步是 tryResume()：它會切到學習畫面、重建佇列。
+ *   而首頁的「繼續這一輪」會走 resumeRound()：它會切到學習畫面、重建佇列。
  *   於是練到一半時 token 一換，畫面就自己重來 ——
  *   使用者看到的是「輪練會自動刷新」。
  *
@@ -782,13 +776,16 @@ async function onUser(u, event) {
 
   refreshRecall();          // 清單與首頁其他區塊並行載入，不互相擋
 
-  // ★ 有沒有做到一半的一輪？有就直接接回去。
-  //   放在 show() 之前 —— 先閃一下首頁再跳進學習畫面，
-  //   會讓人以為自己按錯了，而且那一閃會在每次重新整理時出現。
-  if (await tryResume()) {          // resumeRound 自己會切到學習畫面
-    msg('接著上次的進度繼續', 'ok');
-    return;
-  }
+  // ★ 開場一律落在網址指定的那一頁，不自動彈進學習畫面。
+  //
+  //   本來是「有做到一半的一輪就直接接回去」，理由是少按一下。
+  //   但學習畫面不寫進網址（見 router.js 檔頭），所以重新整理時
+  //   無論人原本在哪一頁，都會被彈進學習畫面 ——
+  //   使用者要的是回首頁，拿到的是又一輪題目。
+  //
+  //   續跑本身沒有變弱：進度照存，首頁第一顆大按鈕就是
+  //   「繼續這一輪（還有 N 題）」（見 views/home.js）。
+  //   差別只在由誰決定要不要接回去。
   await show(viewFromHash());
 }
 

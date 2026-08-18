@@ -151,6 +151,21 @@ for (const f of files) {
 }
 chk('JS 取用的 DOM id 都存在於 index.html', missingIds);
 
+// 計數不得在客戶端累加 —— 2026-08-19 造成 108 筆對不上的那個 bug。
+// prevCard 是一輪開始時讀到的那張，而同一輪內重排的卡不會更新它，
+// 於是每次都寫成 prev+1，計數停在原地而 reviews 一筆筆累積。
+// 累加一律交給資料庫（log_review / log_practice 的 +1）。
+{
+  const prog = fs.readFileSync(new URL('../shared/js/data/progress.js', import.meta.url).pathname, 'utf8');
+  const bad = [];
+  if (/total_reviews:\s*\(/.test(prog)) bad.push('progress.js 又在客戶端算 total_reviews');
+  if (/correct_reviews:\s*\(/.test(prog)) bad.push('progress.js 又在客戶端算 correct_reviews');
+  chk('★ 答題計數不在客戶端累加', bad);
+  // 正規複習與自由練習都必須走 RPC —— 兩個寫入分開做就不是同進同退
+  chk('saveReview 走 RPC（卡片與記錄同一個交易）',
+      /rpc\('log_review'/.test(prog) ? [] : ['saveReview 沒有走 log_review RPC']);
+}
+
 // 課程導言的不變量：begin() 每輪都必須重設，否則下一輪會掛著上一課的說明。
 // 這條在 jsdom 測不到（study.js 會連帶載入 CDN 上的 supabase-js），改用原始碼層檢查。
 {
@@ -657,6 +672,26 @@ for (const f of files) {
 }
 chk('沒有「猜一個大 limit 再過濾」的查詢', bigLimit,
   'PostgREST 單次最多 1000 列 —— 猜的那個數字會過期，而截斷不會報錯');
+
+
+// 【導覽列不准攔截】
+//   曾經有過：「有進行中的一輪時，按首頁就接回那一輪」。
+//   結果是使用者在首頁以外的任何一頁按「首頁」都會被彈進學習畫面，
+//   唯一的出口是學習畫面裡那顆 🏠 —— 等於回不了首頁。
+//   導覽列是使用者對「我能去哪」的唯一保證。
+const routerSrc = read(`${ROOT}/views/router.js`);
+chk('分頁按鈕不做攔截',
+  /resumeTab|dataset\.tab === 'view-home' &&/.test(routerSrc) ? ['router.js 的 initTabs 有條件式攔截'] : [],
+  '按「首頁」就該去首頁，沒有例外');
+
+// 【輪次池的規則不准回到 app.js】
+//   埋在 app.js 裡就驗不到（那裡碰得到 supabase 與 DOM），
+//   而驗不到的結果已經發生過：空的 queue 被當成「走完一輪」，
+//   線上某使用者被推到第 17 輪，實際一輪都沒走完。
+const appR = read(`${ROOT}/app.js`);
+chk('app.js 不自己判斷輪次的邊界',
+  /round\.pos\s*\+=|roundNo:\s*\(/.test(appR) ? ['app.js 又在自己算輪次'] : [],
+  '規則放在 study/round.js，那裡是純函式、驗得到');
 
 console.log(fails ? `\n❌ ${fails} 項約束被違反` : '\n✅ 所有架構約束通過');
 process.exit(fails ? 1 : 0);

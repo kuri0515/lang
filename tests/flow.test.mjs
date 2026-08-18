@@ -42,7 +42,7 @@ const study = await import(`${SHARED}/js/views/study.js`);
 const { createSession } = await import(`${SHARED}/js/study/session.js`);
 const { getMode } = await import(`${SHARED}/js/study/modes/index.js`);
 const { RATING } = await import(`${SHARED}/js/core/srs.js`);
-const { show, initTabs, setTabResume } = await import(`${SHARED}/js/views/router.js`);
+const { show, initTabs } = await import(`${SHARED}/js/views/router.js`);
 const pool = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
 
 console.log(`【一整輪的動線】（站台：${LANG.code}）`);
@@ -65,14 +65,17 @@ study.initStudy({
   onPark: () => show('view-home'),
   inRecallList: () => false, onToggleRecall: () => {},
 });
-setTabResume(() => {
+initTabs();
+
+// 首頁上那顆「繼續這一輪」在 views/home.js，這裡只模擬它做的事：
+// 把記憶體裡那一輪畫回來。分頁按鈕不再攔截，接不接由使用者決定。
+const resumeFromHome = () => {
   const st = session.state();
   if (!(st.total > 0 && st.idx < st.total)) return false;
   show('view-study');
   study.render(st);
   return true;
-});
-initTabs();
+};
 
 session.start(entries, { mode: 'flip', kind: 'review',
                          criterion: getMode('flip').criterion });
@@ -93,13 +96,17 @@ await new Promise((r) => setTimeout(r, 0));
 chk('切到詞庫', visible('view-browse'));
 chk('這一輪沒有被結束', finished === 0, '離開不等於放棄 —— 結束要按 ✕');
 
-// ── 點「首頁」要接回那一輪 ────────────────────────────────
+// ── 點「首頁」就去首頁 ────────────────────────────────────
+// ★ 這裡曾經是反過來的：按首頁會被彈回學習畫面。
+//   少按一下的代價是使用者回不了首頁 —— 使用者實際回報了這件事。
 $('tabbar').querySelector('[data-tab="view-home"]').click();
 await new Promise((r) => setTimeout(r, 0));
-chk('★ 點「首頁」回到學習畫面', visible('view-study'),
-    '他離開是因為分心，回來時不該要求他想起自己在做什麼');
-chk('回到離開前那一題', session.state().idx === midway,
+chk('★ 點「首頁」就到首頁，不被攔截', visible('view-home'),
+    '導覽列是使用者對「我能去哪」的唯一保證');
+chk('★ 那一輪沒有因此消失', finished === 0 && session.state().idx === midway,
     `第 ${session.state().idx + 1} 題（離開前是第 ${midway + 1} 題）`);
+chk('首頁的「繼續這一輪」接得回去',
+    resumeFromHome() && visible('view-study') && session.state().idx === midway);
 
 // ── 🏠 離開但保留；✕ 才是結束 ─────────────────────────────
 $('btn-park').click();
@@ -110,7 +117,9 @@ chk('★ 🏠 不會結束這一輪', finished === 0,
 
 $('tabbar').querySelector('[data-tab="view-home"]').click();
 await new Promise((r) => setTimeout(r, 0));
-chk('再點「首頁」又回到那一輪', visible('view-study'));
+chk('再點「首頁」仍然是首頁（不會被彈走）', visible('view-home'));
+resumeFromHome();
+chk('要回去隨時回得去', visible('view-study'));
 
 // ── 做完剩下的 ────────────────────────────────────────────
 let n = 0;

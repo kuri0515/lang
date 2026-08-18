@@ -67,22 +67,17 @@ export async function show(view, { push = true } = {}) {
 /** 重新整理後回到原本那一頁；沒有 hash 或指向學習中就回首頁 */
 export const viewFromHash = () => HASH[window.location.hash.slice(1)] || 'view-home';
 
-/**
- * 有進行中的一輪時，「首頁」要回到那一輪。
- * 由 app.js 注入 —— router 不該知道什麼是「一輪」。
- */
-let resumeTab = null;
-export const setTabResume = (fn) => { resumeTab = fn; };
-
 export function initTabs() {
   qsa('#tabbar button').forEach((b) => {
     b.onclick = () => {
-      // ★ 學習中切到別的分頁再回「首頁」，要接上離開前的進度。
-      //   使用者的期待是「回到那個分頁就接上」，不是「回到首頁再按一次繼續」——
-      //   他離開正是因為分心，回來時不該再要求他想起自己在做什麼。
+      // ★ 分頁按鈕永遠去它寫的那一頁，不做任何攔截。
       //
-      //   已經在學習頁時不攔截：否則按了沒反應，會以為壞了。
-      if (b.dataset.tab === 'view-home' && current !== 'view-study' && resumeTab?.()) return;
+      //   這裡曾經攔過：「有進行中的一輪時，按首頁就接回那一輪」。
+      //   動機是少按一下，代價是使用者回不了首頁 ——
+      //   在首頁以外的任何一頁按「首頁」都會被彈進學習畫面，
+      //   而唯一的出口是學習畫面裡那顆 🏠，沒有人找得到。
+      //   導覽列是使用者對「我能去哪」的唯一保證，不該有例外。
+      //   要接回上一輪的入口在首頁上（那顆「繼續這一輪」的大按鈕）。
       show(b.dataset.tab);
     };
   });

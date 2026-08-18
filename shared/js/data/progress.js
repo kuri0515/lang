@@ -86,29 +86,40 @@ export async function fetchNewItems(userId, deckId, dirs, limit = 20, tag = '') 
 }
 
 // ---------- 寫入 ----------
-/** 正規複習：更新排程 + 記錄答題 */
+/**
+ * 正規複習：更新排程 + 記錄答題。走 RPC，兩件事同進同退。
+ *
+ * ★ 計數（total_reviews / correct_reviews）由資料庫 +1，不從 prevCard 算。
+ *   原本寫 `(prev.total_reviews ?? 0) + 1`，而 prevCard 是這一輪開始時
+ *   讀到的那張。「新卡在同一輪循環到會為止」會把同一張排回隊尾再答一次，
+ *   重排時只覆蓋排程欄位、不動計數 —— 於是第 2、3、4 次都還是寫 prev+1，
+ *   計數停在原地而 reviews 一筆筆累積。實際造成 108 筆對不上。
+ *
+ *   排程欄位仍由前端算好帶進去：SM-2 需要完整的卡片狀態，
+ *   搬進 SQL 只會把演算法拆成兩半、兩邊各自漂移。
+ *   這裡要修的只是「累加不該由客戶端決定」。
+ */
 export async function saveReview({ userId, item, direction, prevCard, rating, next,
                                   elapsedMs, mode, sessionId, activity }) {
   const prev = prevCard || {};
-  const isCorrect = rating >= 3;
-  const cardRow = {
-    user_id: userId, item_id: item.id, direction, ...next,
-    total_reviews: (prev.total_reviews ?? 0) + 1,
-    correct_reviews: (prev.correct_reviews ?? 0) + (isCorrect ? 1 : 0),
-  };
-  const [{ error: e1 }, { error: e2 }] = await Promise.all([
-    sb.from('user_cards').upsert(cardRow, { onConflict: 'user_id,item_id,direction' }),
-    sb.from('reviews').insert({
-      user_id: userId, item_id: item.id, direction, rating,
-      elapsed_ms: elapsedMs ?? null,
-      mode: mode ?? null, session_id: sessionId ?? null, is_free: false,
-      activity: activity ?? 'review',
-      prev_interval_days: prev.interval_days ?? 0,
-      prev_ease_factor: prev.ease_factor ?? 2.5,
-    }),
-  ]);
-  if (e1) throw e1;
-  if (e2) throw e2;
+  const { error } = await sb.rpc('log_review', {
+    p_item_id: item.id,
+    p_direction: direction,
+    p_rating: rating,
+    p_state: next.state,
+    p_due_at: next.due_at,
+    p_interval_days: next.interval_days,
+    p_ease_factor: next.ease_factor,
+    p_repetitions: next.repetitions,
+    p_lapses: next.lapses,
+    p_elapsed_ms: elapsedMs ?? null,
+    p_mode: mode ?? null,
+    p_session_id: sessionId ?? null,
+    p_activity: activity ?? 'review',
+    p_prev_interval: prev.interval_days ?? 0,
+    p_prev_ease: prev.ease_factor ?? 2.5,
+  });
+  if (error) throw error;
 }
 
 /**

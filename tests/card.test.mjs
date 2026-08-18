@@ -333,7 +333,13 @@ console.log('\n【每日複習任務】');
   //   程式改成帶站台前綴（kr./ja.）之後，測試會去讀一個沒人寫的格子，
   //   而斷言仍然「通過」—— 驗的其實是空氣。
   const { lsKey } = await import(SHARED + '/js/core/lang.js');
-  const key = lsKey('mastered-' + new Date().toISOString().slice(0, 10));
+  // ★ 一定要用 dayKey()（本地日期），不能用 toISOString()（UTC 日期）。
+  //   程式在 3e7210a 改成本地日期之後，這裡還留著 UTC ——
+  //   在 UTC+8 的午夜到早上八點之間，兩者差一天，
+  //   測試寫進一個格子、程式讀另一個，斷言就紅了。
+  //   而白天跑是綠的：這種測試會挑時間騙人。
+  const { dayKey } = await import(SHARED + '/js/core/dom.js');
+  const key = lsKey('mastered-' + dayKey());
   const set = (n) => localStorage.setItem(key, String(n));
 
   set(0);
