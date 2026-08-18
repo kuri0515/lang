@@ -40,13 +40,23 @@ export function buildChoices(item, direction, pool) {
     return s;
   };
 
+  // ★ 同義詞排除：問這一題時，所有「同樣題面」的條目，它們的答案面都是對的。
+  //
+  //   감사합니다 與 고맙습니다 中文都是「謝謝」。中→韓問「謝謝」時，
+  //   兩個都是正解 —— 拿其中一個當干擾項，學習者答對了卻被判錯。
+  //
+  //   先前只排除「候選自己的題面相同」，那不夠：
+  //   候選 A 的題面可能不同（於是放行），但另有一個 B 題面相同、
+  //   而 B 的答案面剛好等於 A 的答案面 —— 那個選項還是對的。
+  //   實測 826 條資料裡，這個縫隙每跑幾次就會漏一次
+  //   （干擾項是隨機挑的，所以時中時不中，測試看起來像 flaky）。
+  //
+  //   正確的判準是「這個字串會不會也是正解」，與它從哪一條來無關。
+  const alsoCorrect = new Set(
+    pool.filter((o) => o[ask] === item[ask] && o[key]).map((o) => o[key]));
+
   const cands = pool
-    .filter((o) =>
-      o.id !== item.id && o[key] && o[key] !== answer &&
-      // ★ 同義詞排除：題面相同的條目不能當干擾項。
-      //   감사합니다 與 고맙습니다 中文都是「謝謝」，中→韓問「謝謝」時
-      //   兩者都對，拿其一當干擾項會把正確答案判成錯。
-      o[ask] !== item[ask])
+    .filter((o) => o.id !== item.id && o[key] && !alsoCorrect.has(o[key]))
     .map((o) => ({ o, s: score(o) + Math.random() }))   // 隨機打破同分僵局
     .sort((a, b) => b.s - a.s)
     .map((x) => x.o);

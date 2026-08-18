@@ -98,8 +98,14 @@
 
     <section class="card hidden" id="life-card">
       <h2>生活 · 興趣</h2>
+      <!-- 推薦的那一個留在外面，完整清單收起來 —— 與發音課程同一種結構。
+           十個場景全攤開會把首頁推得很長，而首頁的主線是
+           「今天複習什麼、下一個學什麼」；十個並排等於沒有指路。 -->
       <div id="life-pick"></div>
-      <div id="life-list"></div>
+      <details class="pron-all">
+        <summary>看全部場景（<span id="life-count">–</span> 個）</summary>
+        <div id="life-list"></div>
+      </details>
     </section>
 
     <details class="card details" id="opt-box">

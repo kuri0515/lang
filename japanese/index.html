@@ -19,7 +19,7 @@
 
   <!-- ↓ 由 shared/scripts/build-sites.mjs 從真實的 import 圖產生，不要手改。
        沒有它的話瀏覽器要一層一層發現模組，實測 4 層 × 每次往返。 -->
-<meta name="build" content="4d3b6362">
+<meta name="build" content="1ee50605">
   <link rel="modulepreload" href="https://esm.sh/@supabase/supabase-js@2" crossorigin>
   <link rel="modulepreload" href="main.js">
   <link rel="modulepreload" href="../shared/js/core/lang.js">
@@ -135,8 +135,14 @@
 
     <section class="card hidden" id="life-card">
       <h2>生活 · 興趣</h2>
+      <!-- 推薦的那一個留在外面，完整清單收起來 —— 與發音課程同一種結構。
+           十個場景全攤開會把首頁推得很長，而首頁的主線是
+           「今天複習什麼、下一個學什麼」；十個並排等於沒有指路。 -->
       <div id="life-pick"></div>
-      <div id="life-list"></div>
+      <details class="pron-all">
+        <summary>看全部場景（<span id="life-count">–</span> 個）</summary>
+        <div id="life-list"></div>
+      </details>
     </section>
 
     <details class="card details" id="opt-box">

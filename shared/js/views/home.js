@@ -424,6 +424,11 @@ function renderLife(scenes) {
   if (!scenes.length) { card.classList.add('hidden'); return; }
   card.classList.remove('hidden');
 
+  // 收合列上寫出數量 —— 「看全部場景」不寫幾個，等於要人先點開才知道值不值得點。
+  const shown = scenes.filter((s) => s.total > 0);
+  const cnt = $('life-count');
+  if (cnt) cnt.textContent = String(shown.length);
+
   const { scene, reason } = pickScene(scenes);
   const TEXT = {
     continue: '接著把這個收完',
