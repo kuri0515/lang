@@ -11,13 +11,6 @@ export async function listDecks() {
   return data ?? [];
 }
 
-export async function countItems(deckId) {
-  const { count, error } = await sb.from('items')
-    .select('id', { count: 'exact', head: true })
-    .eq('deck_id', deckId).eq('is_active', true);
-  if (error) throw error;
-  return count ?? 0;
-}
 
 /** 搜尋條件收斂在此，瀏覽與自由練習共用同一套語意 */
 function applyFilters(q, { tag, search, deckId, ids }) {

@@ -121,15 +121,6 @@ export async function overallStats(userId) {
   };
 }
 
-/** 今日已建的新卡數（套用每日新卡上限用） */
-export async function newCardsToday(userId) {
-  const start = new Date(); start.setHours(0, 0, 0, 0);
-  const { count, error } = await sb.from('user_cards')
-    .select('item_id', { count: 'exact', head: true })
-    .eq('user_id', userId).gte('created_at', start.toISOString());
-  if (error) throw error;
-  return count ?? 0;
-}
 
 /** 弱項：正確率低 / 遺忘次數多 */
 export async function weakItems(userId, limit = 20) {
@@ -141,17 +132,6 @@ export async function weakItems(userId, limit = 20) {
   return data ?? [];
 }
 
-/** 逐筆答題記錄，新到舊。before 為分頁游標。 */
-export async function listHistory(userId, { limit = 100, before = null, dir = null } = {}) {
-  let q = sb.from('reviews')
-    .select('id, direction, rating, is_correct, elapsed_ms, reviewed_at, source, items(id, ko, zh, romanization, item_type)')
-    .eq('user_id', userId).order('reviewed_at', { ascending: false }).limit(limit);
-  if (before) q = q.lt('reviewed_at', before);
-  if (dir) q = q.eq('direction', dir);
-  const { data, error } = await q;
-  if (error) throw error;
-  return (data ?? []).filter((r) => r.items);
-}
 
 /** 近 N 天的每日答題量與正確率 */
 export async function dailyStats(userId, days = 30) {
@@ -197,27 +177,7 @@ export async function cardsByItem(userId, itemIds, batch = 80) {
 }
 
 // ---------- 學習軌跡 ----------
-/**
- * 已掌握的詞，最近達成的在前。
- * mastered_at 由資料庫 trigger 維護 —— 跨過門檻那一刻蓋時間戳，
- * 遺忘掉出門檻則清空，所以這裡讀到的一定是「目前確實掌握著」的。
- */
-export async function masteredItems(userId, limit = 200) {
-  const { data, error } = await sb.from('v_learning_timeline')
-    .select('item_id, direction, ko, zh, hanja, mastered_at, first_learned_at, accuracy, total_reviews')
-    .eq('user_id', userId).not('mastered_at', 'is', null)
-    .order('mastered_at', { ascending: false }).limit(limit);
-  if (error) throw error;
-  return data ?? [];
-}
 
-/** 單一條目的完整學習軌跡（兩個方向） */
-export async function itemTimeline(userId, itemId) {
-  const { data, error } = await sb.from('v_learning_timeline')
-    .select('*').eq('user_id', userId).eq('item_id', itemId);
-  if (error) throw error;
-  return data ?? [];
-}
 
 // ---------- 學習場次 ----------
 /**

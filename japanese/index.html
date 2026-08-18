@@ -19,7 +19,7 @@
 
   <!-- ↓ 由 shared/scripts/build-sites.mjs 從真實的 import 圖產生，不要手改。
        沒有它的話瀏覽器要一層一層發現模組，實測 4 層 × 每次往返。 -->
-<meta name="build" content="9904604f">
+<meta name="build" content="d3647bec">
   <link rel="modulepreload" href="https://esm.sh/@supabase/supabase-js@2" crossorigin>
   <link rel="modulepreload" href="main.js">
   <link rel="modulepreload" href="../shared/js/core/lang.js">
@@ -95,6 +95,11 @@
       </div>
       <button id="btn-submit" class="primary block">登入</button>
       <p class="center nomargin"><button id="btn-toggle" class="link">還沒有帳號？註冊</button></p>
+      <!-- 重設密碼的程式碼一直都在（data/auth.js 的 resetPassword），
+           只是畫面上沒有入口 —— 忘記密碼的人就只能卡在這一頁。
+           是「找孤兒」的稽核翻出來的：一個沒有任何地方呼叫的匯出，
+           多數時候是垃圾，但這一個是漏接的功能。 -->
+      <p class="center nomargin"><button id="btn-forgot" class="link">忘記密碼？</button></p>
     </div>
   </section>
 
