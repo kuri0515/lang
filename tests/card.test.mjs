@@ -701,8 +701,13 @@ console.log('\n【離開再回來要接得上】');
 console.log('\n【練習方式要記住】');
 {
   const home = await import(SHARED + '/js/views/home.js');
-  const pick = (sel, val) => { const el = document.querySelector(`${sel} input[value="${val}"]`);
-                               if (el) el.checked = true; };
+  // ★ 要連 change 事件一起發 —— 真實使用者動選鈕一定會觸發，
+  //   而程式只在那個事件裡更新「使用者選的方向」（區分人改的與程式改的）。
+  //   只設 checked 不發事件，測到的是一個使用者做不到的狀態。
+  const pick = (sel, val) => {
+    const el = document.querySelector(`${sel} input[value="${val}"]`);
+    if (el) { el.checked = true; $(sel.slice(1)).dispatchEvent(new window.Event('change')); }
+  };
 
   home.initHome({ user: () => ({ id: 'u1' }), isAdmin: () => false,
                   onStudyTag: () => {}, onRecall: () => {}, onReview: () => {},
@@ -731,6 +736,33 @@ console.log('\n【練習方式要記住】');
   home.applyPrefs({ dir: 'zh2ko', type: 'sentence', mode: 'flip' });
   chk('★ 換裝置時套用雲端的設定', home.readPrefs().type === 'sentence',
       '本機那一份的意義是離線與零延遲，不是真理來源');
+
+  // ★ 題型強制方向時，不能吃掉使用者自己的選擇。
+  //
+  //   聽音選義必須是「外語→中」（聽聲音選意思），拼出來必須是「中→外語」——
+  //   那是題型的性質，不能改。但先前的做法是直接改掉選鈕，於是：
+  //   使用者設了「中→外語」，點一次聽音選義就被覆蓋，換回翻卡也回不來，
+  //   而偏好還會把被覆蓋的值存起來 —— 等於永久弄丟。
+  //   （使用者的回報：「設定裡設了中→日，回到學習還是日→中」。）
+  {
+    const fire = (id) => $(id).dispatchEvent(new window.Event('change'));
+    const setRadio = (sel, v) => {
+      const e = [...document.querySelectorAll(`${sel} input`)].find((i) => i.value === v);
+      if (e) e.checked = true;
+    };
+    setRadio('#dir-pick', 'zh2ko'); fire('dir-pick');
+    chk('使用者選了中→外語', home.selectedDir() === 'zh2ko');
+
+    setRadio('#mode-pick', 'listen'); fire('mode-pick');
+    chk('聽音選義這一輪用外語→中', home.effectiveDir() === 'ko2zh',
+        '那是題型的性質：聽聲音選意思');
+    chk('★ 但使用者的選擇沒有被改掉', home.selectedDir() === 'zh2ko');
+
+    setRadio('#mode-pick', 'flip'); fire('mode-pick');
+    chk('★ 換回不強制的題型 → 回到使用者的選擇', home.effectiveDir() === 'zh2ko',
+        '被覆蓋的話，點一次聽音選義就永久弄丟原本的設定');
+    chk('存進偏好的是使用者的選擇', home.readPrefs().dir === 'zh2ko');
+  }
 
   // 壞資料不能炸 —— jsonb 不幫忙驗證
   home.applyPrefs(null);

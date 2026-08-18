@@ -96,6 +96,9 @@ def check_queries(url, key):
         ('詞庫清單', 'decks?select=id,slug,title&limit=1'),
         ('條目查詢', 'items?select=id,ko,zh,pos,hanja,tags&limit=1'),
         ('續跑狀態', 'study_resume?select=state,saved_at&limit=1'),
+        # 練習方式偏好。寫入用 .eq('id', userId) —— profiles 的主鍵是 id，
+        # 而我上一次沒查就寫（user_cards 沒有 id 欄位），結果是 400。
+        ('練習方式偏好', 'profiles?select=id,study_prefs&limit=1'),
     ]
     print('【首頁查詢】')
     bad = 0

@@ -39,7 +39,18 @@ export const studyType = () => qs('#type-pick input:checked')?.value || 'all';
 
 /** 條目符不符合目前選的類型（判斷本身在 study/session.js，這裡只補上預設值）*/
 export const matchesType = (item, t = studyType()) => matchesTypePure(item, t);
-export const selectedDir = () => qs('#dir-pick input:checked')?.value || 'ko2zh';
+// ★ 使用者自己選的方向，與「這個題型實際用的方向」是兩件事。
+//
+//   聽音選義必須是「外語→中」（聽聲音選意思），拼出來必須是「中→外語」
+//   （看中文寫出來）—— 那是題型本身的性質，不能改。
+//
+//   但先前的做法是在強制時直接把選鈕改掉，於是：
+//   使用者設了「中→外語」，點一次聽音選義，那個設定就被覆蓋成「外語→中」，
+//   換回翻卡也回不來。而偏好會把被覆蓋的值存起來，等於永久弄丟。
+//
+//   所以記住使用者自己的選擇，強制只影響「這一輪用哪個方向」與畫面顯示。
+let userDir = 'ko2zh';
+export const selectedDir = () => userDir;
 export const effectiveDir = () => forcedDirection(studyMode()) || selectedDir();
 
 /** 題型綁定方向時鎖住方向選擇器，避免出現「看中文卻要選中文」的矛盾組合 */
@@ -51,7 +62,9 @@ export function syncModeUI() {
     `${m.label} · ${dirShort()[effectiveDir()]}${TYPE_TXT[studyType()] || ''}`;
   qsa('#dir-pick input').forEach((i) => {
     i.disabled = !!m.direction;
-    if (m.direction) i.checked = i.value === m.direction;
+    // 強制時顯示題型要求的方向；沒強制時顯示使用者自己的選擇。
+    // 兩種情況都只動畫面，不動 userDir —— 那是使用者的東西。
+    i.checked = i.value === (m.direction || userDir);
   });
   $('dir-pick').style.opacity = m.direction ? '.5' : '1';
 }
@@ -86,9 +99,9 @@ export function applyPrefs(p) {
     if (el) el.checked = true;                 // 找不到就不動：題型可能已被本站關掉
   };
   set('#mode-pick', p.mode);
-  set('#dir-pick', p.dir);
+  if (p.dir === 'ko2zh' || p.dir === 'zh2ko') userDir = p.dir;
   set('#type-pick', p.type);
-  syncModeUI();
+  syncModeUI();                                // 依題型決定畫面上要顯示哪一個
 }
 
 /** 存偏好：本機立刻、雲端交給呼叫端（app.js 知道 user id） */
@@ -130,7 +143,12 @@ export function initHome(d) {
   // 改題型／方向只影響「待複習」數 —— 統計、詞庫、弱項與方向無關，
   // 全量重載會打 6+N 個查詢，切個選項就卡一下。
   $('mode-pick').addEventListener('change', () => { syncModeUI(); refreshDue(); deps.onPrefsChange?.(); });
-  $('dir-pick').addEventListener('change', () => { syncModeUI(); refreshDue(); deps.onPrefsChange?.(); });
+  $('dir-pick').addEventListener('change', () => {
+    // 只有使用者自己動選鈕時才更新 userDir。
+    // syncModeUI 因為題型強制而改 checked 不會走到這裡（那是程式改的，不是人改的）。
+    userDir = qs('#dir-pick input:checked')?.value || userDir;
+    syncModeUI(); refreshDue(); deps.onPrefsChange?.();
+  });
   // 類型只影響「這輪抽什麼」，不影響到期張數的計算，所以不必 refreshDue()。
   // 但摘要要跟著變 —— 選項收合起來時，摘要是唯一看得到目前設定的地方。
   $('type-pick').addEventListener('change', () => { syncModeUI(); deps.onPrefsChange?.(); });
