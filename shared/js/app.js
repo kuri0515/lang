@@ -55,7 +55,8 @@ const session = createSession({
   onChange: (state) => study.render(state),
   // 收尾話要知道剛練的是哪一課；自由練習不算推進課程，所以不帶
   onFinish: (stats, free) => {
-    study.renderDone(stats, free, free ? '' : currentLesson);
+    // 只有複習才有「還剩多少」—— 學新課、自由練習都是一次一批，沒有續攤的概念
+    study.renderDone(stats, free, free ? '' : currentLesson, reviewQueue.length);
     show('view-done');
   },
   onError: (e) => msg('儲存失敗：' + (e.message || e)),
@@ -105,13 +106,32 @@ async function begin(entries, { freeMode = false, kind = 'review', note = '', le
 // ---------------------------------------------------------------------
 // 三種進入學習的路徑
 // ---------------------------------------------------------------------
+// 一輪的題數。
+//
+// 【為什麼是 20】
+//   模擬每天學 8 條的學習者：第 82 天要複習 75 條（正確率 85%），
+//   70% 的話 87 條 —— 排程沒有壞（沒有尖峰，是穩定成長），
+//   但一輪 87 題會讓人今天不想打開 App。
+//   20 題約 5 分鐘，是「等車時也做得完」的長度。
+const ROUND = 20;
+let reviewQueue = [];        // 這一批還沒做的（分輪用）
+
 async function startReview() {
   try {
     const rows = await progress.fetchDue(user.id, [home.effectiveDir()], 200);
     if (!rows.length) return msg('沒有待複習的卡片', 'ok');
-    await begin(shuffle(rows.map((c) => ({ item: c.items, direction: c.direction, card: c }))),
-                { kind: 'review' });
+    // 先打散再切輪 —— 照 due_at 排序切的話，第一輪永遠是最舊的那批，
+    // 而最舊的往往集中在同一課，一輪 20 題全是同一課會失去交錯的效果。
+    reviewQueue = shuffle(rows.map((c) => ({ item: c.items, direction: c.direction, card: c })));
+    await nextRound();
   } catch (e) { msg(e.message || e); }
+}
+
+/** 從 reviewQueue 取一輪出來開始 */
+async function nextRound() {
+  const batch = reviewQueue.splice(0, ROUND);
+  if (!batch.length) return msg('複習已清空 ✓', 'ok');
+  await begin(batch, { kind: 'review' });
 }
 
 async function startNew(deckId, tag = '') {
@@ -334,7 +354,13 @@ function initImporterAndAdmin() {
   };
   $('btn-import').onclick = () => show('view-import');
   $('btn-import-back').onclick = () => show('view-me');
-  $('btn-back').onclick = () => show('view-home');
+  $('btn-back').onclick = () => {
+    // 中途離開時把剩下的丟掉 —— 它們沒有消失，下次進首頁照樣算在待複習裡。
+    // 留著的話，隔一天再按「再來一輪」會拿到昨天算出來的舊佇列。
+    reviewQueue = [];
+    show('view-home');
+  };
+  $('btn-again').onclick = () => nextRound().catch((e) => msg(e.message || e));
 }
 
 // 內容變動 → 干擾項池失效，下輪重抓

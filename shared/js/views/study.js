@@ -334,7 +334,22 @@ async function showHanja(item) {
   els.hanjaRel.classList.remove('hidden');
 }
 
-export function renderDone(stats, free, lesson = '') {
+/**
+ * @param remaining 這一批還沒做完的數量。0 表示今天的複習清空了。
+ *
+ * 【為什麼要分輪，而不是一次全部做完】
+ *   模擬一個每天學 8 條的學習者：第 82 天要複習 75 條（正確率 85%），
+ *   正確率 70% 的話是 87 條。首頁直接顯示「複習 87」，按下去是一輪 87 題 ——
+ *   那個數字本身就會讓人今天不想打開。
+ *
+ * 【為什麼不直接設每日上限】
+ *   蓋住 87 只做 20，剩下的不會消失，只會無聲地越積越多，
+ *   兩週後變成 200。上限讓數字好看，代價是問題延後爆炸。
+ *   所以總數照實顯示，只把「一次要坐下來做多久」切小：
+ *   一輪 20 題做得完，做完告訴你還剩幾條、要不要接著來。
+ *   決定權在學習者，而他看到的是真實的數字。
+ */
+export function renderDone(stats, free, lesson = '', remaining = 0) {
   $('done-text').textContent = stats.n
     ? `本輪答了 ${stats.n} 題，正確率 ${pct(stats.correct / stats.n)}。`
       + (free ? '（自由練習：已記錄成績，複習排程未變動）' : '')
@@ -346,4 +361,13 @@ export function renderDone(stats, free, lesson = '') {
   const el = $('done-outro');
   el.textContent = outro;
   el.classList.toggle('hidden', !outro);
+
+  // 還有沒做完的就給一顆按鈕，並把真實剩餘量寫在上面。
+  // 不寫數字的話（只寫「繼續」）等於把進度藏起來 ——
+  // 學習者需要知道還有多遠，才決定得了現在要不要繼續。
+  const again = $('btn-again');
+  again.textContent = remaining ? `再來一輪（還有 ${remaining} 條）` : '';
+  again.classList.toggle('hidden', !remaining);
+  // 還有剩時「返回」退居次要；清空了就讓「返回」回到主要按鈕
+  $('btn-back').classList.toggle('primary', !remaining);
 }

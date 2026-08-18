@@ -226,5 +226,30 @@ console.log('\n【詞庫與學習歷史的渲染】');
   }
 }
 
+
+// =====================================================================
+// 【複習分輪】
+//
+// 模擬每天學 8 條的學習者：第 82 天要複習 75 條（正確率 85%），
+// 70% 的話 87 條。排程本身沒壞（沒有尖峰，是穩定成長），
+// 但一輪 87 題會讓人今天不想打開 App。
+//
+// 分輪的關鍵不是把數字變小，是「總數照實顯示、只把一次要坐多久切小」。
+// 蓋住總數只做 20 的話，剩下的不會消失，只會無聲地越積越多。
+// 所以這裡要驗的是：剩餘量有沒有誠實地寫在按鈕上。
+// =====================================================================
+console.log('\n【複習分輪】');
+{
+  study.renderDone({ n: 20, correct: 17 }, false, '', 55);
+  const again = $('btn-again');
+  chk('還有剩時出現「再來一輪」', !again.classList.contains('hidden'));
+  chk('按鈕上寫著真實剩餘量', /55/.test(again.textContent), again.textContent);
+  chk('還有剩時「返回」退居次要', !$('btn-back').classList.contains('primary'));
+
+  study.renderDone({ n: 20, correct: 19 }, false, '', 0);
+  chk('清空後不再出現「再來一輪」', again.classList.contains('hidden'));
+  chk('清空後「返回」回到主要按鈕', $('btn-back').classList.contains('primary'));
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);
