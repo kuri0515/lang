@@ -291,7 +291,12 @@ function speakTTS(text, { rate: override, slow = false, retry = false, bare = fa
   u.onstart = () => { started = true; };
   setTimeout(() => {
     if (!started && !warned) {
-      speakWarn(`朗讀沒有開始（引擎收下了但沒有動）。${diagnosis()}`);
+      // 這種失敗（收下了、沒錯誤、也沒動）到目前為止都是瀏覽器自己的問題：
+      // 使用者實測同一台電腦 Safari 可以、Edge 不行，而手機上的 Edge 也可以 ——
+      // 同一份程式、同一個瀏覽器品牌，只有桌面版的那一個不出聲。
+      // 所以先給最有效的一句話，診斷資料留在後面給要追查的人。
+      speakWarn('這個瀏覽器收下了朗讀卻沒有開始 —— 換一個瀏覽器通常就好了'
+        + '（同一台裝置的 Safari 或 Chrome）。' + diagnosis());
     }
   }, 1500);
 
