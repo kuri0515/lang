@@ -62,8 +62,26 @@ export const displayName = (u) =>
 /** 讀自己的 profile（含 role）。isAdmin 僅供 UX，真門禁在 RLS。 */
 export async function myProfile(userId) {
   const { data, error } = await sb.from('profiles')
-    .select('username, display_name, role, study_mode, daily_new_limit')
+    .select('username, display_name, role, study_mode, daily_new_limit, study_prefs')
     .eq('id', userId).maybeSingle();
   if (error) throw error;
   return data;
+}
+
+/**
+ * 練習方式的偏好（題型／方向／內容類型）。
+ *
+ * 【為什麼要上雲端】
+ *   換一台裝置登入就該還在。這是「我習慣怎麼練」，不是「我做到哪」——
+ *   前者跟著人走，後者跟著裝置走也無所謂。
+ *
+ * 【失敗不吵】
+ *   存不上去頂多是下次要重設一次，不該讓它擋住學習。
+ *   本機那一份仍然有效，同一台裝置照樣記得。
+ */
+export async function savePrefs(userId, prefs) {
+  if (!userId) return;
+  try {
+    await sb.from('profiles').update({ study_prefs: prefs }).eq('id', userId);
+  } catch { /* 見上 */ }
 }

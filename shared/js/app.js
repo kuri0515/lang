@@ -387,8 +387,22 @@ function resumeRound() {
 // 分頁列的「首頁」：有進行中的一輪就回到那一輪
 setTabResume(resumeRound);
 
+/**
+ * 練習方式改變時存起來。
+ *
+ * 本機立刻（零延遲、離線也有效），雲端節流兩秒 ——
+ * 使用者連點三個選項不該打三次網路，而其中兩次的結果馬上就被覆蓋。
+ */
+let prefsTimer = null;
+function onPrefsChange() {
+  home.savePrefsLocal(user?.id);
+  clearTimeout(prefsTimer);
+  prefsTimer = setTimeout(() => auth.savePrefs(user?.id, home.readPrefs()), 2000);
+}
+
 home.initHome({
   ...deps,
+  onPrefsChange,
   // 這一輪還剩幾題（0 = 沒有進行中的一輪）。
   // 分頁列在學習中也顯示，所以要有一條回得去的路。
   roundLeft: () => {
@@ -568,6 +582,12 @@ async function onUser(u) {
     `帳號 <b>${esc(profile?.username)}</b>　角色 ${isAdmin() ? '管理員' : '一般使用者'}<br>`
     + `<span class="hint">${esc(u.email)}</span>`;
   // 重新整理後回到原本那一頁
+  // ★ 練習方式：雲端優先，沒有才用本機。
+  //   雲端優先是為了「換裝置登入要拿得到」；
+  //   而本機那一份的意義是離線與零延遲，不是真理來源。
+  //   兩者都沒有就維持畫面預設。
+  home.applyPrefs(profile?.study_prefs ?? home.loadPrefsLocal(u.id));
+
   refreshRecall();          // 清單與首頁其他區塊並行載入，不互相擋
 
   // ★ 有沒有做到一半的一輪？有就直接接回去。

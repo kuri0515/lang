@@ -686,5 +686,59 @@ console.log('\n【離開再回來要接得上】');
   void box;
 }
 
+
+// =====================================================================
+// 【練習方式要記住】
+//
+// 使用者把方向設成「中→外語」，下次打開又跳回「外語→中」——
+// 而那正是最影響體感的一個設定：看中文想外語（產出）
+// 與看外語想中文（辨識）是兩種完全不同的練習。
+//
+// 三個一起存（題型／方向／內容類型）：它們是同一個面板上的同一件事，
+// 只存方向的話另外兩個仍然每次跳回預設，
+// 使用者的體感會是「有時記得有時不記得」，那比完全不記得更難理解。
+// =====================================================================
+console.log('\n【練習方式要記住】');
+{
+  const home = await import(SHARED + '/js/views/home.js');
+  const pick = (sel, val) => { const el = document.querySelector(`${sel} input[value="${val}"]`);
+                               if (el) el.checked = true; };
+
+  home.initHome({ user: () => ({ id: 'u1' }), isAdmin: () => false,
+                  onStudyTag: () => {}, onRecall: () => {}, onReview: () => {},
+                  onFree: () => {}, onNewDeck: () => {}, onPrefsChange: () => {} });
+
+  // 設成「中→外語」＋只練單字
+  pick('#dir-pick', 'zh2ko');
+  pick('#type-pick', 'word');
+  const before = home.readPrefs();
+  chk('讀得到目前的設定', before.dir === 'zh2ko' && before.type === 'word',
+      JSON.stringify(before));
+
+  home.savePrefsLocal('u1');
+  pick('#dir-pick', 'ko2zh');            // 模擬「下次打開回到預設」
+  pick('#type-pick', 'all');
+  home.applyPrefs(home.loadPrefsLocal('u1'));
+  chk('★ 下次打開仍然是上次的設定', home.readPrefs().dir === 'zh2ko'
+      && home.readPrefs().type === 'word', JSON.stringify(home.readPrefs()));
+
+  // ★ 換使用者要初始化 —— localStorage 是整個網域共用的，不分使用者。
+  //   不帶 id 的話換帳號登入會看到上一個人的設定。
+  chk('★ 換一個使用者拿不到別人的設定', home.loadPrefsLocal('u2') === null,
+      'localStorage 不分使用者，鍵不帶 id 就會串到別人的');
+
+  // ★ 換裝置：本機沒有，但雲端有 → 要拿得到
+  home.applyPrefs({ dir: 'zh2ko', type: 'sentence', mode: 'flip' });
+  chk('★ 換裝置時套用雲端的設定', home.readPrefs().type === 'sentence',
+      '本機那一份的意義是離線與零延遲，不是真理來源');
+
+  // 壞資料不能炸 —— jsonb 不幫忙驗證
+  home.applyPrefs(null);
+  home.applyPrefs({ dir: '不存在的值' });
+  home.applyPrefs('壞掉的字串');
+  chk('壞掉的偏好不會炸，也不會亂改', home.readPrefs().type === 'sentence',
+      '找不到對應選項就不動 —— 題型可能已經被本站關掉');
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);

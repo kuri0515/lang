@@ -56,6 +56,51 @@ export function syncModeUI() {
   $('dir-pick').style.opacity = m.direction ? '.5' : '1';
 }
 
+/**
+ * 練習方式的偏好：題型／方向／內容類型。
+ *
+ * 【為什麼三個一起存】
+ *   它們是同一個面板上的同一件事。只存方向的話，
+ *   另外兩個仍然每次跳回預設 —— 使用者的體感是「有時記得有時不記得」，
+ *   那比完全不記得更難理解。
+ *
+ * 【本機的鍵帶使用者 id】
+ *   localStorage 是整個網域共用的，不分使用者。
+ *   不帶 id 的話換帳號登入會看到上一個人的設定 ——
+ *   而「切換使用者要初始化」正是這裡的要求。
+ */
+const prefsKey = (userId) => lsKey(`prefs.${userId || 'anon'}`);
+
+export function readPrefs() {
+  return { mode: studyMode(), dir: selectedDir(), type: studyType() };
+}
+
+/** 套用偏好到畫面。容忍缺欄位與壞值 —— jsonb 不幫忙驗證 */
+export function applyPrefs(p) {
+  if (!p || typeof p !== 'object') return;
+  const set = (sel, val) => {
+    if (!val) return;
+    // 用比對值而不是屬性選擇器 —— 不必處理跳脫，也不必碰 CSS.escape
+    // （jsdom 沒有 CSS，而裸識別碼即使加可選鏈也會拋 ReferenceError）。
+    const el = [...qsa(`${sel} input`)].find((i) => i.value === val);
+    if (el) el.checked = true;                 // 找不到就不動：題型可能已被本站關掉
+  };
+  set('#mode-pick', p.mode);
+  set('#dir-pick', p.dir);
+  set('#type-pick', p.type);
+  syncModeUI();
+}
+
+/** 存偏好：本機立刻、雲端交給呼叫端（app.js 知道 user id） */
+export function savePrefsLocal(userId) {
+  try { localStorage.setItem(prefsKey(userId), JSON.stringify(readPrefs())); }
+  catch { /* 隱私模式：雲端那一份仍然有效 */ }
+}
+export function loadPrefsLocal(userId) {
+  try { return JSON.parse(localStorage.getItem(prefsKey(userId)) || 'null'); }
+  catch { return null; }
+}
+
 export function initHome(d) {
   deps = d;
 
@@ -84,11 +129,11 @@ export function initHome(d) {
   };
   // 改題型／方向只影響「待複習」數 —— 統計、詞庫、弱項與方向無關，
   // 全量重載會打 6+N 個查詢，切個選項就卡一下。
-  $('mode-pick').addEventListener('change', () => { syncModeUI(); refreshDue(); });
-  $('dir-pick').addEventListener('change', () => { syncModeUI(); refreshDue(); });
+  $('mode-pick').addEventListener('change', () => { syncModeUI(); refreshDue(); deps.onPrefsChange?.(); });
+  $('dir-pick').addEventListener('change', () => { syncModeUI(); refreshDue(); deps.onPrefsChange?.(); });
   // 類型只影響「這輪抽什麼」，不影響到期張數的計算，所以不必 refreshDue()。
   // 但摘要要跟著變 —— 選項收合起來時，摘要是唯一看得到目前設定的地方。
-  $('type-pick').addEventListener('change', syncModeUI);
+  $('type-pick').addEventListener('change', () => { syncModeUI(); deps.onPrefsChange?.(); });
   $('btn-recall').onclick = () => deps.onRecall?.();
   on(EVENTS.ITEMS_CHANGED, () => { deckCounts = null; load(); });
   on(EVENTS.PROGRESS_WRITTEN, () => load());
