@@ -30,7 +30,13 @@ export const onEnter = (view, fn) => enterHooks.set(view, fn);
 export async function show(view, { push = true } = {}) {
   // 換畫面就停朗讀 —— 聲音不該跟著人跑到別的頁面。
   // 放在 router 而不是各畫面自理：新增畫面時不會忘記做這件事。
-  if (current !== view) speech.cancel();
+  //
+  // ★ 學習 → 結束 是例外。
+  //   答完最後一題時，題型會先唸出答案、緊接著這一輪就結束 ——
+  //   跳到結束畫面時把剛開始唸的那句切掉，使用者的體感是「最後一題沒有聲音」。
+  //   而那兩個畫面屬於同一個流程，不是「跑到別的頁面」。
+  const sameFlow = current === 'view-study' && view === 'view-done';
+  if (current !== view && !sameFlow) speech.cancel();
   current = view;
   VIEWS.forEach((v) => $(v)?.classList.toggle('hidden', v !== view));
   $('tabbar')?.classList.toggle('hidden', NO_TAB.includes(view));
