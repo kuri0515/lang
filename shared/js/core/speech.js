@@ -159,17 +159,24 @@ function speakTTS(text, { rate: override, slow = false, retry = false } = {}) {
       + 'iPhone：設定 → 輔助使用 → 朗讀內容 → 聲音；'
       + 'Mac：系統設定 → 輔助使用 → 朗讀內容 → 系統聲音 → 管理聲音。');
   }
-  // ★ 只有真的在播才取消。
+  // ★ 取消之後不能在同一個 tick 內送出下一句。
   //
-  //   原本每次都無條件 cancel()。Chrome 與 Safari 有一個已知的狀況：
-  //   cancel() 之後在同一個 tick 內 speak()，那句會被整個丟掉 ——
-  //   結果是「按了完全沒有聲音」，而且不報錯、在無頭測試裡也重現不出來
-  //   （替身不會模擬那個競態）。
-  //   沒有東西在播的時候本來就不需要取消，把那個競態拿掉。
-  if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
+  //   使用者實測回報的現場：
+  //     ［可用語音 3／選中 Kyoko／引擎 speaking=true pending=false paused=false］
+  //   引擎自己認為「正在說話」，但沒有任何聲音 —— Chrome 會卡在這個狀態
+  //   （切分頁、系統休眠、上一句被中斷都可能造成）。
+  //
+  //   卡住時我們必須 cancel() 把它清乾淨，但 cancel() 是非同步的：
+  //   同一個 tick 內接著 speak()，那一句會連同被清掉的佇列一起消失。
+  //   結果就是「按了完全沒有聲音」，而且不報錯 —— 或報 canceled。
+  //
+  //   所以：要清就清，然後等一拍再送。沒有東西在播時才直接送。
+  const ss = window.speechSynthesis;
+  const wedged = ss.speaking || ss.pending;
+  if (wedged) ss.cancel();
   // Chrome 有時會卡在 paused（切分頁、系統休眠之後），
   // 卡住時 speak() 進得去佇列但不會出聲。
-  if (speechSynthesis.paused) speechSynthesis.resume();
+  if (ss.paused) ss.resume();
 
   const u = new SpeechSynthesisUtterance(text);
   u.lang = L.ttsLang;
@@ -178,26 +185,26 @@ function speakTTS(text, { rate: override, slow = false, retry = false } = {}) {
   u.pitch = 1;
   const v = currentVoice();
   if (v) u.voice = v;
-  // ★ canceled / interrupted 不是錯誤，是我們自己造成的：
-  //   換頁會 cancel()、下一句也會蓋掉上一句。把它們報成失敗是噪音，
-  //   而噪音會讓真正的錯誤被忽略。
+
+  // canceled / interrupted 不是錯誤，是我們自己造成的：
+  // 換頁會 cancel()、下一句也會蓋掉上一句。報成失敗是噪音，
+  // 而噪音會讓真正的錯誤被忽略。
   //
-  //   但「按一次、沒有別人要蓋掉它、卻仍然被取消」是真的失敗 ——
-  //   Safari 與 Chrome 都有這個狀況（尤其是頁面載入後的第一次朗讀）。
-  //   那一種重試一次就會過，所以先重試，重試還是不行才說出來。
+  // 但「按一次、沒有別人要蓋掉它、卻仍然被取消」是真的失敗，
+  // 那一種重試一次通常就會過。
   u.onerror = (e) => {
     const why = e.error || '未知原因';
     if (why === 'canceled' || why === 'interrupted') {
-      // 重試那一次又被取消 → 這不是偶發的競態，把現場狀態說出來。
-      // 換一個聲音、重新整理都試過還是不行時，需要的是資料不是安慰。
       if (retry) return speakWarn(`朗讀被取消，重試也一樣。${diagnosis()}`);
-      // 延到下一個 tick 再試 —— 同一個 tick 內重送會被同樣的競態吃掉
-      setTimeout(() => speakTTS(text, { rate: override, slow, retry: true }), 60);
+      setTimeout(() => speakTTS(text, { rate: override, slow, retry: true }), 120);
       return;
     }
     speakWarn(`朗讀失敗（${why}）。${diagnosis()}`);
   };
-  speechSynthesis.speak(u);
+
+  // 卡住過就等一拍 —— cancel() 是非同步的，同一個 tick 送出會被一起清掉
+  if (wedged) setTimeout(() => ss.speak(u), 120);
+  else ss.speak(u);
 }
 
 /**

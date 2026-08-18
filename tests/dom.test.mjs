@@ -712,9 +712,15 @@ console.log('\n【朗讀失敗要說出來】');
   //   Chrome 與 Safari 有一個已知狀況：cancel() 之後在同一個 tick 內 speak()，
   //   那句會被整個丟掉 —— 結果是「按了完全沒有聲音」，
   //   而且不報錯、在無頭測試裡也重現不出來（替身不模擬那個競態）。
-  chk('★ 只有真的在播才取消', /speaking \|\| speechSynthesis\.pending/.test(src),
-      '沒有東西在播時取消，會讓緊接著的 speak 被丟掉');
-  chk('卡在 paused 時會恢復', /paused\) speechSynthesis\.resume/.test(src),
+  // ★ 使用者實測回報的現場：
+  //     ［可用語音 3／選中 Kyoko／引擎 speaking=true pending=false paused=false］
+  //   引擎自己認為「正在說話」，但沒有任何聲音 —— Chrome 會卡在這個狀態。
+  //   卡住時必須 cancel() 清乾淨，但 cancel() 是非同步的：
+  //   同一個 tick 內接著 speak()，那一句會連同被清掉的佇列一起消失。
+  chk('★ 取消之後等一拍再送', /wedged\) setTimeout\(\(\) => ss\.speak\(u\)/.test(src),
+      'cancel() 是非同步的，同一個 tick 送出會被一起清掉 —— 那就是「按了沒聲音」');
+  chk('沒有東西在播時直接送（不必多等）', /else ss\.speak\(u\)/.test(src));
+  chk('卡在 paused 時會恢復', /ss\.paused\) ss\.resume/.test(src),
       'Chrome 切分頁或系統休眠後會卡住，卡住時 speak 進得去佇列但不出聲');
 
   const vsrc = fs.readFileSync(SHARED + '/js/views/voice.js', 'utf8');
