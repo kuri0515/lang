@@ -247,12 +247,12 @@ function speakTTS(text, { rate: override, slow = false, retry = false, bare = fa
         const L2 = lang();
         const locals = targetVoices().filter((x) => x.localService).length;
         return speakWarn(locals === 0
-          ? `系統裡的${L2.langLabel}語音全是「Online」網路語音，`
-            + '這個瀏覽器送不出聲音。請安裝本機語音：'
+          ? `這個瀏覽器只找得到「Online」網路語音（${L2.langLabel} 本機語音 0 個），`
+            + '而網路語音要連伺服器，連不上就沒有聲音。兩條路：'
+            + '① 最快：Mac 改用 Safari —— 它直接用 macOS 的語音引擎，不必另外安裝。'
+            + `② 或安裝本機語音，裝完 Chrome / Edge 也能用：`
             + `Mac：系統設定 → 輔助使用 → 朗讀內容 → 系統聲音 → 管理聲音 → 下載${L2.langLabel}語音；`
             + 'Windows：設定 → 時間與語言 → 語音 → 新增語音。'
-            + '最快的解法是換一個瀏覽器：Mac 用 Safari、Windows 用 Edge —— '
-            + '它們直接用系統內建的語音，不必連網路。'
           : `朗讀被取消，重試也一樣。${diagnosis()}`);
       }
       setTimeout(() => speakTTS(text, { rate: override, slow, retry: true }), 120);
