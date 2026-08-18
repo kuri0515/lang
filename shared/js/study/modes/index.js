@@ -12,9 +12,10 @@ import flip from './flip.js';
 import choice from './choice.js';
 import scramble from './scramble.js';
 import listen from './listen.js';
+import spell from './spell.js';
 import { lang } from '../../core/lang.js';
 
-const ALL = [flip, choice, scramble, listen];
+const ALL = [flip, choice, spell, scramble, listen];
 
 /**
  * 有些題型對某個語言就是不成立，不是資料不足。
@@ -30,6 +31,11 @@ const ALL = [flip, choice, scramble, listen];
  *   漏了就是新題型默默不見。排除清單的預設是「都能用」，
  *   要關掉才需要明講 —— 沉默的後果是多一個選項，不是少一個功能。
  */
+// 完整註冊表（尚未套用站台的排除清單）。匯出它是為了讓測試不必寫死數量 ——
+// 寫死的數字每加一種題型就要記得改，而忘記改的症狀是「測試紅了但功能是對的」，
+// 那會訓練人把紅字當雜訊。
+export const ALL_MODE_IDS = ALL.map((m) => m.id);
+
 export const MODES = ALL.filter((m) => !(lang().disabledModes || []).includes(m.id));
 export const MODE_MAP = Object.fromEntries(MODES.map((m) => [m.id, m]));
 

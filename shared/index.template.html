@@ -432,6 +432,18 @@
       </div>
     </div>
 
+    <!-- 拼出來：專屬介面。
+         刻意不用固定格子（Wordle 那種）—— 格子數就是答案長度，
+         而有些最該練的對比，差別正好就是長度（促音那一課全是這種），
+         一給就沒得練了。改成稿紙線＋游標：長度自由，寫到哪算到哪。
+         舉例寫在 study/modes/spell.js —— 樣板的註解會輸出到兩站的 HTML，
+         舉日文的例子會讓韓文站的頁面夾帶假名（閘門會擋，我已經被擋過一次）。 -->
+    <div id="spell" class="spell hidden">
+      <div class="sp-line"><span id="sp-typed"></span><i class="sp-caret"></i></div>
+      <div id="sp-keys" class="sp-keys"></div>
+      <div id="sp-result" class="sp-result hidden"></div>
+    </div>
+
     <div id="scramble" class="scramble hidden">
       <div id="s-answer" class="s-answer" data-empty="點下方詞塊，依正確語序排列"></div>
       <div id="s-pool" class="s-pool"></div>

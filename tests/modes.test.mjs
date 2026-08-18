@@ -7,7 +7,7 @@ import { SHARED, SITE, siteReady } from './_site.mjs';
 
 // 先裝語言設定再載入題型 —— 題型的 hint 是模板字串，載入當下就要 lang()
 const LANG = await siteReady();
-const { MODES, getMode, forcedDirection, needsPool } = await import(`${SHARED}/js/study/modes/index.js`);
+const { ALL_MODE_IDS, MODES, getMode, forcedDirection, needsPool } = await import(`${SHARED}/js/study/modes/index.js`);
 const { buildChoices } = await import(`${SHARED}/js/study/modes/choice.js`);
 const { scrambleSource } = await import(`${SHARED}/js/study/modes/scramble.js`);
 
@@ -19,7 +19,8 @@ console.log(`【註冊表】（站台：${SITE}）`);
 // 題型數量隨站台設定變動 —— 日文站關掉了詞序重組（日文不用空格分詞）。
 // 所以斷言的是「設定說幾種就幾種」，而不是寫死 4。
 const off = LANG.disabledModes || [];
-chk(`註冊 ${4 - off.length} 種題型`, MODES.length === 4 - off.length,
+const total = ALL_MODE_IDS.length;      // 從註冊表推導，不寫死 —— 寫死的數字會過期
+chk(`註冊 ${total - off.length} 種題型（共 ${total} 種）`, MODES.length === total - off.length,
     MODES.map((m) => m.id).join('/') + (off.length ? `（本站關閉：${off.join('/')}）` : ''));
 chk('每種都有 id/label/hint', MODES.every((m) => m.id && m.label && m.hint));
 chk('未知 id 退回 flip', getMode('nope').id === 'flip');

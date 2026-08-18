@@ -213,7 +213,7 @@ npm test        # 兩站一起驗：設定完備性、模組真的載得起來�
 1. `mkdir <lang>`，複製 `main.js` `manifest.json` `icon*.svg`
    （**不要複製 `index.html`** —— 它由樣板產生，見第 6 步）
 2. 寫 `<lang>/taxonomy.js` —— 發音序列、每課導言、生活場景
-3. 寫 `<lang>/lang.config.js` —— 照現有兩份的欄位填齊（目前 24 個，
+3. 寫 `<lang>/lang.config.js` —— 照現有兩份的欄位填齊（目前 25 個，
    `npm run test:lang` 會逐一比對，少一個就紅）
 4. 在 Supabase 開**新專案**，填 `<lang>/config.js` 與 `<lang>/.env.local`
 5. `SITE=<lang> shared/scripts/migrate.sh up`

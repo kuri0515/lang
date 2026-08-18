@@ -68,6 +68,7 @@ export function initStudy({ session: s, getCtx, onQuit: quitCb,
     listen: $('c-listen'), listenSlow: $('c-listen-slow'), listenBox: $('listen-box'),
     choices: $('choices'), grade: $('grade'),
     scramble: $('scramble'), sAnswer: $('s-answer'), sPool: $('s-pool'), sResult: $('s-result'),
+    spell: $('spell'), spTyped: $('sp-typed'), spKeys: $('sp-keys'), spResult: $('sp-result'),
     show: $('btn-show'), prog: $('prog'), pos_: $('pos-label'),
   });
 
@@ -203,6 +204,7 @@ export function render(state) {
   els.grade.classList.add('hidden');
   els.choices.classList.add('hidden');
   els.scramble.classList.add('hidden');
+  els.spell.classList.add('hidden');
   els.listenBox.classList.add('hidden');
   els.show.classList.add('hidden');
 

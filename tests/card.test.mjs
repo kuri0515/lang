@@ -383,5 +383,72 @@ console.log('\n【詞庫分頁的詞庫選單】');
   chk('預設隱藏，選了詞庫才出現', $('btn-study-deck').classList.contains('hidden'));
 }
 
+
+// =====================================================================
+// 【拼出來：唯一一個測「產出」的題型】
+//
+// 其他三種都只測認得：翻卡自評（自己說了算）、四選一（猜得到）、
+// 聽音選義（也是選）。學習者可能覺得自己會了 92 個假名，
+// 實際提筆一個都寫不出來 —— 因為從來沒被要求產出過。
+// =====================================================================
+console.log('\n【拼出來】');
+{
+  const spell = (await import(SHARED + '/js/study/modes/spell.js')).default;
+  const kana = items.filter((x) => spell.canUse(x) && x.item_type === 'word');
+  if (!kana.length) { console.log('  ⏭  這份樣本沒有可拼寫的條目'); }
+  else {
+    chk(`有可拼寫的條目（${kana.length} 條）`, kana.length > 0);
+    // 含漢字的拼不出來 —— 鍵盤上放不下漢字，硬要拼只會卡住
+    const withKanji = items.find((x) => /[一-鿿]/.test(x.ko || ''));
+    if (withKanji) chk('含漢字的條目排除在外', !spell.canUse(withKanji), withKanji.ko);
+
+    const target = kana.find((x) => x.ko.length >= 2) || kana[0];
+    let graded = null;
+    // 題型只透過 els 這個對照表碰 DOM，所以測試自己組一份就好 ——
+    // 不必把整個 study.js 的內部狀態拉進來。
+    const spEls = {
+      spell: $('spell'), spTyped: $('sp-typed'),
+      spKeys: $('sp-keys'), spResult: $('sp-result'), grade: $('grade'),
+    };
+    const ctx = {
+      item: target, els: spEls, pool: items,
+      reveal: () => {}, grade: (r) => { graded = r; },
+      setFront: () => {},
+    };
+    spell.mount(ctx);
+
+    const keys = [...$('sp-keys').querySelectorAll('[data-c]')].map((b) => b.dataset.c);
+    chk('鍵盤含正解需要的每一個字', [...target.ko].every((c) => keys.includes(c)),
+        `${target.ko} → 鍵盤 ${keys.join('')}`);
+    chk('★ 沒有洩漏答案長度', !$('sp-keys').textContent.includes(String(target.ko.length))
+        || keys.length !== target.ko.length,
+        '固定格子會把長度送出去，而促音那一課的對比全靠長度');
+    chk('有完成鍵（不靠字數自動判定）', !!$('sp-keys').querySelector('[data-done]'));
+    chk('有退格鍵', !!$('sp-keys').querySelector('[data-back]'));
+
+    // 拼對 → 記「記得」
+    for (const c of target.ko) {
+      $('sp-keys').querySelector(`[data-c="${c}"]`).click();
+    }
+    $('sp-keys').querySelector('[data-done]').click();
+    chk('拼對 → 自動記為答對', graded === 3, `grade=${graded}`);
+    chk('★ 不出現自評按鈕', $('grade').classList.contains('hidden'),
+        '客觀題的價值就在沒有自評的空間');
+
+    // 拼錯 → 逐字標出錯在哪
+    graded = null;
+    spell.mount({ ...ctx, grade: (r) => { graded = r; } });
+    // 重掛之後鍵盤會重新洗牌，要重讀 —— 用舊的那一份會點到不存在的鍵
+    const keys2 = [...$('sp-keys').querySelectorAll('[data-c]')].map((b) => b.dataset.c);
+    const wrong = keys2.find((c) => c !== target.ko[0]);
+    $('sp-keys').querySelector(`[data-c="${wrong}"]`).click();
+    $('sp-keys').querySelector('[data-done]').click();
+    chk('拼錯 → 記為忘了', graded === 1);
+    chk('★ 逐字標出錯的位置', !!$('sp-typed').querySelector('.no'),
+        '只說「錯了」的話，學習者不知道自己錯在哪一個字');
+    chk('顯示正解', /正確答案/.test($('sp-result').textContent));
+  }
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);
