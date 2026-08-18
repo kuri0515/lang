@@ -724,6 +724,18 @@ console.log('\n【朗讀失敗要說出來】');
       'Chrome 切分頁或系統休眠後會卡住，卡住時 speak 進得去佇列但不出聲');
 
   const vsrc = fs.readFileSync(SHARED + '/js/views/voice.js', 'utf8');
+  // ★ 網路語音（Microsoft ... Online (Natural)）在某些瀏覽器送不出聲音 ——
+  //   它要連伺服器才發得出來。使用者實測回報：
+  //     ［選中 Microsoft 圭太 Online (Natural)／引擎 speaking=false…］
+  //   引擎閒置，所以不是卡死，是那個語音本身沒有聲音。
+  //   選單裡看不出哪個是網路語音，所以不能要求使用者自己避開。
+  chk('★ 網路語音失敗時自動退回本機語音', /localService === false/.test(src)
+      && /localVoice\(\)/.test(src),
+      '選單裡看不出哪個是網路語音，要求使用者自己避開是不合理的');
+  chk('退回後會記住（下次直接用會出聲的那個）', /setVoice\(fallback\.name\)/.test(src));
+  chk('排序時網路語音一律排後面', /const remote = v\.localService === false \? 100 : 0/.test(src),
+      '音質好但送不出聲音沒有意義 —— 會出聲比好聽重要');
+
   chk('★ 沒有語音時試聽鈕不停用', !/voice-test'\)\.disabled = true/.test(vsrc),
       '灰掉的按鈕只說「不能按」，不說為什麼；按得下去才問得出原因');
 }

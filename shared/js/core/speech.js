@@ -41,10 +41,14 @@ export function targetVoices() {
   return pool.slice().sort((a, b) => rank(a) - rank(b));
 
   function rank(v) {
+    // ★ 網路語音一律排在後面，即使名字符合偏好清單。
+    //   Microsoft ... Online (Natural) 音質確實比較好，但在 Chrome 上
+    //   經常送不出聲音（要連伺服器）。會出聲比好聽重要。
+    const remote = v.localService === false ? 100 : 0;
     for (let i = 0; i < preferredVoices.length; i++) {
-      if (preferredVoices[i].test(v.name)) return i;
+      if (preferredVoices[i].test(v.name)) return remote + i;
     }
-    return preferredVoices.length + (v.localService ? 0 : 1);
+    return remote + preferredVoices.length + 1;
   }
 }
 
@@ -57,6 +61,18 @@ export function currentVoice() {
 }
 
 export function setVoice(name) { localStorage.setItem(lsVoice(), name); }
+
+/**
+ * 這一輪要避開的語音（例如剛剛失敗的網路語音）。
+ * 只存在記憶體裡 —— 重新整理後重新給它一次機會，
+ * 網路語音失敗常常是暫時的（連不上伺服器），不該永久拉黑。
+ */
+const avoid = new Set();
+
+/** 本機語音（localService）。網路語音失敗時退回這裡 */
+function localVoice() {
+  return targetVoices().find((v) => v.localService && !avoid.has(v.name)) || null;
+}
 
 export function rate() { return Number(localStorage.getItem(lsRate())) || 0.9; }
 export function setRate(r) { localStorage.setItem(lsRate(), String(r)); }
@@ -195,6 +211,25 @@ function speakTTS(text, { rate: override, slow = false, retry = false } = {}) {
   u.onerror = (e) => {
     const why = e.error || '未知原因';
     if (why === 'canceled' || why === 'interrupted') {
+      // ★ 網路語音（Microsoft ... Online (Natural)）在這個瀏覽器上送不出聲音 ——
+      //   它要連伺服器才發得出來，而那條路常常不通。
+      //   使用者實測回報：
+      //     ［選中 Microsoft 圭太 Online (Natural)／引擎 speaking=false…］
+      //   引擎是閒置的，所以不是卡死，是這個語音本身沒有聲音。
+      //
+      //   自動退回本機語音，不要求使用者自己去猜 ——
+      //   他已經「換了一個聲音」，而選單裡看不出哪個是網路語音。
+      if (v && v.localService === false) {
+        avoid.add(v.name);
+        const fallback = localVoice();
+        if (fallback) {
+          setVoice(fallback.name);            // 記住，下次直接用會出聲的那個
+          speakWarn(`「${v.name}」是網路語音，這個瀏覽器送不出聲音，`
+            + `已自動改用「${fallback.name}」。`);
+          setTimeout(() => speakTTS(text, { rate: override, slow }), 60);
+          return;
+        }
+      }
       if (retry) return speakWarn(`朗讀被取消，重試也一樣。${diagnosis()}`);
       setTimeout(() => speakTTS(text, { rate: override, slow, retry: true }), 120);
       return;
