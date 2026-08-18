@@ -173,3 +173,22 @@ export async function distractorPool(deckId = null) {
     return q;
   });
 }
+
+/**
+ * 依目標語言的字面精確取條目。
+ *
+ * 【為什麼不用「撈一批再過濾」】
+ *   形近組的夥伴（ぬ／め、シ／ツ）在詞庫裡的位置是隨機的。
+ *   撈前 400 條再過濾的話，排在 400 之後的夥伴永遠找不到 ——
+ *   而功能看起來完全正常：它只是沒有把該加的加進去，不會報錯。
+ *
+ *   直接查那幾個字：結果精確，傳輸量也從幾百條變成幾條。
+ */
+export async function itemsByKo(koList) {
+  const list = [...new Set((koList || []).filter(Boolean))];
+  if (!list.length) return [];
+  const { data, error } = await sb.from('items')
+    .select(ITEM_FIELDS).eq('is_active', true).in('ko', list);
+  if (error) throw error;
+  return data ?? [];
+}

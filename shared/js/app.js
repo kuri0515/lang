@@ -388,7 +388,12 @@ async function ensureRound() {
   if (round && round.pos < round.queue.length) return round;
 
   const deck = (await content.listDecks()).find((d) => d.slug === lang().roundDeck);
-  const items = await content.pickItems({ deckId: deck?.id ?? null, limit: 5000 });
+  // ★ 不給 limit —— pickItems 沒有 limit 時會分頁撈完。
+  //   給 limit 會走單次查詢，而 PostgREST 單次最多回 1000 列：
+  //   詞庫超過一千條之後，一輪會靜靜地少掉一截，
+  //   而「還剩多少」看起來完全正常（它算的是那份殘缺清單）。
+  //   實測韓文站的詞庫目前 801 條 —— 還沒撞到，但正在往那裡長。
+  const items = await content.pickItems({ deckId: deck?.id ?? null });
   round = {
     roundNo: (round?.roundNo ?? 0) + 1,
     queue: shuffle(items.map((i) => i.id)),
@@ -551,8 +556,11 @@ async function refreshRecall() {
 async function addConfusableMates(item) {
   const group = confusableOf(item.ko);
   if (!group) return [];
-  const mates = await content.pickItems({ ids: null, tag: '', limit: 400 })
-    .then((all) => all.filter((x) => x.ko !== item.ko && group.keys.includes(x.ko)))
+  // ★ 直接查那幾個字，不要「撈一批再過濾」。
+  //   形近組的夥伴在詞庫裡的位置是隨機的 —— 撈前 400 條再過濾的話，
+  //   排在 400 之後的夥伴永遠找不到，而功能看起來完全正常：
+  //   它只是沒有把該加的加進去，不會報錯。
+  const mates = await content.itemsByKo(group.keys.filter((k) => k !== item.ko))
     .catch(() => []);
   const added = [];
   for (const m of mates) {

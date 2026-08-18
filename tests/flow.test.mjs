@@ -289,6 +289,15 @@ console.log('\n【輪次池】');
   const r2 = mkRound(['a', 'b', 'c', 'd']);
   const seen = [...take(r2, 2), ...take(r2, 2)];
   chk('★ 一輪之內每個詞只出現一次', new Set(seen).size === seen.length, seen.join(','));
+
+  // ★ 建一輪時不能給 limit。
+  //   pickItems 有 limit 就走單次查詢，而 PostgREST 單次最多回 1000 列 ——
+  //   詞庫超過一千條之後，一輪會靜靜地少掉一截，
+  //   而「還剩多少」看起來完全正常（它算的是那份殘缺清單）。
+  const appSrc = fs.readFileSync(`${SITE_DIR}/../shared/js/app.js`, 'utf8');
+  chk('★ 建一輪時撈完整份（不給 limit）',
+      /pickItems\(\{ deckId: deck\?\.id \?\? null \}\)/.test(appSrc),
+      '給 limit 會被 PostgREST 的 1000 列上限截斷，而畫面看不出來');
 }
 // =====================================================================
 // 【自由練習會把詞送進複習循環】
