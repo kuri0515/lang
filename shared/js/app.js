@@ -577,5 +577,46 @@ window.addEventListener('pagehide', () => saveResume({ toCloud: true }));
   } catch { /* 隱私模式：沒有舊資料要清，也不該因此擋住啟動 */ }
 })();
 
+// ---------------------------------------------------------------------
+// 版本偵測：手上這份是不是最新的？
+//
+// GitHub Pages 對 JS 設 cache-control: max-age=600 —— 十分鐘內瀏覽器
+// 根本不會去問伺服器。於是部署完打開網站，看到的還是舊版，
+// 而使用者無從分辨「改壞了」與「還沒生效」，每次都要猜。
+//
+// 這裡不去對抗快取（改不了 Pages 的標頭），只做一件事：**誠實說出來**。
+// version.json 用 no-store 讀取，與頁面裡嵌的編號比對，不同就顯示提示。
+//
+// 【為什麼點下去是換網址而不是 location.reload()】
+//   reload 仍可能從快取拿 JS。換成帶 ?v= 的網址，
+//   至少 HTML 一定是新的；而 HTML 更新後，模組的預載清單也會跟著更新。
+//   要讓每個模組都立刻更新得替它們全部加上版本號 ——
+//   那需要一個建置步驟，會破壞現在「推上去就是部署」的簡單性。
+//   十分鐘後快取到期本來就會自己好，這裡解決的是「不知道發生什麼事」。
+// ---------------------------------------------------------------------
+async function checkVersion() {
+  const mine = document.querySelector('meta[name="build"]')?.content;
+  if (!mine) return;
+  try {
+    const r = await fetch('../version.json', { cache: 'no-store' });
+    const { build } = await r.json();
+    if (!build || build === mine) return;
+    const bar = document.createElement('button');
+    bar.className = 'update-bar';
+    bar.textContent = '有新版本 · 點此更新';
+    bar.onclick = () => {
+      const u = new URL(window.location.href);
+      u.searchParams.set('v', build);
+      window.location.replace(u.toString());
+    };
+    document.body.appendChild(bar);
+  } catch { /* 離線或檔案還沒部署：不打擾，維持現狀 */ }
+}
+checkVersion();
+// 從背景切回來時再看一次 —— 手機把分頁留在背景好幾天是常態
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') checkVersion();
+});
+
 auth.onChange(onUser);
 (async () => { await onUser(await auth.currentUser()); })();

@@ -20,12 +20,50 @@
 //   否則「單一真理源」只是口號，改久了兩邊還是會分家。
 // =====================================================================
 import fs from 'fs';
+import crypto from 'crypto';
 
 const ROOT = new URL('../..', import.meta.url).pathname.replace(/\/$/, '');
 const SITES = ['korean', 'japanese'];
 const check = process.argv.includes('--check');
 
 const template = fs.readFileSync(`${ROOT}/shared/index.template.html`, 'utf8');
+
+/**
+ * 建置編號＝所有 JS 內容的雜湊。
+ *
+ * 【為什麼需要】
+ *   GitHub Pages 對 JS 設 cache-control: max-age=600 ——
+ *   十分鐘內瀏覽器根本不會去問伺服器，於是部署完看到的還是舊版。
+ *   而使用者無從分辨「改壞了」與「還沒生效」，
+ *   每次判斷都要猜，猜錯就往錯的方向查。
+ *
+ *   我們改不了 Pages 的標頭，但可以讓畫面誠實說出自己是哪一版：
+ *   頁面裡嵌一個編號，另外放一份 version.json（讀取時不走快取）。
+ *   兩者不一致就表示「有新版，但你手上這份還是舊的」。
+ *
+ * 【為什麼用內容雜湊而不是時間戳】
+ *   時間戳會讓每次跑 build 都產生差異，即使一個字都沒改 ——
+ *   那會讓 --check 永遠失敗，也讓 git 每次都有雜訊。
+ */
+function buildId() {
+  const h = crypto.createHash('sha1');
+  const walk = (dir) => {
+    for (const name of fs.readdirSync(dir).sort()) {
+      if (name === 'node_modules' || name.startsWith('.')) continue;
+      const full = `${dir}/${name}`;
+      if (fs.statSync(full).isDirectory()) walk(full);
+      else if (name.endsWith('.js')) h.update(fs.readFileSync(full));
+    }
+  };
+  walk(`${ROOT}/shared/js`);
+  for (const site of SITES) {
+    for (const f of ['main.js', 'lang.config.js', 'taxonomy.js']) {
+      h.update(fs.readFileSync(`${ROOT}/${site}/${f}`));
+    }
+  }
+  return h.digest('hex').slice(0, 8);
+}
+const BUILD = buildId();
 
 /**
  * 掃出某個入口的完整模組圖，產生 <link rel="modulepreload">。
@@ -90,6 +128,7 @@ function render(lang, site) {
       .map((href) => `  <link rel="modulepreload" href="${href}">`),
   ].join('\n');
   out = out.replace('{{modulepreload}}', links);
+  out = out.replace('{{build}}', BUILD);
 
   // ① 條件區塊：{{#grid}}…{{/grid}} —— 只有宣告了字母表的站台才留
   out = out.replace(/\{\{#grid\}\}\n([\s\S]*?)\{\{\/grid\}\}\n/g,
@@ -149,6 +188,19 @@ for (const site of SITES) {
     fs.writeFileSync(path, out);
     console.log(`  ✅ ${site}/index.html ${cur === out ? '（無變化）' : '已更新'}`);
   }
+}
+
+// version.json 供執行期比對。放在網站根目錄，兩站共用一份 ——
+// 兩站永遠一起部署，分開兩份只會多一個會不一致的地方。
+const vPath = `${ROOT}/version.json`;
+const vBody = JSON.stringify({ build: BUILD }) + '\n';
+if (check) {
+  const cur = fs.existsSync(vPath) ? fs.readFileSync(vPath, 'utf8') : null;
+  if (cur !== vBody) { bad++; console.log('  ❌ version.json 與程式碼不一致'); }
+  else console.log(`  ✅ version.json 與程式碼一致（${BUILD}）`);
+} else {
+  fs.writeFileSync(vPath, vBody);
+  console.log(`  ✅ version.json ${BUILD}`);
 }
 
 if (check && bad) {
