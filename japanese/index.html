@@ -19,7 +19,7 @@
 
   <!-- ↓ 由 shared/scripts/build-sites.mjs 從真實的 import 圖產生，不要手改。
        沒有它的話瀏覽器要一層一層發現模組，實測 4 層 × 每次往返。 -->
-<meta name="build" content="1ee50605">
+<meta name="build" content="50e2a0b5">
   <link rel="modulepreload" href="https://esm.sh/@supabase/supabase-js@2" crossorigin>
   <link rel="modulepreload" href="main.js">
   <link rel="modulepreload" href="../shared/js/core/lang.js">
@@ -110,95 +110,28 @@
       <div id="streak" class="streak"></div>
 
       <div id="suggest" class="suggest"></div>
+      <!-- 首頁只留三個入口：複習、學習新的、自由練習。
+           先前有五個「開始學」的入口（主按鈕、發音課程、生活場景、詞庫、弱項），
+           而它們多半指向同一批內容 —— 多一個入口不是多一個選擇，是多一次猶豫。
+           分工：挑內容 → 詞庫分頁；看記錄 → 記錄分頁；調設定 → 我的。 -->
       <button id="btn-primary" class="primary block big">開始複習</button>
       <div class="row2" style="margin-top:8px">
-        <button id="btn-review" class="ghost">複習</button>
+        <button id="btn-new" class="ghost">學習新的</button>
         <button id="btn-free" class="ghost">自由練習</button>
       </div>
+      <!-- 舊的「複習」鈕保留但隱藏：主按鈕在有到期時就是複習，
+           兩顆做同一件事會讓人以為有差別。留著是因為 app.js 仍綁它的事件，
+           拿掉要同時改接線，而那不是這次調整的範圍。 -->
+      <button id="btn-review" class="hidden"></button>
     </div>
 
-    <section class="card" id="pron-card">
-      <h2>發音課程</h2>
-      <details id="grid-box" class="grid-box hidden">
-        <summary><span>五十音表</span><span id="grid-sub" class="muted"></span></summary>
-        <p class="hint">橫是「行」、縱是「段」。這不只是排版 —— 動詞活用就是在同一行上移動（書く → 書きます → 書いた）。</p>
-        <div id="gojuon"></div>
-        <p class="hint" style="margin-top:10px">濁音・半濁音不是新字 —— 在清音右上加兩點（゛）或小圈（゜）就變成它。要學的是規則，不是 25 個新符號。</p>
-        <div id="dakuon"></div>
-      </details>
-      <div id="pron-next"></div>
-      <details class="pron-all">
-        <summary>看完整課程（<span id="pron-count">–</span> 課）</summary>
-        <div id="pron-list"></div>
-      </details>
-    </section>
-
-    <section class="card hidden" id="life-card">
-      <h2>生活 · 興趣</h2>
-      <!-- 推薦的那一個留在外面，完整清單收起來 —— 與發音課程同一種結構。
-           十個場景全攤開會把首頁推得很長，而首頁的主線是
-           「今天複習什麼、下一個學什麼」；十個並排等於沒有指路。 -->
-      <div id="life-pick"></div>
-      <details class="pron-all">
-        <summary>看全部場景（<span id="life-count">–</span> 個）</summary>
-        <div id="life-list"></div>
-      </details>
-    </section>
-
-    <details class="card details" id="opt-box">
-      <summary>
-        <span>練習方式</span>
-        <span id="opt-summary" class="muted"></span>
-      </summary>
-      <div class="details-body">
-        <label class="field-label">題型</label>
-        <div class="seg seg-4" id="mode-pick">
-          <label><input type="radio" name="mode" value="flip" checked><span>翻卡自評</span></label>
-          <label><input type="radio" name="mode" value="choice"><span>四選一</span></label>
-          <label><input type="radio" name="mode" value="scramble"><span>詞序重組</span></label>
-          <label><input type="radio" name="mode" value="listen"><span>聽音選義</span></label>
-        </div>
-        <p id="mode-hint" class="hint"></p>
 
 
-        <label class="field-label">內容類型</label>
-        <div class="seg" id="type-pick">
-          <label><input type="radio" name="itype" value="all" checked><span>全部</span></label>
-          <label><input type="radio" name="itype" value="word"><span>單字</span></label>
-          <label><input type="radio" name="itype" value="sentence"><span>句子</span></label>
-        </div>
 
-        <label class="field-label">方向</label>
-        <div class="seg" id="dir-pick">
-          <label><input type="radio" name="dir" value="ko2zh" checked><span>日 → 中</span></label>
-          <label><input type="radio" name="dir" value="zh2ko"><span>中 → 日</span></label>
-        </div>
-      </div>
-    </details>
 
-    <!-- 只有一個詞庫時整張卡片會被隱藏（見 views/home.js 的 renderDecks）——
-         三個指向同一批內容的入口，不是三個選擇，是三次猶豫。 -->
-    <div class="card hidden" id="deck-card">
-      <h2>詞庫</h2>
-      <div id="deck-list"><p class="muted nomargin">載入中…</p></div>
-    </div>
 
-    <div class="card hidden" id="recall-card">
-      <div class="card-head">
-        <h2>回顧清單 <span id="recall-n" class="muted"></span></h2>
-        <button id="btn-recall" class="small primary">開始回顧</button>
-      </div>
-      <p class="hint nomargin">自己標起來的。答得好不會把複習日推遠，答不好才拉近。</p>
-      <div id="recall-list"></div>
-    </div>
 
-    <div class="card" id="weak-card">
-      <div class="card-head">
-        <h2>我的弱項</h2>
-        <button id="btn-drill-weak" class="small hidden">集中練這些</button>
-      </div>
-      <div id="weak-list"></div>
-    </div>
+
   </section>
 
   <!-- ══════════════ ② 詞庫瀏覽 ══════════════ -->
@@ -246,10 +179,40 @@
     </div>
 
     <div id="b-pane-words">
+    <section class="card" id="pron-card">
+      <h2>發音課程</h2>
+      <details id="grid-box" class="grid-box hidden">
+        <summary><span>五十音表</span><span id="grid-sub" class="muted"></span></summary>
+        <p class="hint">橫是「行」、縱是「段」。這不只是排版 —— 動詞活用就是在同一行上移動（書く → 書きます → 書いた）。</p>
+        <div id="gojuon"></div>
+        <p class="hint" style="margin-top:10px">濁音・半濁音不是新字 —— 在清音右上加兩點（゛）或小圈（゜）就變成它。要學的是規則，不是 25 個新符號。</p>
+        <div id="dakuon"></div>
+      </details>
+      <div id="pron-next"></div>
+      <details class="pron-all">
+        <summary>看完整課程（<span id="pron-count">–</span> 課）</summary>
+        <div id="pron-list"></div>
+      </details>
+    </section>
+    <section class="card hidden" id="life-card">
+      <h2>生活 · 興趣</h2>
+      <!-- 推薦的那一個留在外面，完整清單收起來 —— 與發音課程同一種結構。
+           十個場景全攤開會把首頁推得很長，而首頁的主線是
+           「今天複習什麼、下一個學什麼」；十個並排等於沒有指路。 -->
+      <div id="life-pick"></div>
+      <details class="pron-all">
+        <summary>看全部場景（<span id="life-count">–</span> 個）</summary>
+        <div id="life-list"></div>
+      </details>
+    </section>
     <div class="card sticky-search">
       <input id="b-search" type="search" placeholder="搜尋日文／中文／羅馬音…" class="nomargin">
       <details class="filter-box" id="b-filter">
         <summary><span>篩選</span><b id="b-filter-now">全部</b></summary>
+        <!-- 只有兩個以上詞庫時才出現（見 views/browse.js）。
+             首頁原本有一張「詞庫」卡做這件事，但那是第三個
+             「開始學」的入口 —— 合併到這裡，首頁只留一條主線。 -->
+        <div id="b-decks" class="tag-group hidden"></div>
         <div id="b-tags"></div>
       </details>
     </div>
@@ -258,6 +221,7 @@
         <span id="b-count" class="muted"></span>
         <span class="browse-actions">
           <button id="btn-practice-sel" class="small hidden">練所選</button>
+          <button id="btn-study-deck" class="small primary hidden">學新的</button>
           <button id="btn-study-tag" class="small primary hidden">學這組</button>
         </span>
       </div>
@@ -269,6 +233,23 @@
 
   <!-- ══════════════ ③ 學習記錄 ══════════════ -->
   <section id="view-history" class="hidden">
+    <div class="card hidden" id="recall-card">
+      <div class="card-head">
+        <h2>回顧清單 <span id="recall-n" class="muted"></span></h2>
+        <button id="btn-recall" class="small primary">開始回顧</button>
+      </div>
+      <p class="hint nomargin">自己標起來的。答得好不會把複習日推遠，答不好才拉近。</p>
+      <div id="recall-list"></div>
+    </div>
+
+    <div class="card" id="weak-card">
+      <div class="card-head">
+        <h2>我的弱項</h2>
+        <button id="btn-drill-weak" class="small hidden">集中練這些</button>
+      </div>
+      <div id="weak-list"></div>
+    </div>
+
     <div class="card">
       <div class="prog-head">
         <div>
@@ -325,6 +306,37 @@
 
   <!-- ══════════════ ④ 我的 ══════════════ -->
   <section id="view-me" class="hidden">
+    <details class="card details" id="opt-box">
+      <summary>
+        <span>練習方式</span>
+        <span id="opt-summary" class="muted"></span>
+      </summary>
+      <div class="details-body">
+        <label class="field-label">題型</label>
+        <div class="seg seg-4" id="mode-pick">
+          <label><input type="radio" name="mode" value="flip" checked><span>翻卡自評</span></label>
+          <label><input type="radio" name="mode" value="choice"><span>四選一</span></label>
+          <label><input type="radio" name="mode" value="scramble"><span>詞序重組</span></label>
+          <label><input type="radio" name="mode" value="listen"><span>聽音選義</span></label>
+        </div>
+        <p id="mode-hint" class="hint"></p>
+
+
+        <label class="field-label">內容類型</label>
+        <div class="seg" id="type-pick">
+          <label><input type="radio" name="itype" value="all" checked><span>全部</span></label>
+          <label><input type="radio" name="itype" value="word"><span>單字</span></label>
+          <label><input type="radio" name="itype" value="sentence"><span>句子</span></label>
+        </div>
+
+        <label class="field-label">方向</label>
+        <div class="seg" id="dir-pick">
+          <label><input type="radio" name="dir" value="ko2zh" checked><span>日 → 中</span></label>
+          <label><input type="radio" name="dir" value="zh2ko"><span>中 → 日</span></label>
+        </div>
+      </div>
+    </details>
+
     <div class="card">
       <h2>外觀</h2>
       <div class="seg seg-3" id="theme-pick">

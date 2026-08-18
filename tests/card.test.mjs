@@ -370,21 +370,17 @@ console.log('\n【每日複習任務】');
 // 內容不會進不去；兩個以上才真的需要清單來選。
 // 日文站現在只有 kana-01，韓文站有三個 —— 同一段程式，兩種正確結果。
 // =====================================================================
-console.log('\n【詞庫卡片】');
+// ★ 詞庫選單搬到詞庫分頁：首頁原本有一張「詞庫」卡，
+//   那是第三個「開始學」的入口，而它們指向同一批內容。
+//   合併而不是刪除 —— 韓文站有三個詞庫，刪了其中兩個就沒有入口。
+console.log('\n【詞庫分頁的詞庫選單】');
 {
-  const home = await import(SHARED + '/js/views/home.js');
-  const deck = (n) => Array.from({ length: n }, (_, i) => ({ id: 'd' + i, title: '詞庫' + i }));
-  const card = $('deck-card');
-
-  await home.renderDecks(deck(1));
-  chk('只有一個詞庫 → 整張卡片隱藏', card.classList.contains('hidden'));
-
-  await home.renderDecks(deck(3));
-  chk('三個詞庫 → 卡片出現（否則另外兩個進不去）', !card.classList.contains('hidden'));
-  chk('三個都列出來', $('deck-list').querySelectorAll('[data-deck]').length === 3);
-
-  await home.renderDecks(deck(1));
-  chk('回到一個 → 又隱藏起來', card.classList.contains('hidden'));
+  const browse2 = await import(SHARED + '/js/views/browse.js');
+  const box = $('b-decks');
+  chk('選單元素存在', !!box);
+  chk('預設隱藏（等 open() 決定）', box.classList.contains('hidden'));
+  chk('有「學新的」按鈕（承接首頁那張卡的功能）', !!$('btn-study-deck'));
+  chk('預設隱藏，選了詞庫才出現', $('btn-study-deck').classList.contains('hidden'));
 }
 
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');

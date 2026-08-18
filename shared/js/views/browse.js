@@ -22,6 +22,9 @@ export function initBrowse(d) {
   deps = d;
   $('b-search').addEventListener('input', debounce(render, 250));
   $('btn-study-tag').onclick = () => { if (tag) deps.onStudyTag(tag); };
+  // 「學新的」＝從這個詞庫抓沒學過的。首頁原本那張詞庫卡就是這個功能，
+  // 搬過來而不是刪掉 —— 韓文站有三個詞庫，刪了其中兩個就沒有入口。
+  $('btn-study-deck').onclick = () => { if (deckId) deps.onNewDeck(deckId); };
   $('btn-practice-sel').onclick = () => {
     if (!picked.size) return msg('先勾選要練的條目');
     deps.onPractice([...picked]);
@@ -34,6 +37,8 @@ export function initBrowse(d) {
 }
 
 let tagsLoaded = false;
+let deckId = '';          // '' = 全部詞庫
+let deckTitle = '';
 
 /** 單字／對話 子分頁。對話是另一種學習形態，不該混在單字清單裡 */
 function initTabs() {
@@ -50,6 +55,29 @@ function initTabs() {
 export async function open() {
   if (!tagsLoaded) {
     try {
+      // 詞庫選單：只有兩個以上才顯示。一個的時候選它等於沒選，
+      // 而多一列沒有作用的按鈕會讓人以為自己漏看了什麼。
+      const decks = await content.listDecks().catch(() => []);
+      const dbox = $('b-decks');
+      if (decks.length > 1) {
+        dbox.classList.remove('hidden');
+        dbox.innerHTML = '<div class="tag-group-h">詞庫<span>先選範圍，再挑標籤</span></div>'
+          + '<div class="tag-row">'
+          + `<button class="tag on" data-deck="">全部</button>`
+          + decks.map((d) => `<button class="tag" data-deck="${esc(d.id)}">${esc(d.title)}</button>`).join('')
+          + '</div>';
+        qsa('[data-deck]', dbox).forEach((b) => {
+          b.onclick = () => {
+            deckId = b.dataset.deck;
+            deckTitle = deckId ? b.textContent : '';
+            qsa('[data-deck]', dbox).forEach((x) => x.classList.toggle('on', x === b));
+            render();
+          };
+        });
+      } else {
+        dbox.classList.add('hidden');
+      }
+
       const tags = await content.listTags();
       // 分組呈現：主題是篩選器，發音是課程。平鋪在一起，
       // 想找「食物」得先滑過「收音ㄼ」。分組與順序的判準在 core/taxonomy.js
@@ -80,11 +108,13 @@ export async function render() {
   if (!$('b-list').querySelector('.b-row')) $('b-list').innerHTML = skeleton(6);
   try {
     const user = deps.user();
-    const raw = await content.pickItems({ tag, search: $('b-search').value });
+    const raw = await content.pickItems({ tag, deckId: deckId || null, search: $('b-search').value });
     const byItem = await progress.cardsByItem(user?.id, raw.map((i) => i.id));
     const rows = raw.map((i) => ({ ...i, cards: byItem[i.id] || {} }));
 
-    $('b-count').textContent = `${rows.length} 條${tag ? ` · ${tag}` : ''}`;
+    $('b-count').textContent = `${rows.length} 條`
+      + (deckTitle ? ` · ${deckTitle}` : '') + (tag ? ` · ${tag}` : '');
+    $('btn-study-deck').classList.toggle('hidden', !deckId);
     $('btn-study-tag').classList.toggle('hidden', !tag);
     $('btn-study-tag').textContent = `學「${tag}」`;
     $('btn-practice-sel').classList.toggle('hidden', !picked.size);

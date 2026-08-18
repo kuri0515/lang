@@ -134,7 +134,6 @@ export async function load() {
     dueNow = due.length;
     renderSuggestion(due.length, today, decks, carriedOver(due));
 
-    renderDecks(decks);
     renderLife(life);
     renderWeak(weak);
   } catch (e) {
@@ -239,6 +238,20 @@ export function newLessonBlocked(dueCount) {   // eslint-disable-line no-unused-
   return null;
 }
 
+/**
+ * 「學習新的」按鈕。
+ *
+ * 走的是主按鈕在「今天沒有到期」時會走的那條路：
+ * 有發音課程就上下一課，否則從第一個詞庫抓新詞。
+ * 不另外實作 —— 兩份「開始學新的」邏輯必然漂移，
+ * 而漂移的症狀是「兩顆按鈕點下去結果不一樣」，使用者只會覺得壞了。
+ */
+export function startNext() {
+  if (nextLessonTag) return deps.onStudyTag(nextLessonTag);
+  if (firstDeckId) return deps.onNewDeck(firstDeckId);
+  msg('還沒有詞庫。到「我的 → 批次匯入」貼上你的詞表。');
+}
+
 export function carriedOver(due) {
   const yesterday = Date.now() - 86400000;
   return due.filter((c) => Date.parse(c.due_at) < yesterday).length;
@@ -308,43 +321,10 @@ export function renderSuggestion(dueCount, today, decks, carried = 0) {
   primaryAction = null;
 }
 
-export async function renderDecks(decks) {
-  // ★ 只有一個詞庫時整張卡片不顯示。
-  //
-  //   首頁原本有三個「開始學」的入口：最上面的主按鈕、發音課程、詞庫。
-  //   三個都指向同一批內容時，使用者要先看懂三者的差別才敢按 ——
-  //   而它們其實沒有差別。多一個入口不是多一個選擇，是多一次猶豫。
-  //
-  //   為什麼是「數量」而不是站台開關：一個詞庫時，主按鈕本來就會
-  //   落到 onNewDeck(firstDeckId)，不會有內容進不去；
-  //   兩個以上才真的需要一份清單來選。
-  //   用數量判斷，日後任何一站加了第二個詞庫，卡片自己會回來。
-  const card = $('deck-card');
-  if (decks.length <= 1) { card?.classList.add('hidden'); return; }
-  card?.classList.remove('hidden');
-
-  if (!decks.length) {
-    $('deck-list').innerHTML = emptyState('📦', '還沒有詞庫<br>到「我的 → 批次匯入」貼上你的詞表');
-    return;
-  }
-  // 條目數只在內容變動時才會變，沒必要每次進首頁都打 N 個查詢
-  if (!deckCounts) {
-    deckCounts = Object.fromEntries(await Promise.all(
-      decks.map(async (d) => [d.id, await content.countItems(d.id).catch(() => 0)])));
-  }
-  const counts = decks.map((d) => deckCounts[d.id] ?? 0);
-  $('deck-list').innerHTML = decks.map((d, i) => `
-    <div class="deck-row">
-      <div>
-        <h3>${esc(d.title)}${d.title_ko ? ` <span class="muted">${esc(d.title_ko)}</span>` : ''}</h3>
-        <p>${counts[i]} 條${d.level ? ` · ${esc(d.level)}` : ''}</p>
-      </div>
-      <button class="primary small" data-deck="${d.id}">學新的</button>
-    </div>`).join('');
-  qsa('[data-deck]', $('deck-list')).forEach((b) => {
-    b.onclick = () => deps.onNewDeck(b.dataset.deck);
-  });
-}
+// 首頁不再有「詞庫」卡 —— 它是第三個「開始學」的入口，
+// 而三個入口指向同一批內容時，使用者要先看懂差別才敢按。
+// 選詞庫、看內容、學新的，全部搬到「詞庫」分頁（views/browse.js）。
+// firstDeckId 仍保留：沒有發音課程可上時，主按鈕會落到它。
 
 /**
  * 發音課程。

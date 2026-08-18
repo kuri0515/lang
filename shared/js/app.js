@@ -460,6 +460,8 @@ study.initStudy({
 });
 browse.initBrowse({ ...deps,
   onPractice: (ids) => startFree({ ids }),
+  // 詞庫分頁的「學新的」—— 與首頁原本那張詞庫卡同一條路
+  onNewDeck: (id) => startNew(id),
   onStudyTag: (t) => startNew(null, t),
   // 對話的翻譯練習：走同一條自由練習的路，只差要不要打亂
   onPracticeDialogue: (ids, keepOrder) => startFree({ ids, keepOrder, kind: 'drill' }),
@@ -475,8 +477,14 @@ history.initWords((ids) => startFree({ ids, kind: 'drill' }));
 importer.initImporter();
 
 onEnter('view-home', () => home.load());
-onEnter('view-browse', () => browse.open());
-onEnter('view-history', () => history.open());
+// ★ 課程選擇（發音課程、生活場景）已經搬到詞庫分頁，
+//   但它們的內容仍由 home.load() 產生 —— 直接開啟 #browse 而沒去過首頁時，
+//   那兩區會是空的。這種缺陷不會報錯，只會讓人看到兩張空卡片。
+//   所以進入詞庫分頁時也跑一次首頁的載入。
+//   （home.load 內部本來就會擋重複載入，多跑一次的代價只有一次查詢。）
+onEnter('view-browse', () => Promise.all([browse.open(), home.load()]));
+// 學習記錄（回顧清單、弱項）同理：它們也是 home.load() 產生的
+onEnter('view-history', () => Promise.all([history.open(), home.load()]));
 onEnter('view-import', () => importer.open());
 
 function initImporterAndAdmin() {
@@ -492,6 +500,9 @@ function initImporterAndAdmin() {
     reviewQueue = [];
     show('view-home');
   };
+  // 「學習新的」：與主按鈕在「今天沒有到期」時的行為同一條路 ——
+  // 同一件事只能有一個實作，兩份必然漂移。
+  $('btn-new').onclick = () => home.startNext();
   $('btn-again').onclick = () => nextRound().catch((e) => msg(e.message || e));
   $('btn-extra').onclick = () => {
     const ids = [...new Set([...lastBatchIds, ...reviewQueue.map((e) => e.item.id)])];
