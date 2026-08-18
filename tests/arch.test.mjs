@@ -610,6 +610,26 @@ chk('localStorage 的鍵都經過 lsKey()（帶站台前綴）', bareKeys,
   }
   chk('畫面用到的 deps 回呼都有接線', gaps,
     '可選鏈呼叫漏接時不報錯 —— 那顆按鈕只是靜靜地沒反應');
+
+  // ★ 另一半：app.js 提供了，模組也要真的留住。
+  //   study.js 原本寫 deps = { inRecallList, onToggleRecall } —— 逐一挑，
+  //   於是後來新增的 onPark 被丟掉，🏠 按鈕點下去什麼都不會發生。
+  //   上面那道閘門只驗「有沒有提供」，驗不到「有沒有留住」，
+  //   是端到端的動線測試才抓到的。
+  const dropped = [];
+  for (const f of files.filter((f) => /\/views\/\w+\.js$/.test(f))) {
+    const src = read(f);
+    const used = new Set([...src.matchAll(/deps[?]?\.(\w+)/g)].map((x) => x[1]));
+    if (!used.size) continue;
+    // 有沒有整包留下來（deps = d）？有的話一定不會漏
+    if (/\bdeps\s*=\s*\w+\s*;/.test(src)) continue;
+    for (const m of [...src.matchAll(/\bdeps\s*=\s*\{([^}]*)\}/g)]) {
+      const kept = new Set(m[1].split(',').map((x) => x.split(':')[0].trim()));
+      for (const u of used) if (!kept.has(u)) dropped.push(`${rel(f)}: deps.${u}() 沒有被留下來`);
+    }
+  }
+  chk('模組有留住它用到的 deps', dropped,
+    '逐一挑的寫法每加一個回呼就多一次漏掉的機會 —— 整包留下來就不會');
 }
 
 console.log(fails ? `\n❌ ${fails} 項約束被違反` : '\n✅ 所有架構約束通過');

@@ -54,9 +54,14 @@ export function setLesson(tag, intro) {
   box.ontoggle = () => localStorage.setItem(LS_INTRO(), box.open ? '1' : '0');
 }
 
-export function initStudy({ session: s, getCtx, onQuit: quitCb,
-                            inRecallList, onToggleRecall }) {
-  deps = { inRecallList, onToggleRecall };
+export function initStudy(d) {
+  // ★ 整個留下來，不要逐一挑。
+  //   原本寫成 deps = { inRecallList, onToggleRecall } —— 後來新增的
+  //   onPark 就這樣被丟掉了，而呼叫端是 deps.onPark?.()，
+  //   可選鏈讓它靜靜地什麼都不做：🏠 按鈕點下去沒反應，也不報錯。
+  //   逐一挑的寫法每加一個回呼就多一次漏掉的機會。
+  deps = d;
+  const { session: s, onQuit: quitCb, getCtx } = d;
   session = s; onQuit = quitCb;
   Object.assign(els, {
     front: $('c-front'), back: $('c-back'), backText: $('c-back-text'),
