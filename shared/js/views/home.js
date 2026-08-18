@@ -129,7 +129,7 @@ export async function load() {
     // ら行 的內容還沒進來時，格子要看得出「還沒加入」而不是「還沒學」。
     renderGojuon(lang().taxonomy.grid ?? null, pron,
                  new Set(pron.filter((r) => r.total > 0).map((r) => r.tag)));
-    renderSuggestion(due.length, today, decks);
+    renderSuggestion(due.length, today, decks, carriedOver(due));
 
     renderDecks(decks);
     renderLife(life);
@@ -155,16 +155,42 @@ let deckCounts = null;
  * 使用者得自己想到去詞庫按「學新的」。這裡把當下最該做的那件事
  * 直接放進主按鈕。
  */
-function renderSuggestion(dueCount, today, decks) {
+/**
+ * 這批待複習裡，有幾條是「之前排定、當天沒做完而順延過來」的。
+ *
+ * 判準是到期超過一天 —— 今天才到期的不算順延。
+ * 順延本身是自動的（沒做的卡 due_at 留在過去，隔天照樣算待複習，
+ * 而清單照 due_at 排序，逾期最久的自然排最前面）。
+ * 但這件事對學習者是隱形的：他只看到「待複習 63」，
+ * 不知道其中 40 條是上週的，也就不知道該調整的是新課的速度。
+ */
+export function carriedOver(due) {
+  const yesterday = Date.now() - 86400000;
+  return due.filter((c) => Date.parse(c.due_at) < yesterday).length;
+}
+
+export function renderSuggestion(dueCount, today, decks, carried = 0) {
   const box = $('suggest');
   const btn = $('btn-primary');
   box.classList.remove('done');
   firstDeckId = decks[0]?.id ?? null;
 
   if (dueCount > 0) {
-    box.innerHTML = `今天有 <b>${dueCount}</b> 個詞到期，先把複習做完最划算 ——
-      間隔重複的效果全靠準時複習。`;
-    btn.textContent = `開始複習（${dueCount}）`;
+    // 一輪 20 題。超過兩輪就把「做不完沒關係」講清楚 ——
+    // 看到 63 而不知道可以分次做，很多人會直接關掉。
+    const rounds = Math.ceil(dueCount / 20);
+    box.innerHTML = `今天有 <b>${dueCount}</b> 個詞到期`
+      + (carried ? `（其中 <b>${carried}</b> 條是之前順延過來的）` : '')
+      + '，先把複習做完最划算 —— 間隔重複的效果全靠準時複習。'
+      + (rounds > 2
+        ? '<br><span class="muted">一輪 20 題，做不完沒關係：'
+          + '沒做到的會排到明天最前面，複習間隔不會因此變長。'
+          + (carried > dueCount / 2
+            ? '<br>★ 順延的已經超過一半，先暫停學新課幾天，讓它降下來。'
+            : '')
+          + '</span>'
+        : '');
+    btn.textContent = `開始複習（一輪 20 題，共 ${dueCount}）`;
     btn.disabled = false;
     primaryAction = () => deps.onReview();
     return;

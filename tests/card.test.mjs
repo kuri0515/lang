@@ -251,5 +251,49 @@ console.log('\n【複習分輪】');
   chk('清空後「返回」回到主要按鈕', $('btn-back').classList.contains('primary'));
 }
 
+
+// =====================================================================
+// 【順延的可見性】
+//
+// 順延本身是自動的：沒做的卡 due_at 留在過去，隔天照樣算待複習，
+// 而清單照 due_at 排序，逾期最久的自然排最前面。
+// 問題是這件事對學習者完全隱形 —— 他只看到「待複習 63」，
+// 不知道其中 40 條是上週的，也就不知道該調整的是新課的速度。
+//
+// 機制對、但看不到，等於不存在。這裡驗的是「看得到」。
+// =====================================================================
+console.log('\n【順延的可見性】');
+{
+  const home = await import(SHARED + '/js/views/home.js');
+  const box = $('suggest');
+  const day = 86400000;
+  const now = Date.now();
+  const due = (n, ageDays) => Array.from({ length: n }, () => ({
+    due_at: new Date(now - ageDays * day).toISOString(),
+  }));
+
+  // ① 判準：只有逾期超過一天的才算順延
+  chk('今天才到期的不算順延', home.carriedOver(due(8, 0)) === 0);
+  chk('逾期三天的算順延', home.carriedOver(due(8, 3)) === 8);
+
+  // ② 少量時不囉嗦
+  home.renderSuggestion(8, { reviewed: 0 }, [], 0);
+  chk('一輪以內不提分輪', !/一輪 20 題，做不完/.test(box.textContent), box.textContent.slice(0, 30));
+
+  // ③ 超過兩輪：要講清楚做不完會怎樣，否則很多人直接關掉
+  home.renderSuggestion(63, { reviewed: 0 }, [], 12);
+  chk('大量時說明分輪與順延', /做不完沒關係/.test(box.textContent));
+  chk('★ 明說間隔不會因順延而變長', /間隔不會因此變長/.test(box.textContent),
+      '這是使用者最可能誤解的地方：以為拖到明天會被懲罰');
+  chk('顯示順延的條數', /12/.test(box.textContent));
+
+  // ④ 順延過半 = 學新課的速度超過負荷，要直接講
+  home.renderSuggestion(63, { reviewed: 0 }, [], 40);
+  chk('★ 順延過半時建議暫停新課', /暫停學新課/.test(box.textContent),
+      '積壓的成因是新課太快，不講的話學習者只會更用力複習');
+  home.renderSuggestion(63, { reviewed: 0 }, [], 12);
+  chk('沒過半就不給那句建議', !/暫停學新課/.test(box.textContent));
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);

@@ -120,16 +120,35 @@ async function startReview() {
   try {
     const rows = await progress.fetchDue(user.id, [home.effectiveDir()], 200);
     if (!rows.length) return msg('沒有待複習的卡片', 'ok');
-    // 先打散再切輪 —— 照 due_at 排序切的話，第一輪永遠是最舊的那批，
-    // 而最舊的往往集中在同一課，一輪 20 題全是同一課會失去交錯的效果。
-    reviewQueue = shuffle(rows.map((c) => ({ item: c.items, direction: c.direction, card: c })));
+    // ★ 不打散整個佇列 —— fetchDue 已經照 due_at 排好，逾期最久的在最前面，
+    //   那正是「今天沒做完的，明天排在最前面」的意思（順延）。
+    //   上一版在這裡 shuffle(rows)，理由是「一輪 20 題全同一課會失去交錯」，
+    //   但那個需求只存在於一輪之內，不該把跨輪的優先權一起打散 ——
+    //   打散之後，逾期三天的卡可能排在第四輪，而使用者往往只做一輪。
+    //   正確的做法是：輪次照優先權切，輪內再打散（見 nextRound）。
+    reviewQueue = rows.map((c) => ({ item: c.items, direction: c.direction, card: c }));
     await nextRound();
   } catch (e) { msg(e.message || e); }
 }
 
-/** 從 reviewQueue 取一輪出來開始 */
+/**
+ * 從 reviewQueue 取一輪出來開始。
+ *
+ * 【取的是「最前面」的 20 條，不是隨機 20 條】
+ *   佇列照 due_at 排序，所以最前面就是逾期最久的 ——
+ *   今天沒做完的那些，明天會自然出現在最前面（它們的 due_at 更舊）。
+ *   這就是順延：間隔不變，只是實際複習的日子往後移。
+ *
+ * 【但輪內要重排】
+ *   同一課的卡往往同時到期，照 due_at 取出來會連著 20 題同一課。
+ *   重排只影響「這 20 題的先後」，不影響「哪 20 題被選中」。
+ *
+ *   用 orderForDiscrimination 而不是單純 shuffle —— 跟回顧清單同一套：
+ *   形近組（ぬ／め）要相鄰出現才練得到辨別，被打散到一輪的頭和尾
+ *   等於各自單獨練，而各自單獨練本來就都會。組間仍是隨機的。
+ */
 async function nextRound() {
-  const batch = reviewQueue.splice(0, ROUND);
+  const batch = orderForDiscrimination(reviewQueue.splice(0, ROUND), confusableOf);
   if (!batch.length) return msg('複習已清空 ✓', 'ok');
   await begin(batch, { kind: 'review' });
 }
