@@ -8,6 +8,7 @@ import { pronOrder, nextLesson, LESSON_DONE,
          lifeScenes, pickScene } from '../core/taxonomy.js';
 import * as progress from '../data/progress.js';
 import { MODES, getMode, forcedDirection } from '../study/modes/index.js';
+import { ROUND_SIZE } from '../study/session.js';
 import { matchesType as matchesTypePure } from '../study/session.js';
 import { computeStreak } from '../core/stats.js';
 import { lang } from '../core/lang.js';
@@ -176,21 +177,21 @@ export function renderSuggestion(dueCount, today, decks, carried = 0) {
   firstDeckId = decks[0]?.id ?? null;
 
   if (dueCount > 0) {
-    // 一輪 20 題。超過兩輪就把「做不完沒關係」講清楚 ——
+    // 超過兩輪就把「做不完沒關係」講清楚 ——
     // 看到 63 而不知道可以分次做，很多人會直接關掉。
-    const rounds = Math.ceil(dueCount / 20);
+    const rounds = Math.ceil(dueCount / ROUND_SIZE);
     box.innerHTML = `今天有 <b>${dueCount}</b> 個詞到期`
       + (carried ? `（其中 <b>${carried}</b> 條是之前順延過來的）` : '')
       + '，先把複習做完最划算 —— 間隔重複的效果全靠準時複習。'
       + (rounds > 2
-        ? '<br><span class="muted">一輪 20 題，做不完沒關係：'
+        ? `<br><span class="muted">一輪 ${ROUND_SIZE} 題，做不完沒關係：`
           + '沒做到的會排到明天最前面，複習間隔不會因此變長。'
           + (carried > dueCount / 2
             ? '<br>★ 順延的已經超過一半，先暫停學新課幾天，讓它降下來。'
             : '')
           + '</span>'
         : '');
-    btn.textContent = `開始複習（一輪 20 題，共 ${dueCount}）`;
+    btn.textContent = `開始複習（一輪 ${ROUND_SIZE} 題，共 ${dueCount}）`;
     btn.disabled = false;
     primaryAction = () => deps.onReview();
     return;

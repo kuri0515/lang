@@ -265,6 +265,7 @@ console.log('\n【複習分輪】');
 console.log('\n【順延的可見性】');
 {
   const home = await import(SHARED + '/js/views/home.js');
+  const { ROUND_SIZE } = await import(SHARED + '/js/study/session.js');
   const box = $('suggest');
   const day = 86400000;
   const now = Date.now();
@@ -277,8 +278,8 @@ console.log('\n【順延的可見性】');
   chk('逾期三天的算順延', home.carriedOver(due(8, 3)) === 8);
 
   // ② 少量時不囉嗦
-  home.renderSuggestion(8, { reviewed: 0 }, [], 0);
-  chk('一輪以內不提分輪', !/一輪 20 題，做不完/.test(box.textContent), box.textContent.slice(0, 30));
+  home.renderSuggestion(ROUND_SIZE, { reviewed: 0 }, [], 0);
+  chk('一輪以內不提分輪', !/做不完沒關係/.test(box.textContent), box.textContent.slice(0, 30));
 
   // ③ 超過兩輪：要講清楚做不完會怎樣，否則很多人直接關掉
   home.renderSuggestion(63, { reviewed: 0 }, [], 12);
@@ -293,6 +294,13 @@ console.log('\n【順延的可見性】');
       '積壓的成因是新課太快，不講的話學習者只會更用力複習');
   home.renderSuggestion(63, { reviewed: 0 }, [], 12);
   chk('沒過半就不給那句建議', !/暫停學新課/.test(box.textContent));
+
+  // ★ 畫面上寫的題數必須等於實際切輪用的題數。
+  //   這兩個數字原本散在三個檔案，改一處漏兩處不會報錯 ——
+  //   只會讓畫面寫「一輪 20 題」而實際做 10 題。
+  chk(`畫面寫的題數＝實際的一輪（${ROUND_SIZE}）`,
+    box.textContent.includes(`一輪 ${ROUND_SIZE} 題`)
+    && $('btn-primary').textContent.includes(`一輪 ${ROUND_SIZE} 題`));
 }
 
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');

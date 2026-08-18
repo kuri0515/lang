@@ -11,7 +11,7 @@ import { on, emit, EVENTS } from './core/bus.js';
 import * as auth from './data/auth.js';
 import * as content from './data/content.js';
 import * as progress from './data/progress.js';
-import { createSession, orderForDiscrimination } from './study/session.js';
+import { createSession, orderForDiscrimination, ROUND_SIZE } from './study/session.js';
 import { getMode, needsPool } from './study/modes/index.js';
 import { show, onEnter, initTabs, viewFromHash } from './views/router.js';
 import { initTheme } from './views/theme.js';
@@ -106,14 +106,7 @@ async function begin(entries, { freeMode = false, kind = 'review', note = '', le
 // ---------------------------------------------------------------------
 // 三種進入學習的路徑
 // ---------------------------------------------------------------------
-// 一輪的題數。
-//
-// 【為什麼是 20】
-//   模擬每天學 8 條的學習者：第 82 天要複習 75 條（正確率 85%），
-//   70% 的話 87 條 —— 排程沒有壞（沒有尖峰，是穩定成長），
-//   但一輪 87 題會讓人今天不想打開 App。
-//   20 題約 5 分鐘，是「等車時也做得完」的長度。
-const ROUND = 20;
+// 一輪的題數定義在 study/session.js（單一來源，首頁的提示文字也讀它）
 let reviewQueue = [];        // 這一批還沒做的（分輪用）
 
 async function startReview() {
@@ -122,7 +115,7 @@ async function startReview() {
     if (!rows.length) return msg('沒有待複習的卡片', 'ok');
     // ★ 不打散整個佇列 —— fetchDue 已經照 due_at 排好，逾期最久的在最前面，
     //   那正是「今天沒做完的，明天排在最前面」的意思（順延）。
-    //   上一版在這裡 shuffle(rows)，理由是「一輪 20 題全同一課會失去交錯」，
+    //   上一版在這裡 shuffle(rows)，理由是「一輪全是同一課會失去交錯」，
     //   但那個需求只存在於一輪之內，不該把跨輪的優先權一起打散 ——
     //   打散之後，逾期三天的卡可能排在第四輪，而使用者往往只做一輪。
     //   正確的做法是：輪次照優先權切，輪內再打散（見 nextRound）。
@@ -140,15 +133,15 @@ async function startReview() {
  *   這就是順延：間隔不變，只是實際複習的日子往後移。
  *
  * 【但輪內要重排】
- *   同一課的卡往往同時到期，照 due_at 取出來會連著 20 題同一課。
- *   重排只影響「這 20 題的先後」，不影響「哪 20 題被選中」。
+ *   同一課的卡往往同時到期，照 due_at 取出來會連著一整輪同一課。
+ *   重排只影響「這一輪的先後」，不影響「哪些被選中」。
  *
  *   用 orderForDiscrimination 而不是單純 shuffle —— 跟回顧清單同一套：
  *   形近組（ぬ／め）要相鄰出現才練得到辨別，被打散到一輪的頭和尾
  *   等於各自單獨練，而各自單獨練本來就都會。組間仍是隨機的。
  */
 async function nextRound() {
-  const batch = orderForDiscrimination(reviewQueue.splice(0, ROUND), confusableOf);
+  const batch = orderForDiscrimination(reviewQueue.splice(0, ROUND_SIZE), confusableOf);
   if (!batch.length) return msg('複習已清空 ✓', 'ok');
   await begin(batch, { kind: 'review' });
 }
