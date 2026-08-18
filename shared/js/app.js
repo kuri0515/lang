@@ -489,6 +489,10 @@ onEnter('view-home', () => home.load());
 onEnter('view-browse', () => Promise.all([browse.open(), home.load()]));
 // 學習記錄（回顧清單、弱項）同理：它們也是 home.load() 產生的
 onEnter('view-history', () => Promise.all([history.open(), home.load()]));
+// 練習方式已經搬到「我的」，而它的摘要列（題型 · 方向 · 內容類型）
+// 由 home 的 syncModeUI() 產生 —— 沒有這一行，進「我的」時摘要是空的。
+// 搬移畫面時最容易漏的就是這種「內容還留在原本的模組裡」的接線。
+onEnter('view-me', () => home.syncModeUI());
 onEnter('view-import', () => importer.open());
 
 function initImporterAndAdmin() {

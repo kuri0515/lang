@@ -19,7 +19,7 @@
 
   <!-- ↓ 由 shared/scripts/build-sites.mjs 從真實的 import 圖產生，不要手改。
        沒有它的話瀏覽器要一層一層發現模組，實測 4 層 × 每次往返。 -->
-<meta name="build" content="68093b12">
+<meta name="build" content="c3df2b15">
   <link rel="modulepreload" href="https://esm.sh/@supabase/supabase-js@2" crossorigin>
   <link rel="modulepreload" href="main.js">
   <link rel="modulepreload" href="../shared/js/core/lang.js">
@@ -335,12 +335,13 @@
       </summary>
       <div class="details-body">
         <label class="field-label">題型</label>
-        <div class="seg seg-4" id="mode-pick">
-          <label><input type="radio" name="mode" value="flip" checked><span>翻卡自評</span></label>
-          <label><input type="radio" name="mode" value="choice"><span>四選一</span></label>
-          <label><input type="radio" name="mode" value="scramble"><span>詞序重組</span></label>
-          <label><input type="radio" name="mode" value="listen"><span>聽音選義</span></label>
-        </div>
+        <!-- 由題型註冊表產生（見 views/home.js 的 initHome）。
+             寫死在這裡的後果實際發生過兩次：
+               · 新增「拼出來」之後選單上沒有它 —— 功能做完了卻沒有人點得到
+               · 日文站關閉了「詞序重組」，選單卻照樣顯示，
+                 選了會靜靜退回翻卡自評（getMode 對關閉的題型回退 flip）
+             兩者都不會報錯。 -->
+        <div class="seg" id="mode-pick"></div>
         <p id="mode-hint" class="hint"></p>
 
 

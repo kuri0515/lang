@@ -58,6 +58,20 @@ export function syncModeUI() {
 
 export function initHome(d) {
   deps = d;
+
+  // ★ 題型選單由註冊表產生，不寫死在 HTML。
+  //
+  //   寫死的後果實際發生過兩次，而且都不會報錯：
+  //     · 新增「拼出來」之後選單上沒有它 —— 功能做完了卻沒有人點得到
+  //     · 日文站關閉了「詞序重組」（日文不用空格分詞，實測 301 條裡
+  //       只有 1 條有素材），選單卻照樣顯示，選了會靜靜退回翻卡自評
+  //
+  //   欄數跟著題型數走：兩欄排版在手機上一律成立，
+  //   寬螢幕時才攤成一排（見 CSS 的 seg-4）。
+  $('mode-pick').className = `seg${MODES.length === 4 ? ' seg-4' : ''}`;
+  $('mode-pick').innerHTML = MODES.map((m, i) =>
+    `<label><input type="radio" name="mode" value="${esc(m.id)}"${i === 0 ? ' checked' : ''}>`
+    + `<span>${esc(m.label)}</span></label>`).join('');
   $('btn-primary').onclick = () => primaryAction?.();
   $('btn-free').onclick = () => deps.onFree();
   // 首頁的按鈕一律在這裡綁。先前「學習新的」綁在 app.js ——
@@ -88,6 +102,11 @@ export async function refreshDue() {
   try {
     const due = await progress.dueCounts(user.id, [effectiveDir()]);
     $('s-due').textContent = due.total;
+    // 環的目標值是 min(20, 待複習 + 已掌握)，所以待複習一變它也要跟著動。
+    // 少了這一行，切換方向之後環會停在舊目標 —— 兩個數字互相矛盾，
+    // 而使用者不會知道該信哪一個。
+    renderRing(masteredToday(), dailyTarget(due.total));
+    dueNow = due.total;
   } catch (e) { msg('載入失敗：' + (e.message || e)); }
 }
 

@@ -527,6 +527,15 @@ console.log('\n【今日進度環】');
   chk('★ 超過目標不溢出', Math.abs(parseFloat(ring.style.strokeDashoffset)) < 0.5
       && $('s-done').textContent === '20/20', $('s-done').textContent);
 
+  // ★ 兩條載入路徑都要更新環。
+  //   refreshDue() 是切換方向時走的快速路徑，只更新「待複習」——
+  //   而環的目標是 min(20, 待複習 + 已掌握)，待複習一變它也要動。
+  //   少了它，切完方向環會停在舊目標，兩個數字互相矛盾。
+  const homeSrc = fs.readFileSync(`${SHARED}/js/views/home.js`, 'utf8');
+  const paths = (homeSrc.match(/renderRing\(/g) || []).length;
+  chk('★ 快速路徑也更新環', paths >= 3,
+      `renderRing 出現 ${paths} 次（定義 1 ＋ 兩條載入路徑各 1）`);
+
   // 最近七天：「昨天有、今天空著」一眼看得到，
   // 而那比任何一句文案都更能讓人現在就打開。
   const day = (i) => new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
@@ -539,6 +548,44 @@ console.log('\n【今日進度環】');
       '今天空著正是要讓人看到的東西');
   home.renderWeek([{ day: day(0), n: 3 }]);
   chk('今天學了就填實', [...$('week').children][6].classList.contains('on'));
+}
+
+
+// =====================================================================
+// 【題型選單】
+//
+// 先前寫死在 HTML 裡，後果實際發生過兩次，而且都不報錯：
+//   · 新增「拼出來」之後選單上沒有它 —— 功能做完了卻沒有人點得到
+//   · 日文站關閉了「詞序重組」，選單卻照樣顯示，
+//     選了會靜靜退回翻卡自評（getMode 對關閉的題型回退 flip）
+// 現在由註冊表產生。
+// =====================================================================
+console.log('\n【題型選單】');
+{
+  const { MODES } = await import(SHARED + '/js/study/modes/index.js');
+  const home = await import(SHARED + '/js/views/home.js');
+  // ★ 選單在 initHome 裡產生。先前這裡沒有呼叫它，
+  //   而它剛好只在五十音表那一段的 else 分支被呼叫過 ——
+  //   於是日文站是綠的、韓文站是空的，看起來像產品有問題，
+  //   實際上是測試的前置沒做。真實 App 一定會呼叫 initHome。
+  home.initHome({ user: () => ({ id: 'u' }), isAdmin: () => false,
+                  onStudyTag: () => {}, onRecall: () => {},
+                  onReview: () => {}, onFree: () => {}, onNewDeck: () => {} });
+  const opts = [...$('mode-pick').querySelectorAll('input[name="mode"]')];
+  chk(`選單的題型數＝註冊表（${MODES.length} 種）`, opts.length === MODES.length,
+      opts.map((o) => o.value).join('/'));
+  chk('★ 拼出來在選單上', opts.some((o) => o.value === 'spell'),
+      '做完一個題型卻沒讓它可選，等於沒做');
+
+  const off = LANG.disabledModes || [];
+  if (off.length) {
+    chk(`★ 本站關閉的題型不出現（${off.join('/')}）`,
+        off.every((id) => !opts.some((o) => o.value === id)),
+        '顯示一個選了會退回別的題型的選項，比不顯示更糟');
+  } else {
+    console.log('  ⏭  本站沒有關閉任何題型');
+  }
+  chk('預設選第一個', opts[0]?.checked === true);
 }
 
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
