@@ -69,6 +69,47 @@ def fetch_tags(url, key):
     return rows, Counter(t for r in rows for t in (r.get('tags') or []))
 
 
+def check_duplicates(url, key):
+    """完全重複的條目：ko 與 zh 都一樣。
+
+    【為什麼是缺陷而不是無害】
+      學習者會看到兩張一模一樣的卡，而且各自獨立排程 ——
+      同一個詞要學兩次、複習兩次，卻沒有任何跡象說明為什麼。
+      他只會覺得「這個 App 怎麼一直重複問我」。
+
+    【實際抓到】
+      韓文站有 7 組，全部同時存在於 daily-01 與 vocab-01
+      （匯入兩批詞表時各收了一次）。都沒有學習記錄，已軟下架。
+
+    【為什麼只看「ko 與 zh 都相同」】
+      同中文對到不同的詞（미안해요／죄송합니다 都是「對不起」）是正常的，
+      那是同義詞，四選一已經處理（不會拿其一當干擾項）。
+      真正的缺陷是同一個詞收兩次。
+    """
+    rows, off = [], 0
+    while True:
+        req = urllib.request.Request(
+            f"{url}/rest/v1/items?select=ko,zh,item_type&is_active=eq.true"
+            f"&limit=1000&offset={off}",
+            headers={'apikey': key, 'Authorization': 'Bearer ' + key})
+        b = json.load(urllib.request.urlopen(req))
+        rows += b
+        if len(b) < 1000:
+            break
+        off += 1000
+    seen = Counter((x['ko'], x['zh']) for x in rows
+                   if x['item_type'] in ('word', 'phrase'))
+    dups = [(k, n) for k, n in seen.items() if n > 1]
+    print('【重複條目】')
+    if not dups:
+        print(f"  ✅ 沒有完全重複的條目（{len(rows)} 條）\n")
+        return 0
+    for (ko, zh), n in dups[:10]:
+        print(f"  ❌ {ko}（{zh}）出現 {n} 次")
+    print(f"  → 共 {len(dups)} 組。軟下架多餘的那一份（is_active=false），不要真刪。\n")
+    return len(dups)
+
+
 def deck_exists(url, key, slug):
     req = urllib.request.Request(f"{url}/rest/v1/decks?select=slug&slug=eq.{slug}",
                                  headers={'apikey': key, 'Authorization': 'Bearer ' + key})
@@ -193,6 +234,7 @@ def main():
         print()
 
     bad += check_pos(url, key, a.site)
+    bad += check_duplicates(url, key)
 
     if bad:
         print(f"❌ 有 {bad} 項問題（標籤沒有內容，或詞性缺漏／打錯字）。")
