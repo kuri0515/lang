@@ -1,6 +1,6 @@
 # 測試
 
-六支測試，涵蓋最容易出錯、且錯了會直接污染使用者資料的部分。
+十支測試，涵蓋最容易出錯、且錯了會直接污染使用者資料的部分。
 
 ```bash
 npm test          # 全部，兩站一起驗
@@ -13,6 +13,7 @@ npm test          # 全部，兩站一起驗
 | `arch.test.mjs` | 無 | 依賴方向、core 無向上依賴、data/session 不碰 DOM、DOM 契約、XSS、密鑰 |
 | `session.test.mjs` | 無 | 學習會話引擎：撤銷、回看不重複計分、延遲寫入的定案時機 |
 | `modes.test.mjs` | 真實詞庫 JSON | 題型註冊表；四選一的干擾項品質與同義詞歧義；詞序重組的素材與標點洩題 |
+| `round.test.mjs` | 無 | 輪次池：空 queue 不算走完、發牌不推指標、一輪不漏詞（見 [`../docs/LESSONS.md`](../docs/LESSONS.md) L-001／L-002） |
 | `dom.test.mjs` | `jsdom` | 對真實 `index.html` 跑視圖切換、事件匯流排、主題、題型掛載與 teardown |
 
 ## 站台
