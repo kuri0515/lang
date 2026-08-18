@@ -353,6 +353,20 @@ console.log('\n【每日複習任務】');
   set(20);
   chk('達標後當然也放行', home.newLessonBlocked(40) === null);
 
+  // ★ 只有正規複習算進今日任務。
+  //   回顧清單是自己標記想多練的詞，不是今天到期的 ——
+  //   算進去的話，靠練自選的詞就能湊滿 20/20，
+  //   而真正該複習的一條都沒做，那個數字就失去意義。
+  set(0);
+  home.addMasteredToday(5, 'review');
+  chk('複習算數', home.masteredToday() === 5);
+  home.addMasteredToday(5, 'drill');
+  chk('★ 回顧清單不算', home.masteredToday() === 5, `實得 ${home.masteredToday()}`);
+  home.addMasteredToday(5, 'free');
+  chk('自由練習不算', home.masteredToday() === 5);
+  home.addMasteredToday(5, 'new');
+  chk('學新課不算（它不是複習）', home.masteredToday() === 5);
+
   set(0);
   home.renderSuggestion(60, { reviewed: 0 }, [], 0);
   chk('首頁顯示掌握進度', /0\/20/.test($('suggest').textContent), $('suggest').textContent.slice(0, 40));

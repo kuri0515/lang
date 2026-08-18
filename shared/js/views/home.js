@@ -284,8 +284,21 @@ const todayKey = () => lsKey('mastered-' + new Date().toISOString().slice(0, 10)
 export function masteredToday() {
   return Number(localStorage.getItem(todayKey()) || 0);
 }
-/** 一輪結束後累加。key 帶日期，跨日自動歸零，不必清理 */
-export function addMasteredToday(n) {
+/**
+ * 一輪結束後累加。key 帶日期，跨日自動歸零，不必清理。
+ *
+ * @param kind 這一輪的性質。只有正規複習（review）算進今日任務。
+ *
+ * 【為什麼回顧清單不算】
+ *   回顧清單是自己標記想多練的詞，不是今天到期的。
+ *   算進去的話，靠練自選的詞就能湊滿 20/20，
+ *   而真正該複習的一條都沒做 —— 那讓「今日複習任務」這個數字失去意義。
+ *
+ *   先前的條件寫在 app.js 且只判斷 !free，於是 drill 被算進去了。
+ *   規則搬到這裡是為了驗得到：app.js 是接線檔，沒有執行期測試。
+ */
+export function addMasteredToday(n, kind = 'review') {
+  if (kind !== 'review') return;
   if (n > 0) localStorage.setItem(todayKey(), String(masteredToday() + n));
 }
 /** 今天要掌握幾個才算完成 —— 到期數不足 20 時以到期數為準 */

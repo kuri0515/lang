@@ -58,8 +58,8 @@ const session = createSession({
   onFinish: (stats, free) => {
     clearResume();          // 這一輪結束了，沒有東西要續跑
     // 這一輪掌握了幾個，累加到今天的進度。
-    // 自由練習不算 —— 它不動排程，也不該讓人靠它解鎖新課。
-    if (!free) home.addMasteredToday(stats.mastered || 0);
+    // 「哪一種輪次算數」的規則在 home.addMasteredToday 裡（那裡驗得到）。
+    home.addMasteredToday(stats.mastered || 0, currentKind);
     // 只有複習才有「還剩多少」—— 學新課、自由練習都是一次一批，沒有續攤的概念
     // 可練的內容＝剛做完那一輪 ＋ 今天還沒做的。
     // 刻意不從整個詞庫抓 —— 那會把還沒學過的詞端出來，
@@ -80,6 +80,7 @@ async function ensurePool() {
 async function begin(entries, { freeMode = false, kind = 'review', note = '', lesson = '' } = {}) {
   // 導言與收尾話每輪都要重設 —— 不清掉的話，下一輪會掛著上一課的內容
   currentLesson = lesson;
+  currentKind = kind;
   // 導言優先取自本輪的假名卡（雲端資料），沒有才回設定查（規則課）
   study.setLesson(lesson, introFor(lesson, entries));
   const modeId = home.studyMode();
@@ -127,6 +128,7 @@ async function begin(entries, { freeMode = false, kind = 'review', note = '', le
 const NEW_BATCH = 20;
 let reviewQueue = [];        // 這一批還沒做的（分輪用）
 let lastBatchIds = [];       // 剛做完那一輪的條目，供「再多練一些」使用
+let currentKind = 'review';  // 這一輪是什麼性質（決定掌握數算不算進今日任務）
 
 // ---------------------------------------------------------------------
 // 中斷續跑
