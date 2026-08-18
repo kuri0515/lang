@@ -460,5 +460,49 @@ console.log('\n【達標次數由題型決定】');
   chk('第三次才過', U.state().total === 3);
 }
 
+
+// =====================================================================
+// 【每一種輪次都要結束得了】
+//
+// 使用者回報「最後一個詞重複答題都正確了，但還是無法結束」。
+// 重現後是自由練習：連按 50 次「記得」仍在循環。
+//
+// 【我造成的】
+//   加 baseCard 是為了「一輪內評分多次不該讓費氏階梯爬多階」。
+//   但自由練習不套「連對 N 次」的規則，而全新卡的 baseCard 永遠是 null ——
+//   每次都算成「學習第一步」，於是永遠排回隊尾。
+//
+// 【為什麼既有測試全部沒抓到】
+//   我測過 spell/choice/flip、review/new、各種正確率 —— 就是沒測 freeMode。
+//   自由練習是「不動排程」的路徑，而我所有的排程測試都在驗排程有沒有動，
+//   自然不會走到它。這裡把「會不會結束」單獨列成一件事，
+//   對每一種組合都問一次。
+// =====================================================================
+console.log('\n【每一種輪次都要結束得了】');
+{
+  const newCard = null;
+  const oldCard = { state: 'review', interval_days: 3, ease_factor: 2.5,
+                    repetitions: 2, lapses: 0 };
+  const combos = [
+    [{ freeMode: true, kind: 'free' }, newCard, '自由練習 · 全新卡'],
+    [{ freeMode: true, kind: 'free' }, oldCard, '自由練習 · 學過的卡'],
+    [{ kind: 'new' }, newCard, '學新課 · 全新卡'],
+    [{ kind: 'review' }, oldCard, '複習 · 學過的卡'],
+    [{ kind: 'drill' }, oldCard, '回顧清單'],
+    [{ kind: 'review', criterion: 2 }, oldCard, '拼出來（連對兩次）'],
+  ];
+  for (const [opts, card, label] of combos) {
+    for (const [rating, how] of [[RATING.GOOD, '一路答對'], [RATING.EASY, '一路很簡單']]) {
+      let done = false, n = 0;
+      const S = createSession({ save: async () => {}, onChange: () => {},
+                                onFinish: () => { done = true; } });
+      S.start([{ item: { id: 'a', ko: 'あ', zh: 'a' }, direction: 'zh2ko', card: card && { ...card } }],
+              { mode: 'flip', ...opts });
+      while (n < 60 && !done) { S.grade(rating); n++; }
+      chk(`${label} · ${how} 會結束`, done, done ? `${n} 題` : '連答 60 次仍在循環');
+    }
+  }
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);

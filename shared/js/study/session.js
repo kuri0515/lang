@@ -149,7 +149,18 @@ export function createSession({ save, onChange, onFinish, onError }) {
       const hits = rating >= RATING.GOOD ? (entry.hits || 0) + 1 : 0;
       const reached = !free && hits >= criterion;
 
-      let next = schedule(entry.baseCard || {}, entry.firstRating);
+      // ★ 自由練習用逐次更新的卡，不用 baseCard。
+      //
+      //   baseCard 存在的理由是「一輪內評分多次不該讓費氏階梯爬多階」——
+      //   而自由練習根本不寫排程，那個問題不存在。
+      //   反過來，在自由練習用 baseCard 會出大事：
+      //   全新卡的 baseCard 永遠是 null，每次都算成「學習第一步」，
+      //   於是無論答對幾次都排回隊尾 —— 這一輪永遠結束不了。
+      //   （實測：連按 50 次「記得」仍在循環。使用者的回報是「無法結束」。）
+      //
+      //   一般的輪次要用 baseCard；自由練習要用當下的卡，讓學習步驟真的前進。
+      const base = free ? (entry.card || {}) : (entry.baseCard || {});
+      let next = schedule(base, entry.firstRating);
       if (reached && next.state === 'learning') {
         // 達標 → 從上面算出的狀態畢業。
         // 第一次就答錯的卡，lapses 已經在上一步記下來了，這一步不會抹掉它，
