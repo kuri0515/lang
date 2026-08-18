@@ -358,5 +358,34 @@ console.log('\n【每日複習任務】');
   localStorage.removeItem(key);
 }
 
+
+// =====================================================================
+// 【詞庫卡片：只有一個詞庫時不顯示】
+//
+// 首頁原本有三個「開始學」的入口：主按鈕、發音課程、詞庫。
+// 三個都指向同一批內容時，使用者要先看懂三者的差別才敢按 ——
+// 而它們其實沒有差別。多一個入口不是多一個選擇，是多一次猶豫。
+//
+// 用數量判斷而不是站台開關：一個詞庫時主按鈕本來就會落到 onNewDeck，
+// 內容不會進不去；兩個以上才真的需要清單來選。
+// 日文站現在只有 kana-01，韓文站有三個 —— 同一段程式，兩種正確結果。
+// =====================================================================
+console.log('\n【詞庫卡片】');
+{
+  const home = await import(SHARED + '/js/views/home.js');
+  const deck = (n) => Array.from({ length: n }, (_, i) => ({ id: 'd' + i, title: '詞庫' + i }));
+  const card = $('deck-card');
+
+  await home.renderDecks(deck(1));
+  chk('只有一個詞庫 → 整張卡片隱藏', card.classList.contains('hidden'));
+
+  await home.renderDecks(deck(3));
+  chk('三個詞庫 → 卡片出現（否則另外兩個進不去）', !card.classList.contains('hidden'));
+  chk('三個都列出來', $('deck-list').querySelectorAll('[data-deck]').length === 3);
+
+  await home.renderDecks(deck(1));
+  chk('回到一個 → 又隱藏起來', card.classList.contains('hidden'));
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);

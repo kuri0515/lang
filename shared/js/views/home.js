@@ -308,7 +308,21 @@ export function renderSuggestion(dueCount, today, decks, carried = 0) {
   primaryAction = null;
 }
 
-async function renderDecks(decks) {
+export async function renderDecks(decks) {
+  // ★ 只有一個詞庫時整張卡片不顯示。
+  //
+  //   首頁原本有三個「開始學」的入口：最上面的主按鈕、發音課程、詞庫。
+  //   三個都指向同一批內容時，使用者要先看懂三者的差別才敢按 ——
+  //   而它們其實沒有差別。多一個入口不是多一個選擇，是多一次猶豫。
+  //
+  //   為什麼是「數量」而不是站台開關：一個詞庫時，主按鈕本來就會
+  //   落到 onNewDeck(firstDeckId)，不會有內容進不去；
+  //   兩個以上才真的需要一份清單來選。
+  //   用數量判斷，日後任何一站加了第二個詞庫，卡片自己會回來。
+  const card = $('deck-card');
+  if (decks.length <= 1) { card?.classList.add('hidden'); return; }
+  card?.classList.remove('hidden');
+
   if (!decks.length) {
     $('deck-list').innerHTML = emptyState('📦', '還沒有詞庫<br>到「我的 → 批次匯入」貼上你的詞表');
     return;

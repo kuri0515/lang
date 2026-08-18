@@ -19,7 +19,7 @@
 
   <!-- ↓ 由 shared/scripts/build-sites.mjs 從真實的 import 圖產生，不要手改。
        沒有它的話瀏覽器要一層一層發現模組，實測 4 層 × 每次往返。 -->
-<meta name="build" content="c313c39d">
+<meta name="build" content="4d3b6362">
   <link rel="modulepreload" href="https://esm.sh/@supabase/supabase-js@2" crossorigin>
   <link rel="modulepreload" href="main.js">
   <link rel="modulepreload" href="../shared/js/core/lang.js">
@@ -163,7 +163,9 @@
       </div>
     </details>
 
-    <div class="card">
+    <!-- 只有一個詞庫時整張卡片會被隱藏（見 views/home.js 的 renderDecks）——
+         三個指向同一批內容的入口，不是三個選擇，是三次猶豫。 -->
+    <div class="card hidden" id="deck-card">
       <h2>詞庫</h2>
       <div id="deck-list"><p class="muted nomargin">載入中…</p></div>
     </div>

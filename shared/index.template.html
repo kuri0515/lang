@@ -133,7 +133,9 @@
       </div>
     </details>
 
-    <div class="card">
+    <!-- 只有一個詞庫時整張卡片會被隱藏（見 views/home.js 的 renderDecks）——
+         三個指向同一批內容的入口，不是三個選擇，是三次猶豫。 -->
+    <div class="card hidden" id="deck-card">
       <h2>詞庫</h2>
       <div id="deck-list"><p class="muted nomargin">載入中…</p></div>
     </div>
