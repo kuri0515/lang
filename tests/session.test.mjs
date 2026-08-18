@@ -426,5 +426,39 @@ console.log('\n【中斷續跑】');
       B.resume(null) === false && B.resume({ queue: [] }) === false);
 }
 
+
+// =====================================================================
+// 【達標次數由題型決定】
+//
+// 「連對三次」的理由是「認得」很廉價：四選一答對可能是猜的，
+// 翻卡自評答對可能是自己放水，單次不足為證。
+// 但拼對一次是強得多的證據 —— 沒有人能靠猜拼出一個沒學過的詞。
+//
+// 而拼出來的成本高得多：實測一輪 10 個詞要點
+//   正確率 100% → 123 次、80% → 189 次、50% → 358 次
+//   （對照：四選一每題一下，一輪 30–87 次）
+// 三次乘在一個本來就昂貴的題型上，最痛的那一格是 358 下 —— 那不是練習。
+// =====================================================================
+console.log('\n【達標次數由題型決定】');
+{
+  const one = () => [{ item: { id: 'q', ko: 'あ', zh: 'a' }, direction: 'zh2ko',
+                       card: { state: 'review', interval_days: 3, ease_factor: 2.5,
+                               repetitions: 2, lapses: 0 } }];
+  const T = createSession({ save: async () => {}, onChange: () => {}, onFinish: () => {} });
+  T.start(one(), { mode: 'spell', kind: 'review', criterion: 2 });
+  T.grade(RATING.GOOD);
+  chk('拼出來：第一次還不算過', T.state().total === 2);
+  T.grade(RATING.GOOD);
+  chk('★ 拼出來：連對兩次就過', T.state().total === 2,
+      '拼對一次的證據力遠高於選對一次，第三次幾乎不帶新資訊');
+
+  const U = createSession({ save: async () => {}, onChange: () => {}, onFinish: () => {} });
+  U.start(one(), { mode: 'choice', kind: 'review' });   // 不傳 criterion → 預設 3
+  U.grade(RATING.GOOD); U.grade(RATING.GOOD);
+  chk('其他題型仍是三次（沒傳就用預設）', U.state().total === 3);
+  U.grade(RATING.GOOD);
+  chk('第三次才過', U.state().total === 3);
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);

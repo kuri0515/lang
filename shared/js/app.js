@@ -85,7 +85,11 @@ async function begin(entries, { freeMode = false, kind = 'review', note = '', le
   const modeId = home.studyMode();
   if (needsPool(modeId)) await ensurePool();
 
-  session.start(entries, { freeMode, mode: modeId, kind });
+  // 達標次數由題型決定：產出型的「拼出來」只要兩次 ——
+  // 拼對一次的證據力遠高於選對一次，而它的成本也高得多
+  // （實測一輪 123–358 次點擊，對照四選一的 30–87 次）。
+  session.start(entries, { freeMode, mode: modeId, kind,
+                           criterion: getMode(modeId).criterion });
   const mode = getMode(modeId);
   // 兩道過濾分開報，因為兩種空結果要給的建議完全不同：
   //   類型過空 → 「這批沒有句子」，該換的是類型或內容

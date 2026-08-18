@@ -47,6 +47,7 @@ export function createSession({ save, onChange, onFinish, onError }) {
   // 這一輪達到「連續答對三次」的條目 id。用 Set 而不是計數 ——
   // 同一張卡達標後若又被排回（不會，但防呆），不該重複計入。
   const mastered = new Set();
+  let criterion = ROUND_CRITERION;
   let queue = [];
   let idx = 0;
   let free = false;              // 自由練習：只記錄不動排程
@@ -83,13 +84,23 @@ export function createSession({ save, onChange, onFinish, onError }) {
     get queue() { return queue; },
 
     /** 開始一輪。entries: [{item, direction, card}] */
-    start(entries, { freeMode = false, mode = 'flip', kind = 'review' } = {}) {
+    /**
+     * @param criterion 一輪之內要連續答對幾次才算掌握。
+     *
+     *   由呼叫端傳進來，不從題型註冊表查 —— session 是底層，
+     *   而 modes/index.js 在模組求值時就會呼叫 lang()，
+     *   從這裡 import 它會讓「還沒 setLang 就載入 session」的情境直接炸掉
+     *   （測試就是這樣紅的）。層次顛倒的代價往往不是設計不美，是載入順序陷阱。
+     */
+    start(entries, { freeMode = false, mode = 'flip', kind = 'review',
+                     criterion: crit = ROUND_CRITERION } = {}) {
       flush();
       queue = entries;
       idx = 0;
       free = freeMode;
       modeId = mode;
       activity = kind;
+      criterion = crit;
       sessionId = (globalThis.crypto?.randomUUID?.()) || null;
       stats = { n: 0, correct: 0, mastered: 0 };
       mastered.clear();
@@ -136,7 +147,7 @@ export function createSession({ save, onChange, onFinish, onError }) {
       if (entry.firstRating === undefined) entry.firstRating = rating;
 
       const hits = rating >= RATING.GOOD ? (entry.hits || 0) + 1 : 0;
-      const reached = !free && hits >= ROUND_CRITERION;
+      const reached = !free && hits >= criterion;
 
       let next = schedule(entry.baseCard || {}, entry.firstRating);
       if (reached && next.state === 'learning') {
