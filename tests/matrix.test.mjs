@@ -169,5 +169,86 @@ console.log(`【組合矩陣】（站台：${LANG.code}，${KINDS.length} 種輪
     drift.slice(0, 3).join('、') || '不一樣的話，表示有狀態沒有存進快照');
 }
 
+
+// ── ⑤ 今天修過的每一個 bug，都不能再回來 ────────────────────
+//
+// 一天之內修了六個，全部是「不會報錯、只會靜靜做錯事」的形狀。
+// 逐一寫成斷言，因為這種 bug 的共同點是：沒有人會主動去看它有沒有回來。
+{
+  const back = [];
+  const mk = (onFinish) => createSession({ save: async () => {}, onChange: () => {}, onFinish });
+
+  // ① 自由練習永遠結束不了（baseCard × free）
+  {
+    let done = false, n = 0;
+    const S = mk(() => { done = true; });
+    S.start([{ item: { id: 'a', ko: 'あ', zh: 'a' }, direction: 'zh2ko', card: null }],
+            { freeMode: true, mode: 'flip', kind: 'free' });
+    while (n < 50 && !done) { S.grade(RATING.GOOD); n += 1; }
+    if (!done) back.push('自由練習又結束不了了');
+  }
+
+  // ② 續跑後達標次數掉回預設（快照沒存 criterion）
+  {
+    const A = mk(() => {});
+    A.start([{ item: { id: 'b', ko: 'あ', zh: 'a' }, direction: 'zh2ko', card: { ...OLD } }],
+            { mode: 'spell', kind: 'review', criterion: 2 });
+    A.grade(RATING.GOOD);
+    const B = mk(() => {});
+    B.resume(JSON.parse(JSON.stringify(A.snapshot())));
+    let more = 0;
+    while (more < 10 && B.state().idx < B.state().total) { B.grade(RATING.GOOD); more += 1; }
+    if (more !== 1) back.push(`續跑後達標次數變了（還要 ${more} 次，應該是 1 次）`);
+  }
+
+  // ③ 先答錯再連對，遺忘被抹掉（用最後一次評分排程）
+  {
+    let last = null, done = false, n = 0;
+    const S = createSession({ save: async (p2) => { last = p2; }, onChange: () => {},
+                              onFinish: () => { done = true; } });
+    S.start([{ item: { id: 'c', ko: 'あ', zh: 'a' }, direction: 'zh2ko', card: { ...OLD } }],
+            { mode: 'flip', kind: 'review' });
+    S.grade(RATING.AGAIN);
+    while (n < 50 && !done) { S.grade(RATING.GOOD); n += 1; }
+    if ((last?.next?.lapses ?? 0) < 1) back.push('遺忘又被後面的操練抹掉了');
+  }
+
+  // ④ 自由練習產生掌握數（會讓人靠自由練習解鎖新課）
+  //
+  //   ★ 這一條我用兩種方式都無法讓它報警：自由練習被兩道獨立的鎖保護
+  //     （!free 守衛，加上 hits 在自由練習下根本不累加），一行改不掉。
+  //     所以它目前是「原則上可證偽、實際上沒驗過」——
+  //     留著是因為它斷言的是真的不變量而且零成本，
+  //     但不該把它算進「已驗證會報警」的那幾條。
+  {
+    let st = null, n = 0;
+    const S = mk((s2) => { st = s2; });
+    S.start([{ item: { id: 'd', ko: 'あ', zh: 'a' }, direction: 'zh2ko', card: { ...OLD } }],
+            { freeMode: true, mode: 'flip', kind: 'free' });
+    while (n < 50 && !st) { S.grade(RATING.GOOD); n += 1; }
+    if ((st?.mastered ?? 0) > 0) back.push('自由練習又會產生掌握數了');
+  }
+
+  // ⑤ 快照沒帶題型 → 回去時無從判斷該不該接
+  {
+    const S = mk(() => {});
+    S.start([{ item: { id: 'e', ko: 'あ', zh: 'a' }, direction: 'zh2ko', card: { ...OLD } }],
+            { mode: 'spell', kind: 'review' });
+    S.grade(RATING.GOOD);
+    if (S.snapshot().modeId !== 'spell') back.push('快照不記得自己是哪個題型');
+  }
+
+  // ★ 傳 back.length === 0，不能傳 back。
+  //   這一支的 chk 吃的是布林，而非空陣列是 truthy ——
+  //   我第一版直接傳陣列，於是 bug 回來時它照樣顯示 ✅，
+  //   而訊息裡明明寫著「自由練習又結束不了了」。
+  //   一個在報告問題的同時顯示通過的測試，比沒有測試更危險：
+  //   它讓人以為那裡有人在看。
+  //   （同樣的簽章誤用我在 arch.test.mjs 也犯過一次 ——
+  //     那一支的 chk 吃的是問題陣列，兩支剛好相反。）
+  chk(`今天修過的 bug 都沒有回來（5 個）`, back.length === 0, back.join('、')
+    || '這種 bug 不會報錯，也沒有人會主動去看它有沒有回來');
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);
