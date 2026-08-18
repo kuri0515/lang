@@ -249,6 +249,36 @@ console.log('\n【今日畢業：新卡在本輪內循環到會為止】');
                       repetitions: 3, lapses: 0 } }], { mode: 'flip', kind: 'review' });
   T6.grade(RATING.EASY); T6.grade(RATING.EASY); T6.grade(RATING.EASY);
   T6.quit();
+  // ★ 排程由「這一輪的第一次作答」決定，不是最後一次。
+  //   間隔重複量的是「隔了這麼多天還記不記得」，那個答案在第一次就揭曉；
+  //   後面兩次是操練 —— 兩分鐘前才看過答案，再答對不代表隔八天也記得。
+  //
+  //   用最後一次的話：忘了一張 8 天的卡、再連對三次 → 13 天且 lapses=0，
+  //   跟從來沒忘過一模一樣。那個詞會被排到 13 天後，
+  //   而你剛剛才想不起來它。不會報錯，也看不出來。
+  const outcome = (card, seq) => {
+    let last = null;
+    const S = createSession({ save: async (p) => { last = p; },
+                              onChange: () => {}, onFinish: () => {} });
+    S.start([{ item: { id: 'z', ko: 'う', zh: 'u' }, direction: 'ko2zh', card }],
+            { mode: 'flip', kind: 'review' });
+    seq.forEach((r) => S.grade(r));
+    S.quit();
+    return last.next;
+  };
+  const eight = { state: 'review', interval_days: 8, ease_factor: 2.5,
+                  repetitions: 4, lapses: 0 };
+  const G = RATING.GOOD;
+  const ok = outcome(eight, [G, G, G]);
+  const lapsed = outcome(eight, [RATING.AGAIN, G, G, G]);
+  const hard = outcome(eight, [RATING.HARD, G, G, G]);
+  chk('一路答對：8 → 13 天', ok.interval_days === 13 && ok.lapses === 0);
+  chk('★ 先忘了再連對三次：回到 1 天且記下遺忘',
+      lapsed.interval_days === 1 && lapsed.lapses === 1,
+      `實得 ${lapsed.interval_days} 天、lapses=${lapsed.lapses}`
+      + '（若是 13 天／lapses=0，表示那次遺忘被後面的操練抹掉了）');
+  chk('先有點難再連對三次：原地 8 天', hard.interval_days === 8);
+
   chk('★ 一輪內評分三次，間隔只前進一次', T6.last?.next.interval_days === 3,
       `1 天的卡按三次「很簡單」應該是 3 天（前進兩階一次），`
       + `不是 1→3→8→21。實得 ${T6.last?.next.interval_days} 天`);

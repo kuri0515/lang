@@ -123,11 +123,28 @@ export function createSession({ save, onChange, onFinish, onError }) {
       //
       //   改成每次都從 baseCard 算，最後一次評分的結果就是這一輪的結論。
       if (entry.baseCard === undefined) entry.baseCard = entry.card || null;
-      // 先算這次答對後的連續次數，再決定要不要讓它畢業
+      // ★ 排程由「這一輪的第一次作答」決定，不是最後一次。
+      //
+      //   間隔重複量的是「隔了這麼多天，你還記不記得」——
+      //   那個答案在第一次作答就揭曉了。後面兩次是操練，不是測驗：
+      //   兩分鐘前才看過答案，再答對不代表隔八天也記得。
+      //
+      //   先前用最後一次，結果是：忘了一張 8 天的卡、再連對三次，
+      //   得到 13 天且 lapses=0 —— 跟從來沒忘過一模一樣。
+      //   那次遺忘被完全抹掉，而抹掉的後果是它會被排到 13 天後，
+      //   一個你剛剛才想不起來的詞。這不會報錯，也看不出來。
+      if (entry.firstRating === undefined) entry.firstRating = rating;
+
       const hits = rating >= RATING.GOOD ? (entry.hits || 0) + 1 : 0;
       const reached = !free && hits >= ROUND_CRITERION;
-      let next = schedule(entry.baseCard || {}, rating, new Date(),
-                          { forceGraduate: reached });
+
+      let next = schedule(entry.baseCard || {}, entry.firstRating);
+      if (reached && next.state === 'learning') {
+        // 達標 → 從上面算出的狀態畢業。
+        // 第一次就答錯的卡，lapses 已經在上一步記下來了，這一步不會抹掉它，
+        // 只是讓它結束重學、回到階梯第一階（1 天）。
+        next = schedule(next, RATING.GOOD, new Date(), { forceGraduate: true });
+      }
 
       // ★ 連續答對 ROUND_CRITERION 次才算學會。
       //
@@ -175,6 +192,7 @@ export function createSession({ save, onChange, onFinish, onError }) {
       //   而且重排是加到隊尾，中間隔著其他題，不會變成連續轟炸。
       if (next.state === 'learning') {
         queue.push({ ...entry, hits: entry.hits, baseCard: entry.baseCard,
+                   firstRating: entry.firstRating,
                    card: { ...(entry.card || {}), ...next } });
       }
 
