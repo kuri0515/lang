@@ -551,5 +551,31 @@ window.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('pagehide', () => saveResume({ toCloud: true }));
 
+// ---------------------------------------------------------------------
+// 清掉沒有站台前綴的舊鍵（一次性）
+//
+// 這些鍵是 2026-08-18 之前寫下的，兩站共用同一格 ——
+// 於是日文站會讀到韓文站的學習佇列（使用者回報「日文站串了韓文站的內容」）。
+// 程式已經改用帶前綴的鍵，但**使用者瀏覽器裡的舊資料還在**，
+// 而舊版的 app.js 還會在快取裡待上十分鐘（max-age=600）。
+// 那段時間內舊碼仍會讀到舊鍵，症狀不會馬上消失。
+//
+// 所以主動刪掉。刪掉的代價只是「那一輪要重做」，
+// 而留著的代價是「日文站上出現韓文單字」—— 後者嚴重得多。
+//
+// ★ 不刪 'kr.theme'：韓文站現在的正式鍵就是這個字串（前綴剛好是 kr）。
+//   刪掉會把韓文站使用者的佈景設定清空。
+(() => {
+  try {
+    const legacy = ['session-resume-v1', 'lesson-intro-open'];
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (legacy.includes(k) || /^mastered-\d{4}-\d{2}-\d{2}$/.test(k)) {
+        localStorage.removeItem(k);
+      }
+    }
+  } catch { /* 隱私模式：沒有舊資料要清，也不該因此擋住啟動 */ }
+})();
+
 auth.onChange(onUser);
 (async () => { await onUser(await auth.currentUser()); })();
