@@ -172,5 +172,59 @@ console.log('\n【情境對話的渲染】');
   }
 }
 
+// =====================================================================
+// 【詞庫與學習歷史的渲染】
+//
+// 這兩個畫面從來沒有被渲染測試過 —— 而上一輪替漢字補標讀音時，
+// 改的正是它們。當時只單獨驗了 wordHTML() 這支函式回傳什麼，
+// 沒有真的把畫面渲染出來看。
+//
+// 「函式對」與「畫面對」是兩件事：函式回傳 <ruby>，
+// 呼叫端只要多包一層 esc() 就會把標籤原樣印在畫面上 ——
+// 那個錯誤在情境對話已經犯過一次，靠肉眼看畫面才發現。
+// =====================================================================
+console.log('\n【詞庫與學習歷史的渲染】');
+{
+  const browse = await import(SHARED + '/js/views/browse.js');
+  // deps 要給齊 —— 少一個（例如 user()）會在 render 的 try 裡被吞掉，
+  // 畫面停在骨架，看起來像「沒有資料」而不是「測試沒接好」。
+  browse.initBrowse({
+    user: () => ({ id: 'u1' }), isAdmin: () => false,
+    onStudy: () => {}, onEdit: () => {}, onStudyTag: () => {},
+    onPractice: () => {}, onStudyScene: () => {},
+  });
+  await browse.open();
+
+  const list = $('b-list');
+  chk(`詞庫有渲染出條目（${list.children.length} 列）`, list.children.length > 0);
+
+  // 沒有把 HTML 當成文字印出來 —— 雙重 esc() 的典型症狀
+  chk('沒有把 <ruby> 標籤印成文字', !/&lt;ruby/.test(list.innerHTML));
+
+  const kanji = items.filter((x) => /\[/.test(x.hanja || '') && x.item_type === 'word');
+  if (!kanji.length) {
+    console.log('  ⏭  這份樣本沒有帶讀音的單字');
+  } else {
+    chk(`詞庫裡的漢字有標讀音（樣本 ${kanji.length} 條）`,
+      list.querySelectorAll('ruby').length > 0,
+      `渲染出 ${list.querySelectorAll('ruby').length} 個 ruby`);
+  }
+
+  // hanja 欄兩站裝的東西不同，所以這一條要分兩個方向驗，
+  // 而且兩邊都必須是「真的可能失敗」的檢查 ——
+  // 原本韓文站那一支寫成恆真（三元運算子的 else 直接給 true），
+  // 綠燈只代表它跑過，不代表它驗過任何東西。
+  const hanjaShown = list.innerHTML.includes('· 漢 ');
+  if (LANG.rubyFromHanja) {
+    // 日文站：hanja 是注音原料，印出來會變成「· 漢 駅[えき]は…」
+    chk('日文站不把注音原料當漢字詞源印出來', !hanjaShown);
+  } else {
+    // 韓文站：hanja 是漢字詞源（학교 → 學校），對中文母語者是最大的紅利，該印
+    const withHanja = items.filter((x) => x.hanja && x.item_type === 'word');
+    if (!withHanja.length) console.log('  ⏭  這份樣本沒有標漢字詞源的單字');
+    else chk(`韓文站有印出漢字詞源（樣本 ${withHanja.length} 條）`, hanjaShown);
+  }
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);
