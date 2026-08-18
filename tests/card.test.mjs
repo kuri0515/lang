@@ -240,13 +240,18 @@ console.log('\n【詞庫與學習歷史的渲染】');
 // =====================================================================
 console.log('\n【複習分輪】');
 {
-  study.renderDone({ n: 20, correct: 17 }, false, '', 55);
+  // 場景一律以「輪」為單位，不用隨手挑的數字 ——
+  // 寫死 55 的話，一輪的題數改了測試還是綠的，但它驗的已經不是真的情境。
+  const { ROUND_SIZE: R } = await import(SHARED + '/js/study/session.js');
+  const done = { n: R, correct: R - 3 };          // 做完一輪，錯三題
+
+  study.renderDone(done, false, '', R * 5 + 5);   // 還剩五輪半
   const again = $('btn-again');
   chk('還有剩時出現「再來一輪」', !again.classList.contains('hidden'));
-  chk('按鈕上寫著真實剩餘量', /55/.test(again.textContent), again.textContent);
+  chk('按鈕上寫著真實剩餘量', again.textContent.includes(String(R * 5 + 5)), again.textContent);
   chk('還有剩時「返回」退居次要', !$('btn-back').classList.contains('primary'));
 
-  study.renderDone({ n: 20, correct: 19 }, false, '', 0);
+  study.renderDone(done, false, '', 0);           // 清空
   chk('清空後不再出現「再來一輪」', again.classList.contains('hidden'));
   chk('清空後「返回」回到主要按鈕', $('btn-back').classList.contains('primary'));
 }
@@ -282,17 +287,19 @@ console.log('\n【順延的可見性】');
   chk('一輪以內不提分輪', !/做不完沒關係/.test(box.textContent), box.textContent.slice(0, 30));
 
   // ③ 超過兩輪：要講清楚做不完會怎樣，否則很多人直接關掉
-  home.renderSuggestion(63, { reviewed: 0 }, [], 12);
-  chk('大量時說明分輪與順延', /做不完沒關係/.test(box.textContent));
+  // 六輪的量、其中一輪是順延來的
+  const many = ROUND_SIZE * 6;
+  home.renderSuggestion(many, { reviewed: 0 }, [], ROUND_SIZE);
+  chk(`大量（${many}＝六輪）時說明分輪與順延`, /做不完沒關係/.test(box.textContent));
   chk('★ 明說間隔不會因順延而變長', /間隔不會因此變長/.test(box.textContent),
       '這是使用者最可能誤解的地方：以為拖到明天會被懲罰');
-  chk('顯示順延的條數', /12/.test(box.textContent));
+  chk('顯示順延的條數', box.textContent.includes(String(ROUND_SIZE)));
 
   // ④ 順延過半 = 學新課的速度超過負荷，要直接講
-  home.renderSuggestion(63, { reviewed: 0 }, [], 40);
+  home.renderSuggestion(many, { reviewed: 0 }, [], ROUND_SIZE * 4);   // 順延四輪＝過半
   chk('★ 順延過半時建議暫停新課', /暫停學新課/.test(box.textContent),
       '積壓的成因是新課太快，不講的話學習者只會更用力複習');
-  home.renderSuggestion(63, { reviewed: 0 }, [], 12);
+  home.renderSuggestion(many, { reviewed: 0 }, [], ROUND_SIZE);       // 順延一輪＝沒過半
   chk('沒過半就不給那句建議', !/暫停學新課/.test(box.textContent));
 
   // ★ 畫面上寫的題數必須等於實際切輪用的題數。
