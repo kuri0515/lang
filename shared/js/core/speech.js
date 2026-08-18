@@ -137,7 +137,18 @@ function speakTTS(text, { rate: override, slow = false } = {}) {
       + 'iPhone：設定 → 輔助使用 → 朗讀內容 → 聲音；'
       + 'Mac：系統設定 → 輔助使用 → 朗讀內容 → 系統聲音 → 管理聲音。');
   }
-  speechSynthesis.cancel();                    // 打斷上一句，避免排隊堆積
+  // ★ 只有真的在播才取消。
+  //
+  //   原本每次都無條件 cancel()。Chrome 與 Safari 有一個已知的狀況：
+  //   cancel() 之後在同一個 tick 內 speak()，那句會被整個丟掉 ——
+  //   結果是「按了完全沒有聲音」，而且不報錯、在無頭測試裡也重現不出來
+  //   （替身不會模擬那個競態）。
+  //   沒有東西在播的時候本來就不需要取消，把那個競態拿掉。
+  if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
+  // Chrome 有時會卡在 paused（切分頁、系統休眠之後），
+  // 卡住時 speak() 進得去佇列但不會出聲。
+  if (speechSynthesis.paused) speechSynthesis.resume();
+
   const u = new SpeechSynthesisUtterance(text);
   u.lang = L.ttsLang;
   const base = override ?? autoRate(text, rate());

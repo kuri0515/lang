@@ -10,7 +10,10 @@ export function initVoiceUI() {
     if (!list.length) {
       sel.innerHTML = `<option>（系統沒有${lang().langLabel}語音）</option>`;
       sel.disabled = true;
-      $('voice-test').disabled = true;
+      // ★ 試聽鈕刻意不停用。
+      //   灰掉的按鈕只說「不能按」，不說「為什麼」——
+      //   而按下去會得到一句完整的說明（要去系統的哪裡裝語音）。
+      //   能問出原因的按鈕，比一個按不動的按鈕有用。
       return;
     }
     const cur = speech.currentVoice();

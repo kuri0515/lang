@@ -707,6 +707,19 @@ console.log('\n【朗讀失敗要說出來】');
   chk('utterance 出錯時會說出來', /onerror/.test(src));
   chk('★ 只講一次', /let warned = false/.test(src),
       '一輪要唸三十到八十次，每次都彈訊息會把畫面洗掉');
+
+  // ★ 不要無條件 cancel()。
+  //   Chrome 與 Safari 有一個已知狀況：cancel() 之後在同一個 tick 內 speak()，
+  //   那句會被整個丟掉 —— 結果是「按了完全沒有聲音」，
+  //   而且不報錯、在無頭測試裡也重現不出來（替身不模擬那個競態）。
+  chk('★ 只有真的在播才取消', /speaking \|\| speechSynthesis\.pending/.test(src),
+      '沒有東西在播時取消，會讓緊接著的 speak 被丟掉');
+  chk('卡在 paused 時會恢復', /paused\) speechSynthesis\.resume/.test(src),
+      'Chrome 切分頁或系統休眠後會卡住，卡住時 speak 進得去佇列但不出聲');
+
+  const vsrc = fs.readFileSync(SHARED + '/js/views/voice.js', 'utf8');
+  chk('★ 沒有語音時試聽鈕不停用', !/voice-test'\)\.disabled = true/.test(vsrc),
+      '灰掉的按鈕只說「不能按」，不說為什麼；按得下去才問得出原因');
 }
 
 console.log('\n【換頁與朗讀】');
