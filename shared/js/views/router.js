@@ -13,8 +13,16 @@ import * as speech from '../core/speech.js';
 
 const VIEWS = ['view-auth', 'view-home', 'view-study', 'view-done',
                'view-browse', 'view-history', 'view-me', 'view-import'];
-// 學習中隱藏 Tab，避免誤觸中斷（要離開請按 ✕）
-const NO_TAB = ['view-auth', 'view-study'];
+// 只有登入頁不顯示分頁列 —— 沒登入的話每個分頁都是空的，
+// 給了也只能點到空畫面。
+//
+// ★ 學習中原本也隱藏，理由是「避免誤觸中斷」。那個理由已經不成立：
+//   續跑做好之後，離開不會弄丟進度（每答一題就存本機＋雲端）。
+//   而隱藏的代價是真的：學到一半想查個詞、想看看記錄，都得先結束這一輪。
+//
+//   打開的前提是「回得去」—— 首頁會顯示「繼續這一輪」，見 views/home.js。
+//   沒有那個入口就打開分頁列，等於讓人把自己鎖在外面。
+const NO_TAB = ['view-auth'];
 // 可透過網址還原的畫面
 const HASH = { home: 'view-home', browse: 'view-browse', history: 'view-history',
                me: 'view-me', import: 'view-import' };

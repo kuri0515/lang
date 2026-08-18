@@ -357,6 +357,19 @@ export function renderSuggestion(dueCount, today, decks, carried = 0) {
   box.classList.remove('done');
   firstDeckId = decks[0]?.id ?? null;
 
+  // ★ 有做到一半的一輪就先給回去的路。
+  //   分頁列在學習中也顯示了（見 router.js），所以人隨時可能離開 ——
+  //   離開不會弄丟進度（每答一題就存），但沒有入口就等於把自己鎖在外面。
+  //   這一條排在最前面：它是此刻最該做的事，其餘建議都排在它後面。
+  const left = deps?.roundLeft?.() ?? 0;
+  if (left > 0) {
+    box.innerHTML = `這一輪還有 <b>${left}</b> 題沒做完。`;
+    btn.textContent = `繼續這一輪（還有 ${left} 題）`;
+    btn.disabled = false;
+    primaryAction = () => deps.onResumeRound();
+    return;
+  }
+
   if (dueCount > 0) {
     // 超過兩輪就把「做不完沒關係」講清楚 ——
     // 看到 63 而不知道可以分次做，很多人會直接關掉。

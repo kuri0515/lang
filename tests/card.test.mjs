@@ -615,5 +615,49 @@ console.log('\n【題型選單】');
   chk('預設選第一個', opts[0]?.checked === true);
 }
 
+
+// =====================================================================
+// 【離開再回來要接得上】
+//
+// 學習中的分頁列打開之後，人隨時可能離開（查個詞、看看記錄）。
+// 離開不會弄丟進度 —— 每答一題就存本機＋雲端。
+// 但沒有回去的入口，等於把人鎖在外面：那一輪還在記憶體裡，
+// 卻沒有任何按鈕指向它。
+// =====================================================================
+console.log('\n【離開再回來要接得上】');
+{
+  const home = await import(SHARED + '/js/views/home.js');
+  const box = $('suggest');
+  const btn = $('btn-primary');
+  let resumed = 0;
+
+  home.initHome({
+    user: () => ({ id: 'u' }), isAdmin: () => false,
+    onStudyTag: () => {}, onRecall: () => {}, onReview: () => {},
+    onFree: () => {}, onNewDeck: () => {},
+    roundLeft: () => 7,
+    onResumeRound: () => { resumed += 1; },
+  });
+
+  home.renderSuggestion(30, { reviewed: 0 }, [], 0);
+  chk('★ 有做到一半的一輪 → 主按鈕變成「繼續」', /繼續這一輪/.test(btn.textContent),
+      btn.textContent);
+  chk('寫出還剩幾題', /7/.test(btn.textContent),
+      '不寫數字等於要人自己回想做到哪 —— 而他離開正是因為分心了');
+  btn.click();
+  chk('點下去回到那一輪', resumed === 1);
+
+  // 沒有進行中的一輪時，照常給原本的建議
+  home.initHome({
+    user: () => ({ id: 'u' }), isAdmin: () => false,
+    onStudyTag: () => {}, onRecall: () => {}, onReview: () => {},
+    onFree: () => {}, onNewDeck: () => {},
+    roundLeft: () => 0, onResumeRound: () => {},
+  });
+  home.renderSuggestion(30, { reviewed: 0 }, [], 0);
+  chk('沒有進行中的一輪就不顯示', !/繼續這一輪/.test(btn.textContent), btn.textContent);
+  void box;
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);

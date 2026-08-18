@@ -35,7 +35,16 @@ for (const v of views){ await show(v);
   if(vis.length!==1||vis[0]!==v){chk('切到 '+v,false,'可見='+vis); }
 }
 chk('八個視圖切換皆正確', true);
-await show('view-study'); chk('學習中隱藏 Tabbar', $('tabbar').classList.contains('hidden'));
+// ★ 學習中也顯示分頁列（2026-08-18 起）。
+//   原本隱藏是為了「避免誤觸中斷」，但續跑做好之後那個理由不成立了：
+//   離開不會弄丟進度（每答一題就存本機＋雲端）。
+//   而隱藏的代價是真的：學到一半想查個詞、想看看記錄，都得先結束這一輪。
+await show('view-study');
+chk('★ 學習中也顯示分頁列', !$('tabbar').classList.contains('hidden'),
+    '續跑做好之後，離開不再弄丟進度 —— 沒有理由把人關在這一頁');
+await show('view-auth');
+chk('只有登入頁不顯示', $('tabbar').classList.contains('hidden'),
+    '沒登入的話每個分頁都是空的，給了也只能點到空畫面');
 await show('view-home');  chk('首頁高亮對應 Tab', $('tabbar').querySelector('button.on')?.dataset.tab==='view-home');
 let entered=0; onEnter('view-me',()=>{entered++;}); await show('view-me');
 chk('onEnter 鉤子被呼叫', entered===1, '各畫面自行註冊進入行為，router 不認識它們');

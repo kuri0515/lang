@@ -378,6 +378,13 @@ initImporterAndAdmin();
 
 home.initHome({
   ...deps,
+  // 這一輪還剩幾題（0 = 沒有進行中的一輪）。
+  // 分頁列在學習中也顯示，所以要有一條回得去的路。
+  roundLeft: () => {
+    const st = session.state();
+    return st.total > 0 && st.idx < st.total ? st.total - st.idx : 0;
+  },
+  onResumeRound: () => { show('view-study'); study.render(session.state()); },
   onReview: startReview,
   onFree: () => startFree({}),
   onNewDeck: (deckId) => startNew(deckId),
