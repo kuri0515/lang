@@ -586,5 +586,31 @@ chk('localStorage 的鍵都經過 lsKey()（帶站台前綴）', bareKeys,
     '內容留在原本的模組、新分頁沒呼叫它 —— 結果是一張空卡片，而且不報錯');
 }
 
+// 【各畫面用到的 deps 回呼，app.js 必須真的提供】
+//
+// 畫面都用 deps.onXxx?.() 這種可選鏈呼叫 —— 漏接線時不會報錯，
+// 那顆按鈕就是靜靜地沒反應。而「按了沒反應」是使用者最難描述、
+// 我最難查的一種問題（今天在朗讀上花了一整輪，就是這個形狀）。
+//
+// 【為什麼比對要認簡寫屬性】
+//   deps 是 { user: () => user, isAdmin } —— isAdmin 是簡寫。
+//   只認 `name:` 的話會把它報成缺失，而那是誤報。
+//   我第一版就是這樣，一個誤報就足以讓人不再細看這份報告。
+{
+  const appSrc = fs.readFileSync(`${ROOT}/app.js`, 'utf8');
+  const provided = new Set([
+    ...[...appSrc.matchAll(/(\w+)\s*:/g)].map((m) => m[1]),        // name: value
+    ...[...appSrc.matchAll(/[{,]\s*(\w+)\s*[,}]/g)].map((m) => m[1]), // 簡寫屬性
+  ]);
+  const gaps = [];
+  for (const f of files.filter((f) => /\/views\/\w+\.js$/.test(f))) {
+    for (const m of new Set([...read(f).matchAll(/deps[?]?\.(\w+)/g)].map((x) => x[1]))) {
+      if (!provided.has(m)) gaps.push(`${rel(f)}: deps.${m}()`);
+    }
+  }
+  chk('畫面用到的 deps 回呼都有接線', gaps,
+    '可選鏈呼叫漏接時不報錯 —— 那顆按鈕只是靜靜地沒反應');
+}
+
 console.log(fails ? `\n❌ ${fails} 項約束被違反` : '\n✅ 所有架構約束通過');
 process.exit(fails ? 1 : 0);
