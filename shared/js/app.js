@@ -14,7 +14,7 @@ import * as content from './data/content.js';
 import * as progress from './data/progress.js';
 import { createSession, orderForDiscrimination, ROUND_SIZE } from './study/session.js';
 import { getMode, needsPool } from './study/modes/index.js';
-import { show, onEnter, initTabs, viewFromHash } from './views/router.js';
+import { show, onEnter, initTabs, viewFromHash, setTabResume } from './views/router.js';
 import { initTheme } from './views/theme.js';
 import { initVoiceUI } from './views/voice.js';
 import { initAuth } from './views/auth.js';
@@ -376,6 +376,17 @@ initEdits();
 initVoiceUI();
 initImporterAndAdmin();
 
+/** 回到進行中的那一輪。回傳是否真的有一輪可以回 */
+function resumeRound() {
+  const st = session.state();
+  if (!(st.total > 0 && st.idx < st.total)) return false;
+  show('view-study');
+  study.render(st);
+  return true;
+}
+// 分頁列的「首頁」：有進行中的一輪就回到那一輪
+setTabResume(resumeRound);
+
 home.initHome({
   ...deps,
   // 這一輪還剩幾題（0 = 沒有進行中的一輪）。
@@ -384,7 +395,7 @@ home.initHome({
     const st = session.state();
     return st.total > 0 && st.idx < st.total ? st.total - st.idx : 0;
   },
-  onResumeRound: () => { show('view-study'); study.render(session.state()); },
+  onResumeRound: () => resumeRound(),
   onReview: startReview,
   onFree: () => startFree({}),
   onNewDeck: (deckId) => startNew(deckId),
@@ -468,6 +479,9 @@ async function toggleRecall(item) {
 
 study.initStudy({
   session, getCtx: studyCtx, onQuit: () => show('view-done'),
+  // 離開但保留這一輪。用 push:false 讓網址留在 #home，
+  // 否則下次重新整理會回到學習頁而不是首頁。
+  onPark: () => show('view-home'),
   inRecallList: (id) => recallIds.has(id),
   onToggleRecall: toggleRecall,
 });

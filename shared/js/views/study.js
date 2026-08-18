@@ -88,6 +88,9 @@ export function initStudy({ session: s, getCtx, onQuit: quitCb,
   $('btn-next').onclick = () => session.go(1);
   $('btn-undo').onclick = () => session.undo();
   $('btn-quit').onclick = () => { session.quit(); onQuit?.(); };
+  // 🏠 只離開這一頁，不結束這一輪 —— 分頁列的「首頁」會再把人帶回來。
+  // 與 ✕ 分開是必要的：一輪 30–80 題，只是想看一眼首頁不該付結束的代價。
+  $('btn-park').onclick = () => deps.onPark?.();
 
   document.addEventListener('keydown', onKey);
   window.addEventListener('pagehide', () => session.flushNow());

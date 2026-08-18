@@ -19,7 +19,7 @@
 
   <!-- ↓ 由 shared/scripts/build-sites.mjs 從真實的 import 圖產生，不要手改。
        沒有它的話瀏覽器要一層一層發現模組，實測 4 層 × 每次往返。 -->
-<meta name="build" content="296ec997">
+<meta name="build" content="0227929e">
   <link rel="modulepreload" href="https://esm.sh/@supabase/supabase-js@2" crossorigin>
   <link rel="modulepreload" href="main.js">
   <link rel="modulepreload" href="../shared/js/core/lang.js">
@@ -441,7 +441,12 @@
   <!-- ══════════════ 學習中 ══════════════ -->
   <section id="view-study" class="hidden">
     <div class="study-head">
+      <!-- ✕ 結束本輪；🏠 只是離開這一頁，這一輪留著。
+           兩者必須分開：分頁列的「首頁」在有進行中的一輪時會跳回這裡，
+           少了這個出口就沒有路去真正的首頁，而「結束本輪」的代價太大
+           （一輪 30–80 題，只是想看一眼首頁不該付這個價）。 -->
       <button id="btn-quit" class="icon-btn" title="結束本輪">✕</button>
+      <button id="btn-park" class="icon-btn" title="離開但保留這一輪">🏠</button>
       <div class="progress"><i id="prog"></i></div>
       <span id="pos-label" class="muted"></span>
     </div>

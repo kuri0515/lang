@@ -67,8 +67,25 @@ export async function show(view, { push = true } = {}) {
 /** 重新整理後回到原本那一頁；沒有 hash 或指向學習中就回首頁 */
 export const viewFromHash = () => HASH[window.location.hash.slice(1)] || 'view-home';
 
+/**
+ * 有進行中的一輪時，「首頁」要回到那一輪。
+ * 由 app.js 注入 —— router 不該知道什麼是「一輪」。
+ */
+let resumeTab = null;
+export const setTabResume = (fn) => { resumeTab = fn; };
+
 export function initTabs() {
-  qsa('#tabbar button').forEach((b) => { b.onclick = () => show(b.dataset.tab); });
+  qsa('#tabbar button').forEach((b) => {
+    b.onclick = () => {
+      // ★ 學習中切到別的分頁再回「首頁」，要接上離開前的進度。
+      //   使用者的期待是「回到那個分頁就接上」，不是「回到首頁再按一次繼續」——
+      //   他離開正是因為分心，回來時不該再要求他想起自己在做什麼。
+      //
+      //   已經在學習頁時不攔截：否則按了沒反應，會以為壞了。
+      if (b.dataset.tab === 'view-home' && current !== 'view-study' && resumeTab?.()) return;
+      show(b.dataset.tab);
+    };
+  });
 
   // 瀏覽器上一頁／下一頁
   window.addEventListener('hashchange', () => {

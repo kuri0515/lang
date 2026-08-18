@@ -45,6 +45,40 @@ chk('★ 學習中也顯示分頁列', !$('tabbar').classList.contains('hidden')
 await show('view-auth');
 chk('只有登入頁不顯示', $('tabbar').classList.contains('hidden'),
     '沒登入的話每個分頁都是空的，給了也只能點到空畫面');
+
+// ★ 學習中切到別的分頁，再點「首頁」要接回那一輪。
+//   使用者的期待是「回到那個分頁就接上」，不是「回到首頁再按一次繼續」——
+//   他離開正是因為分心，回來時不該再要求他想起自己在做什麼。
+{
+  const { setTabResume, initTabs: initT } = await import(SHARED + '/js/views/router.js');
+  let asked = 0, inRound = true;
+  setTabResume(() => { asked += 1; return inRound; });
+  initT();
+  const homeTab = $('tabbar').querySelector('[data-tab="view-home"]');
+
+  await show('view-browse');            // 學到一半跑去查詞
+  homeTab.click();
+  chk('★ 有進行中的一輪 → 點「首頁」回到那一輪', asked === 1,
+      '回來時不該要求他想起自己在做什麼');
+
+  inRound = false;
+  homeTab.click();
+  await new Promise((r) => setTimeout(r, 0));
+  chk('沒有進行中的一輪 → 正常進首頁', !$('view-home').classList.contains('hidden'));
+
+  // 已經在學習頁時不攔截 —— 否則按了沒反應，會以為壞了
+  inRound = true;
+  await show('view-study');
+  const before = asked;
+  homeTab.click();
+  chk('★ 已經在學習頁時不攔截', asked === before,
+      '攔截的話按了沒反應，使用者會以為壞了');
+  setTabResume(null);
+}
+
+// 🏠 與 ✕ 必須分開：一輪 30–80 題，只是想看一眼首頁不該付「結束本輪」的代價
+chk('學習頁有「離開但保留」的出口', !!$('btn-park'),
+    '分頁列的「首頁」會跳回這一輪，少了這個出口就沒有路去真正的首頁');
 await show('view-home');  chk('首頁高亮對應 Tab', $('tabbar').querySelector('button.on')?.dataset.tab==='view-home');
 let entered=0; onEnter('view-me',()=>{entered++;}); await show('view-me');
 chk('onEnter 鉤子被呼叫', entered===1, '各畫面自行註冊進入行為，router 不認識它們');
