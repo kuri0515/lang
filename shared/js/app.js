@@ -362,10 +362,63 @@ async function startScene(scene) {
  *   一般練習照原順序會讓人靠位置記答案，但對話照順序是刻意的：
  *   那練的是「這句接哪句」，順序本身就是內容。
  */
+const FREE_BATCH = 40;      // 一次端多少上來。做完可以按「再多練一些」繼續
+
+/**
+ * 自由練習要練的內容。
+ *
+ * 【順序：複習池優先，不夠才補新詞】
+ *   複習池是「已經學過、但還需要鞏固」的那些 —— 練它們的邊際效益最高。
+ *   全部練完了才引進沒學過的，而新詞要打散：
+ *   照資料庫的順序端上來會讓同一課的詞連在一起，
+ *   而同一課的詞往往共用一個主題，猜得出來。
+ *
+ * 【今天答對的先讓開】
+ *   使用者想一直練下去時，翻來覆去都是同幾個會讓他以為
+ *   「這個 App 只有這些詞」。
+ *
+ *   ★ 只讓開「答對的」—— 答錯的正是最需要再練的，
+ *   把它一起藏起來等於「今天答錯的今天不准再練」，剛好與目的相反。
+ *   答對的已經進了複習循環，到期時自然會回來。
+ *
+ * 【真的沒得練了怎麼辦】
+ *   全部都練過的話就不再排除，讓他繼續練 ——
+ *   「今天已經練完了」不該是一個死路，那是使用者最投入的時刻。
+ */
+async function freePool() {
+  const dir = home.effectiveDir();
+  const [due, done] = await Promise.all([
+    progress.fetchDue(user.id, [dir], 200).catch(() => []),
+    progress.correctToday(user.id),
+  ]);
+
+  const fresh = (list) => list.filter((x) => !done.has(x.id));
+  let items = fresh(due.map((c) => c.items).filter(Boolean));
+
+  if (items.length < FREE_BATCH) {
+    const deck = (await content.listDecks())[0]?.id ?? null;
+    const more = await progress
+      .fetchNewItems(user.id, deck, [dir], FREE_BATCH - items.length)
+      .catch(() => []);
+    items = items.concat(shuffle(fresh(more.map((r) => r.item ?? r))));
+  }
+
+  // 全部都練過 → 不再排除。「今天練完了」不該是死路。
+  if (!items.length) {
+    const all = await content.pickItems({ limit: FREE_BATCH });
+    items = shuffle(all);
+    if (all.length) msg('今天的詞都練過一遍了，再來一輪加深印象', 'ok');
+  }
+  return items.slice(0, FREE_BATCH);
+}
+
 async function startFree({ ids = null, tag = '', deckId = null,
                            kind = 'free', keepOrder = false } = {}) {
   try {
-    const items = await content.pickItems({ ids, tag, deckId, limit: 60 });
+    // 沒有指定範圍時（首頁的「自由練習」）走複習池，而不是整個詞庫抓 60 個
+    const items = (!ids && !tag && !deckId)
+      ? await freePool()
+      : await content.pickItems({ ids, tag, deckId, limit: 60 });
     if (!items.length) return msg('沒有符合的內容');
     const dir = home.effectiveDir();
     const entries = items.map((item) => ({ item, direction: dir, card: null }));
