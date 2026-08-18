@@ -1,22 +1,22 @@
-ko,zh,romanization,type,note,tags,hanja
-おじさん,叔叔、伯父,o ji sa n,word,,"長音,平假名,人物",
-おじいさん,爺爺、阿公,o ji i sa n,word,,"長音,平假名,人物",
-おばさん,阿姨、伯母,o ba sa n,word,,"長音,平假名,人物",
-おばあさん,奶奶、外婆,o ba a sa n,word,,"長音,平假名,人物",
-おおさか,大阪,o o sa ka,word,,"長音,平假名,場所",
-しょうねん,少年,sho u ne n,word,,"長音,平假名,人物",
-とうけい,統計,to u ke i,word,,"長音,平假名,學習",
-ほっかいどう,北海道,ho k ka i do u,word,,"長音,平假名,場所",
-とうふ,豆腐,to u fu,word,,"長音,平假名,食物",
-ぼうし,帽子,bo u shi,word,,"長音,平假名,服裝",
-みずうみ,湖,mi zu u mi,word,,"長音,平假名,自然",
-せんぷうき,電風扇,se n pu u ki,word,,"長音,平假名,物品",
-どうぶつ,動物,do u bu tsu,word,,"長音,平假名,動物",
-ジュース,果汁,ju u su,word,,"長音,平假名,食物",
-グレープ,葡萄,gu re e pu,word,,"長音,平假名,食物",
-コート,外套（長版大衣）,ko o to,word,,"長音,平假名,服裝",
-ギター,吉他,gi ta a,word,,"長音,平假名,文化",
-ブーツ,靴子,bu u tsu,word,,"長音,平假名,服裝",
-ギョーザ,餃子 ·片假名寫法,gyo o za,word,,"長音,平假名,食物",
-ボール,皮球,bo o ru,word,,"長音,平假名,物品",
-ジョーカー,（撲克牌的）鬼牌,jo o ka a,word,,"長音,平假名,文化",
+ko,zh,romanization,type,note,tags,hanja,pos
+おじさん,叔叔、伯父,o ji sa n,word,,"長音,平假名,人物",,名詞
+おじいさん,爺爺、阿公,o ji i sa n,word,,"長音,平假名,人物",,名詞
+おばさん,阿姨、伯母,o ba sa n,word,,"長音,平假名,人物",,名詞
+おばあさん,奶奶、外婆,o ba a sa n,word,,"長音,平假名,人物",,名詞
+おおさか,大阪,o o sa ka,word,,"長音,平假名,場所",,固有名詞
+しょうねん,少年,sho u ne n,word,,"長音,平假名,人物",,名詞
+とうけい,統計,to u ke i,word,,"長音,平假名,學習",,名詞
+ほっかいどう,北海道,ho k ka i do u,word,,"長音,平假名,場所",,固有名詞
+とうふ,豆腐,to u fu,word,,"長音,平假名,食物",,名詞
+ぼうし,帽子,bo u shi,word,,"長音,平假名,服裝",,名詞
+みずうみ,湖,mi zu u mi,word,,"長音,平假名,自然",,名詞
+せんぷうき,電風扇,se n pu u ki,word,,"長音,平假名,物品",,名詞
+どうぶつ,動物,do u bu tsu,word,,"長音,平假名,動物",,名詞
+ジュース,果汁,ju u su,word,,"長音,平假名,食物",,名詞
+グレープ,葡萄,gu re e pu,word,,"長音,平假名,食物",,名詞
+コート,外套（長版大衣）,ko o to,word,,"長音,平假名,服裝",,名詞
+ギター,吉他,gi ta a,word,,"長音,平假名,文化",,名詞
+ブーツ,靴子,bu u tsu,word,,"長音,平假名,服裝",,名詞
+ギョーザ,餃子 ·片假名寫法,gyo o za,word,,"長音,平假名,食物",,名詞
+ボール,皮球,bo o ru,word,,"長音,平假名,物品",,名詞
+ジョーカー,（撲克牌的）鬼牌,jo o ka a,word,,"長音,平假名,文化",,名詞

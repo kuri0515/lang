@@ -1,20 +1,20 @@
-ko,zh,romanization,type,note,tags,hanja
-きて,來（て形）,ki te,word,,"促音,平假名,句型",
-きって,郵票,ki t te,word,,"促音,平假名,物品",
-けっかん,血管,ke k ka n,word,,"促音,平假名,身體",
-にっこうよく,日光浴,ni k ko u yo ku,word,,"促音,平假名,生活",
-とっきょ,特許,to k kyo,word,,"促音,平假名,學習",
-こっき,國旗,ko k ki,word,,"促音,平假名,文化",
-がっこう,學校,ga k ko u,word,,"促音,平假名,場所",
-がっき,樂器,ga k ki,word,,"促音,平假名,文化",
-ねったいぎょ,熱帶魚,ne t ta i gyo,word,,"促音,平假名,動物",
-ざっし,雜誌,za s shi,word,,"促音,平假名,物品",
-れっしゃ,列車,re s sha,word,,"促音,平假名,物品",
-レッド,紅色 ·外來語,re d do,word,,"促音,平假名,顏色",
-ケチャップ,番茄醬,ke cha p pu,word,,"促音,平假名,食物",
-ベッド,床,be d do,word,,"促音,平假名,物品",
-サッカー,足球,sa k ka a,word,,"促音,平假名,運動",
-キッチン,廚房,ki c chi n,word,,"促音,平假名,場所",
-キャップ,（瓶子等的）蓋子,kya p pu,word,,"促音,平假名,物品",
-バッター,打擊手,ba t ta a,word,,"促音,平假名,運動",
-バッファロー,水牛,ba f fa ro o,word,,"促音,平假名,動物",
+ko,zh,romanization,type,note,tags,hanja,pos
+きて,來（て形）,ki te,word,,"促音,平假名,句型",,動詞
+きって,郵票,ki t te,word,,"促音,平假名,物品",,名詞
+けっかん,血管,ke k ka n,word,,"促音,平假名,身體",,名詞
+にっこうよく,日光浴,ni k ko u yo ku,word,,"促音,平假名,生活",,名詞
+とっきょ,特許,to k kyo,word,,"促音,平假名,學習",,名詞
+こっき,國旗,ko k ki,word,,"促音,平假名,文化",,名詞
+がっこう,學校,ga k ko u,word,,"促音,平假名,場所",,名詞
+がっき,樂器,ga k ki,word,,"促音,平假名,文化",,名詞
+ねったいぎょ,熱帶魚,ne t ta i gyo,word,,"促音,平假名,動物",,名詞
+ざっし,雜誌,za s shi,word,,"促音,平假名,物品",,名詞
+れっしゃ,列車,re s sha,word,,"促音,平假名,物品",,名詞
+レッド,紅色 ·外來語,re d do,word,,"促音,平假名,顏色",,名詞
+ケチャップ,番茄醬,ke cha p pu,word,,"促音,平假名,食物",,名詞
+ベッド,床,be d do,word,,"促音,平假名,物品",,名詞
+サッカー,足球,sa k ka a,word,,"促音,平假名,運動",,名詞
+キッチン,廚房,ki c chi n,word,,"促音,平假名,場所",,名詞
+キャップ,（瓶子等的）蓋子,kya p pu,word,,"促音,平假名,物品",,名詞
+バッター,打擊手,ba t ta a,word,,"促音,平假名,運動",,名詞
+バッファロー,水牛,ba f fa ro o,word,,"促音,平假名,動物",,名詞

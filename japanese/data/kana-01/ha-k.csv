@@ -1,10 +1,10 @@
-ko,zh,romanization,type,note,tags,hanja
+ko,zh,romanization,type,note,tags,hanja,pos
 ハ,ha ·片假名,ha,word,"ハ･ハ･ハ！八･八･八，八隻小狗笑哈哈！
-字源來自漢字「八」，兩筆寫完，發音 ha，字形就是中文的八。","清音,片假名,ハ行,ハ",
-ハンモック,吊床,ha n mo k ku,word,,"清音,ハ行,ハ,物品",
-ハート,心型,ha a to,word,,"清音,ハ行,ハ,物品",
-ハーモニカ,口琴,ha a mo ni ka,word,,"清音,ハ行,ハ,文化",
-ハンカチ,手帕,ha n ka chi,word,,"清音,ハ行,ハ,物品",
-ハムスター,倉鼠,ha mu su ta a,word,,"清音,ハ行,ハ,動物",
-ハネムーンはどこへ行きますか。,你們蜜月旅行要去哪裡？,ha ne mu u n wa do ko e i ki ma su ka,sentence,對話 A｜聊蜜月旅行｜,"清音,ハ行,ハ,會話",ハネムーンはどこへ行[い]きますか。
-ハワイです。,我們要去夏威夷。,ha wa i de su,sentence,對話 B｜聊蜜月旅行｜,"清音,ハ行,ハ,會話",
+字源來自漢字「八」，兩筆寫完，發音 ha，字形就是中文的八。","清音,片假名,ハ行,ハ",,
+ハンモック,吊床,ha n mo k ku,word,,"清音,ハ行,ハ,物品",,名詞
+ハート,心型,ha a to,word,,"清音,ハ行,ハ,物品",,名詞
+ハーモニカ,口琴,ha a mo ni ka,word,,"清音,ハ行,ハ,文化",,名詞
+ハンカチ,手帕,ha n ka chi,word,,"清音,ハ行,ハ,物品",,名詞
+ハムスター,倉鼠,ha mu su ta a,word,,"清音,ハ行,ハ,動物",,名詞
+ハネムーンはどこへ行きますか。,你們蜜月旅行要去哪裡？,ha ne mu u n wa do ko e i ki ma su ka,sentence,對話 A｜聊蜜月旅行｜,"清音,ハ行,ハ,會話",ハネムーンはどこへ行[い]きますか。,
+ハワイです。,我們要去夏威夷。,ha wa i de su,sentence,對話 B｜聊蜜月旅行｜,"清音,ハ行,ハ,會話",,

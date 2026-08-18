@@ -1,10 +1,10 @@
-ko,zh,romanization,type,note,tags,hanja
+ko,zh,romanization,type,note,tags,hanja,pos
 ヘ,he ·片假名,he,word,"ヘ･ヘ･ヘ！小黑去爬山！
-字源來自漢字「部」，一筆寫完，發音 he，長得像一座小山坡，平假名跟片假名幾乎長得一樣。","清音,片假名,ハ行,ヘ",
-ヘリコプター,直升機,he ri ko pu ta a,word,,"清音,ハ行,ヘ,物品",
-ヘクタール,公頃,he ku ta a ru,word,,"清音,ハ行,ヘ,生活",
-ヘビーメタル,重金屬音樂,he bi i me ta ru,word,,"清音,ハ行,ヘ,文化",
-ヘッドホン,耳罩式耳機,he d do ho n,word,,"清音,ハ行,ヘ,物品",
-ヘルメット,安全帽,he ru me t to,word,,"清音,ハ行,ヘ,物品",
-これはあなたのヘルメットですか。,這是你的安全帽嗎？,ko re wa a na ta no he ru me t to de su ka,sentence,對話 A｜確認物品｜,"清音,ハ行,ヘ,會話",
-はい、そうです。,嗯，對的。,"ha i, so u de su",sentence,對話 B｜確認物品｜,"清音,ハ行,ヘ,會話",
+字源來自漢字「部」，一筆寫完，發音 he，長得像一座小山坡，平假名跟片假名幾乎長得一樣。","清音,片假名,ハ行,ヘ",,
+ヘリコプター,直升機,he ri ko pu ta a,word,,"清音,ハ行,ヘ,物品",,名詞
+ヘクタール,公頃,he ku ta a ru,word,,"清音,ハ行,ヘ,生活",,名詞
+ヘビーメタル,重金屬音樂,he bi i me ta ru,word,,"清音,ハ行,ヘ,文化",,名詞
+ヘッドホン,耳罩式耳機,he d do ho n,word,,"清音,ハ行,ヘ,物品",,名詞
+ヘルメット,安全帽,he ru me t to,word,,"清音,ハ行,ヘ,物品",,名詞
+これはあなたのヘルメットですか。,這是你的安全帽嗎？,ko re wa a na ta no he ru me t to de su ka,sentence,對話 A｜確認物品｜,"清音,ハ行,ヘ,會話",,
+はい、そうです。,嗯，對的。,"ha i, so u de su",sentence,對話 B｜確認物品｜,"清音,ハ行,ヘ,會話",,

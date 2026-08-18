@@ -1,10 +1,10 @@
-ko,zh,romanization,type,note,tags,hanja
+ko,zh,romanization,type,note,tags,hanja,pos
 ト,to ·片假名,to,word,"ト･ト･ト！止･止･止，阻止老公偷偷去卜卦！
-字源來自漢字「止」，兩筆寫完，發音 to。","清音,片假名,タ行,ト",
-トイレ,廁所,to i re,word,,"清音,タ行,ト,場所",
-トンネル,隧道,to n ne ru,word,,"清音,タ行,ト,場所",
-トラブル,問題、麻煩,to ra bu ru,word,,"清音,タ行,ト,生活",
-トップ,頂端,to p pu,word,,"清音,タ行,ト,方位",
-トラック,卡車,to ra k ku,word,,"清音,タ行,ト,物品",
-すみません、トイレはどこですか。,不好意思，廁所在哪裡？,"su mi ma se n, to i re wa do ko de su ka",sentence,對話 A｜問廁所｜,"清音,タ行,ト,會話",
-あそこです。,在那裡。,a so ko de su,sentence,對話 B｜問廁所｜,"清音,タ行,ト,會話",
+字源來自漢字「止」，兩筆寫完，發音 to。","清音,片假名,タ行,ト",,
+トイレ,廁所,to i re,word,,"清音,タ行,ト,場所",,名詞
+トンネル,隧道,to n ne ru,word,,"清音,タ行,ト,場所",,名詞
+トラブル,問題、麻煩,to ra bu ru,word,,"清音,タ行,ト,生活",,名詞
+トップ,頂端,to p pu,word,,"清音,タ行,ト,方位",,名詞
+トラック,卡車,to ra k ku,word,,"清音,タ行,ト,物品",,名詞
+すみません、トイレはどこですか。,不好意思，廁所在哪裡？,"su mi ma se n, to i re wa do ko de su ka",sentence,對話 A｜問廁所｜,"清音,タ行,ト,會話",,
+あそこです。,在那裡。,a so ko de su,sentence,對話 B｜問廁所｜,"清音,タ行,ト,會話",,

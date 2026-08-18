@@ -1,10 +1,10 @@
-ko,zh,romanization,type,note,tags,hanja
+ko,zh,romanization,type,note,tags,hanja,pos
 セ,se ·片假名,se,word,"セ･セ･セ！世･世･世，世界也是我們的！
-字源來自漢字「世」，外形有點像「也」，發音 se。","清音,片假名,サ行,セ",
-セーター,毛衣,se e ta a,word,,"清音,サ行,セ,服裝",
-セールス,推銷,se e ru su,word,,"清音,サ行,セ,職業",
-セロテープ,膠帶,se ro te e pu,word,,"清音,サ行,セ,文具",
-セット,一套,se t to,word,,"清音,サ行,セ,物品",
-セロリ,芹菜,se ro ri,word,,"清音,サ行,セ,食物",
-お茶はセルフサービスです。,茶是自助式提供的。,o cha wa se ru fu sa a bi su de su,sentence,對話 A｜自助茶水｜,"清音,サ行,セ,會話",お茶[ちゃ]はセルフサービスです。
-ご自由にどうぞ。,請自取。,go ji yu u ni do u zo,sentence,對話 B｜自助茶水｜,"清音,サ行,セ,會話",ご自由[じゆう]にどうぞ。
+字源來自漢字「世」，外形有點像「也」，發音 se。","清音,片假名,サ行,セ",,
+セーター,毛衣,se e ta a,word,,"清音,サ行,セ,服裝",,名詞
+セールス,推銷,se e ru su,word,,"清音,サ行,セ,職業",,名詞
+セロテープ,膠帶,se ro te e pu,word,,"清音,サ行,セ,文具",,名詞
+セット,一套,se t to,word,,"清音,サ行,セ,物品",,名詞
+セロリ,芹菜,se ro ri,word,,"清音,サ行,セ,食物",,名詞
+お茶はセルフサービスです。,茶是自助式提供的。,o cha wa se ru fu sa a bi su de su,sentence,對話 A｜自助茶水｜,"清音,サ行,セ,會話",お茶[ちゃ]はセルフサービスです。,
+ご自由にどうぞ。,請自取。,go ji yu u ni do u zo,sentence,對話 B｜自助茶水｜,"清音,サ行,セ,會話",ご自由[じゆう]にどうぞ。,

@@ -1,10 +1,10 @@
-ko,zh,romanization,type,note,tags,hanja
+ko,zh,romanization,type,note,tags,hanja,pos
 ち,chi ·平假名,chi,word,"ち･ち･ち！5･5･5！5，7，5，7！長得像5卻唸7！
-「ち」長得很像數字「5」，口訣可同時記住長相和發音。字源來自漢字「知」。","清音,平假名,た行,ち",
-ちから,力氣,chi ka ra,word,,"清音,た行,ち,身體",
-ちかしつ,地下室,chi ka shi tsu,word,,"清音,た行,ち,場所",
-ちこく,遲到,chi ko ku,word,,"清音,た行,ち,生活",
-ちりとり,畚箕,chi ri to ri,word,,"清音,た行,ち,物品",
-ちちおや,父親,chi chi o ya,word,,"清音,た行,ち,人物",
-あそこがわたしのうちです。,我家就在那裡。,a so ko ga wa ta shi no u chi de su,sentence,對話 A｜聊住處｜,"清音,た行,ち,會話",
-駅から近いですね。,離車站很近呢。,e ki ka ra chi ka i de su ne,sentence,對話 B｜聊住處｜〜から＝從〜。から近い＝離〜很近。,"清音,た行,ち,會話",駅[えき]から近[ちか]いですね。
+「ち」長得很像數字「5」，口訣可同時記住長相和發音。字源來自漢字「知」。","清音,平假名,た行,ち",,
+ちから,力氣,chi ka ra,word,,"清音,た行,ち,身體",,名詞
+ちかしつ,地下室,chi ka shi tsu,word,,"清音,た行,ち,場所",,名詞
+ちこく,遲到,chi ko ku,word,,"清音,た行,ち,生活",,名詞
+ちりとり,畚箕,chi ri to ri,word,,"清音,た行,ち,物品",,名詞
+ちちおや,父親,chi chi o ya,word,,"清音,た行,ち,人物",,名詞
+あそこがわたしのうちです。,我家就在那裡。,a so ko ga wa ta shi no u chi de su,sentence,對話 A｜聊住處｜,"清音,た行,ち,會話",,
+駅から近いですね。,離車站很近呢。,e ki ka ra chi ka i de su ne,sentence,對話 B｜聊住處｜〜から＝從〜。から近い＝離〜很近。,"清音,た行,ち,會話",駅[えき]から近[ちか]いですね。,

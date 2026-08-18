@@ -1,10 +1,10 @@
-ko,zh,romanization,type,note,tags,hanja
+ko,zh,romanization,type,note,tags,hanja,pos
 テ,te ·片假名,te,word,"テ･テ･テ！天･天･天，天天拿東西！
-字源來自漢字「天」，三筆寫完，發音 te。","清音,片假名,タ行,テ",
-テニス,網球,te ni su,word,,"清音,タ行,テ,運動",
-テスト,測試,te su to,word,,"清音,タ行,テ,學習",
-テープ,錄影帶,te e pu,word,,"清音,タ行,テ,物品",
-テーブル,桌子 ·外來語,te e bu ru,word,,"清音,タ行,テ,物品",
-テレビ,電視,te re bi,word,,"清音,タ行,テ,物品",
-またテロのニュースだ。,又是恐怖份子的新聞了。,ma ta te ro no nyu u su da,sentence,對話 A｜看新聞｜,"清音,タ行,テ,會話",
-怖いね。,好恐怖呢。,ko wa i ne,sentence,對話 B｜看新聞｜,"清音,タ行,テ,會話",怖[こわ]いね。
+字源來自漢字「天」，三筆寫完，發音 te。","清音,片假名,タ行,テ",,
+テニス,網球,te ni su,word,,"清音,タ行,テ,運動",,名詞
+テスト,測試,te su to,word,,"清音,タ行,テ,學習",,名詞
+テープ,錄影帶,te e pu,word,,"清音,タ行,テ,物品",,名詞
+テーブル,桌子 ·外來語,te e bu ru,word,,"清音,タ行,テ,物品",,名詞
+テレビ,電視,te re bi,word,,"清音,タ行,テ,物品",,名詞
+またテロのニュースだ。,又是恐怖份子的新聞了。,ma ta te ro no nyu u su da,sentence,對話 A｜看新聞｜,"清音,タ行,テ,會話",,
+怖いね。,好恐怖呢。,ko wa i ne,sentence,對話 B｜看新聞｜,"清音,タ行,テ,會話",怖[こわ]いね。,

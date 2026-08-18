@@ -1,9 +1,9 @@
-ko,zh,romanization,type,note,tags,hanja
+ko,zh,romanization,type,note,tags,hanja,pos
 て,手（假名 te）,te,word,"て･て･て！用手拿東西的て，て什麼東西？是て一C！
-字源來自漢字「天」，字形像手彎曲拿東西，先寫一橫再往下寫C，記住長相與發音 te。","清音,平假名,た行,て,身體",
-てんし,天使,te n shi,word,,"清音,た行,て,文化",
-てんき,天氣,te n ki,word,,"清音,た行,て,自然",
-てぶくろ,手套,te bu ku ro,word,,"清音,た行,て,服裝",
-てんとうむし,瓢蟲,te n to u mu shi,word,,"清音,た行,て,動物",
-手伝いましょうか。,需要幫忙嗎？,te tsu da i ma sho u ka,sentence,對話 A｜主動幫忙｜,"清音,た行,て,會話",手伝[てつだ]いましょうか。
-お願いします。,麻煩了。,o ne ga i shi ma su,sentence,對話 B｜主動幫忙｜,"清音,た行,て,會話",お願[ねが]いします。
+字源來自漢字「天」，字形像手彎曲拿東西，先寫一橫再往下寫C，記住長相與發音 te。","清音,平假名,た行,て,身體",,
+てんし,天使,te n shi,word,,"清音,た行,て,文化",,名詞
+てんき,天氣,te n ki,word,,"清音,た行,て,自然",,名詞
+てぶくろ,手套,te bu ku ro,word,,"清音,た行,て,服裝",,名詞
+てんとうむし,瓢蟲,te n to u mu shi,word,,"清音,た行,て,動物",,名詞
+手伝いましょうか。,需要幫忙嗎？,te tsu da i ma sho u ka,sentence,對話 A｜主動幫忙｜,"清音,た行,て,會話",手伝[てつだ]いましょうか。,
+お願いします。,麻煩了。,o ne ga i shi ma su,sentence,對話 B｜主動幫忙｜,"清音,た行,て,會話",お願[ねが]いします。,

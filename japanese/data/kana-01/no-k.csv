@@ -1,10 +1,10 @@
-ko,zh,romanization,type,note,tags,hanja
+ko,zh,romanization,type,note,tags,hanja,pos
 ノ,no ·片假名,no,word,"ノ･ノ･ノ！乃･乃･乃，乃哥漂ノ（撇）地說 NO！
-字源來自漢字「乃」，一筆寫完，就是一撇，發音 no。","清音,片假名,ナ行,ノ",
-ノイズ,噪音,no i zu,word,,"清音,ナ行,ノ,生活",
-ノート,筆記本,no o to,word,,"清音,ナ行,ノ,文具",
-ノクターン,夜曲,no ku ta a n,word,,"清音,ナ行,ノ,文化",
-ノブ,門把、旋鈕,no bu,word,,"清音,ナ行,ノ,物品",
-ノック,敲門,no k ku,word,,"清音,ナ行,ノ,生活",
-日本人がノーベル賞をもらいました。,有日本人獲得了諾貝爾獎。,ni ho n ji n ga no o be ru sho u o mo ra i ma shi ta,sentence,對話 A｜聊諾貝爾獎｜,"清音,ナ行,ノ,會話",日本人[にほんじん]がノーベル賞[しょう]をもらいました。
-すごいですね。,很厲害耶！,su go i de su ne,sentence,對話 B｜聊諾貝爾獎｜,"清音,ナ行,ノ,會話",
+字源來自漢字「乃」，一筆寫完，就是一撇，發音 no。","清音,片假名,ナ行,ノ",,
+ノイズ,噪音,no i zu,word,,"清音,ナ行,ノ,生活",,名詞
+ノート,筆記本,no o to,word,,"清音,ナ行,ノ,文具",,名詞
+ノクターン,夜曲,no ku ta a n,word,,"清音,ナ行,ノ,文化",,名詞
+ノブ,門把、旋鈕,no bu,word,,"清音,ナ行,ノ,物品",,名詞
+ノック,敲門,no k ku,word,,"清音,ナ行,ノ,生活",,名詞
+日本人がノーベル賞をもらいました。,有日本人獲得了諾貝爾獎。,ni ho n ji n ga no o be ru sho u o mo ra i ma shi ta,sentence,對話 A｜聊諾貝爾獎｜,"清音,ナ行,ノ,會話",日本人[にほんじん]がノーベル賞[しょう]をもらいました。,
+すごいですね。,很厲害耶！,su go i de su ne,sentence,對話 B｜聊諾貝爾獎｜,"清音,ナ行,ノ,會話",,

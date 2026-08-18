@@ -1,10 +1,10 @@
-ko,zh,romanization,type,note,tags,hanja
+ko,zh,romanization,type,note,tags,hanja,pos
 ニ,ni ·片假名,ni,word,"ニ･ニ･ニ！仁･仁･仁，你們二個人自己去仁愛路！
-字源來自漢字「仁」，兩筆寫完，發音 ni，寫法就是中文的二。","清音,片假名,ナ行,ニ",
-ニット,針織衣,ni t to,word,,"清音,ナ行,ニ,服裝",
-ニコチン,尼古丁,ni ko chi n,word,,"清音,ナ行,ニ,生活",
-ニックネーム,外號、綽號,ni k ku ne e mu,word,,"清音,ナ行,ニ,人物",
-ニーズ,需求,ni i zu,word,,"清音,ナ行,ニ,生活",
-ニッパー,鉗子,ni p pa a,word,,"清音,ナ行,ニ,物品",
-そのニットのシャツ、いいね。,那件針織衫不錯呢！,"so no ni t to no sha tsu, i i ne",sentence,對話 A｜稱讚衣服｜,"清音,ナ行,ニ,會話",
-そう？ありがとう。,是嗎？謝謝。,"so u, a ri ga to u",sentence,對話 B｜稱讚衣服｜,"清音,ナ行,ニ,會話",
+字源來自漢字「仁」，兩筆寫完，發音 ni，寫法就是中文的二。","清音,片假名,ナ行,ニ",,
+ニット,針織衣,ni t to,word,,"清音,ナ行,ニ,服裝",,名詞
+ニコチン,尼古丁,ni ko chi n,word,,"清音,ナ行,ニ,生活",,名詞
+ニックネーム,外號、綽號,ni k ku ne e mu,word,,"清音,ナ行,ニ,人物",,名詞
+ニーズ,需求,ni i zu,word,,"清音,ナ行,ニ,生活",,名詞
+ニッパー,鉗子,ni p pa a,word,,"清音,ナ行,ニ,物品",,名詞
+そのニットのシャツ、いいね。,那件針織衫不錯呢！,"so no ni t to no sha tsu, i i ne",sentence,對話 A｜稱讚衣服｜,"清音,ナ行,ニ,會話",,
+そう？ありがとう。,是嗎？謝謝。,"so u, a ri ga to u",sentence,對話 B｜稱讚衣服｜,"清音,ナ行,ニ,會話",,

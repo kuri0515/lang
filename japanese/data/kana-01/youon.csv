@@ -1,28 +1,28 @@
-ko,zh,romanization,type,note,tags,hanja
-りゅう,龍,ryu u,word,,"拗音,平假名,文化",
-としょかん,圖書館,to sho ka n,word,,"拗音,平假名,場所",
-ぎょうざ,餃子,gyo u za,word,,"拗音,平假名,食物",
-しゃしん,照片,sha shi n,word,,"拗音,平假名,物品",
-ききゅう,熱氣球,ki kyu u,word,,"拗音,平假名,物品",
-きんぎょ,金魚,ki n gyo,word,,"拗音,平假名,動物",
-きょうと,京都,kyo u to,word,,"拗音,平假名,場所",
-ちゃわんむし,茶碗蒸,cha wa n mu shi,word,,"拗音,平假名,食物",
-きょうしつ,教室,kyo u shi tsu,word,,"拗音,平假名,場所",
-じんじゃ,神社,ji n ja,word,,"拗音,平假名,場所",
-にんじゃ,忍者,ni n ja,word,,"拗音,平假名,文化",
-ひょうりゅう,漂流,hyo u ryu u,word,,"拗音,平假名,生活",
-びじゅつかん,美術館,bi ju tsu ka n,word,,"拗音,平假名,場所",
-ぎゅうにゅう,牛奶,gyu u nyu u,word,,"拗音,平假名,食物",
-キャンパス,校園,kya n pa su,word,,"拗音,平假名,場所",
-ジュエリー,珠寶,ju e ri i,word,,"拗音,平假名,物品",
-キャンディー,糖果,kya n di i,word,,"拗音,平假名,食物",
-キュート,可愛的,kyu u to,word,,"拗音,平假名,情緒",
-シャワー,沖澡,sha wa a,word,,"拗音,平假名,生活",
-ジャンプ,跳躍,ja n pu,word,,"拗音,平假名,運動",
-シャンプー,洗髮精,sha n pu u,word,,"拗音,平假名,物品",
-シュート,射門,shu u to,word,,"拗音,平假名,運動",
-シューズ,鞋子（泛稱）,shu u zu,word,,"拗音,平假名,服裝",
-ジャケット,外套（短版夾克）,ja ke t to,word,,"拗音,平假名,服裝",
-チャンピオン,冠軍,cha n pi o n,word,,"拗音,平假名,人物",
-ニューヨーク,紐約,nyu u yo o ku,word,,"拗音,平假名,場所",
-リュックサック,背包,ryu k ku sa k ku,word,,"拗音,平假名,物品",
+ko,zh,romanization,type,note,tags,hanja,pos
+りゅう,龍,ryu u,word,,"拗音,平假名,文化",,名詞
+としょかん,圖書館,to sho ka n,word,,"拗音,平假名,場所",,名詞
+ぎょうざ,餃子,gyo u za,word,,"拗音,平假名,食物",,名詞
+しゃしん,照片,sha shi n,word,,"拗音,平假名,物品",,名詞
+ききゅう,熱氣球,ki kyu u,word,,"拗音,平假名,物品",,名詞
+きんぎょ,金魚,ki n gyo,word,,"拗音,平假名,動物",,名詞
+きょうと,京都,kyo u to,word,,"拗音,平假名,場所",,固有名詞
+ちゃわんむし,茶碗蒸,cha wa n mu shi,word,,"拗音,平假名,食物",,名詞
+きょうしつ,教室,kyo u shi tsu,word,,"拗音,平假名,場所",,名詞
+じんじゃ,神社,ji n ja,word,,"拗音,平假名,場所",,名詞
+にんじゃ,忍者,ni n ja,word,,"拗音,平假名,文化",,名詞
+ひょうりゅう,漂流,hyo u ryu u,word,,"拗音,平假名,生活",,名詞
+びじゅつかん,美術館,bi ju tsu ka n,word,,"拗音,平假名,場所",,名詞
+ぎゅうにゅう,牛奶,gyu u nyu u,word,,"拗音,平假名,食物",,名詞
+キャンパス,校園,kya n pa su,word,,"拗音,平假名,場所",,名詞
+ジュエリー,珠寶,ju e ri i,word,,"拗音,平假名,物品",,名詞
+キャンディー,糖果,kya n di i,word,,"拗音,平假名,食物",,名詞
+キュート,可愛的,kyu u to,word,,"拗音,平假名,情緒",,な形容詞
+シャワー,沖澡,sha wa a,word,,"拗音,平假名,生活",,名詞
+ジャンプ,跳躍,ja n pu,word,,"拗音,平假名,運動",,名詞
+シャンプー,洗髮精,sha n pu u,word,,"拗音,平假名,物品",,名詞
+シュート,射門,shu u to,word,,"拗音,平假名,運動",,名詞
+シューズ,鞋子（泛稱）,shu u zu,word,,"拗音,平假名,服裝",,名詞
+ジャケット,外套（短版夾克）,ja ke t to,word,,"拗音,平假名,服裝",,名詞
+チャンピオン,冠軍,cha n pi o n,word,,"拗音,平假名,人物",,名詞
+ニューヨーク,紐約,nyu u yo o ku,word,,"拗音,平假名,場所",,固有名詞
+リュックサック,背包,ryu k ku sa k ku,word,,"拗音,平假名,物品",,名詞

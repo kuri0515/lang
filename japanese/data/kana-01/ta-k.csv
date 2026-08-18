@@ -1,10 +1,10 @@
-ko,zh,romanization,type,note,tags,hanja
+ko,zh,romanization,type,note,tags,hanja,pos
 タ,ta ·片假名,ta,word,"タ･タ･タ！多･多･多，他們的夕陽多美麗！
-字源來自漢字「多」的上半部分，三筆寫完，發音 ta。","清音,片假名,タ行,タ",
-タクシー,計程車,ta ku shi i,word,,"清音,タ行,タ,物品",
-タオル,毛巾,ta o ru,word,,"清音,タ行,タ,物品",
-タレント,才能、藝人,ta re n to,word,,"清音,タ行,タ,職業",
-タルト,塔類（甜點）,ta ru to,word,,"清音,タ行,タ,食物",
-タイヤ,輪胎,ta i ya,word,,"清音,タ行,タ,物品",
-タロットで占ってあげる。,我來用塔羅牌來幫你算命吧！,ta ro tto de u ra na tte a ge ru,sentence,對話 A｜算塔羅牌｜,"清音,タ行,タ,會話",タロットで占[うらな]ってあげる。
-本当？ドキドキするね。,真的嗎？好興奮唷！,"ho n to u, do ki do ki su ru ne",sentence,對話 B｜算塔羅牌｜,"清音,タ行,タ,會話",本当[ほんとう]？ドキドキするね。
+字源來自漢字「多」的上半部分，三筆寫完，發音 ta。","清音,片假名,タ行,タ",,
+タクシー,計程車,ta ku shi i,word,,"清音,タ行,タ,物品",,名詞
+タオル,毛巾,ta o ru,word,,"清音,タ行,タ,物品",,名詞
+タレント,才能、藝人,ta re n to,word,,"清音,タ行,タ,職業",,名詞
+タルト,塔類（甜點）,ta ru to,word,,"清音,タ行,タ,食物",,名詞
+タイヤ,輪胎,ta i ya,word,,"清音,タ行,タ,物品",,名詞
+タロットで占ってあげる。,我來用塔羅牌來幫你算命吧！,ta ro tto de u ra na tte a ge ru,sentence,對話 A｜算塔羅牌｜,"清音,タ行,タ,會話",タロットで占[うらな]ってあげる。,
+本当？ドキドキするね。,真的嗎？好興奮唷！,"ho n to u, do ki do ki su ru ne",sentence,對話 B｜算塔羅牌｜,"清音,タ行,タ,會話",本当[ほんとう]？ドキドキするね。,

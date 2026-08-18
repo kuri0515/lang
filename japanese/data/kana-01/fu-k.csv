@@ -1,10 +1,10 @@
-ko,zh,romanization,type,note,tags,hanja
+ko,zh,romanization,type,note,tags,hanja,pos
 フ,fu ·片假名,fu,word,"フ･フ･フ！不･不･不，像不像夫妻！
-字源來自漢字「不」，一筆寫完，發音 fu，字形是「不」的第一筆。","清音,片假名,ハ行,フ",
-フルーツ,水果 ·外來語,fu ru u tsu,word,,"清音,ハ行,フ,食物",
-フロント,前檯,fu ro n to,word,,"清音,ハ行,フ,場所",
-フロア,地板,fu ro a,word,,"清音,ハ行,フ,物品",
-フック,掛鉤,fu k ku,word,,"清音,ハ行,フ,物品",
-フルート,橫笛,fu ru u to,word,,"清音,ハ行,フ,文化",
-がんばって！,加油！,ga n ba t te,sentence,對話 A｜互相加油｜,"清音,ハ行,フ,會話",
-ファイト！,加油！,fu a i to,sentence,對話 B｜互相加油｜,"清音,ハ行,フ,會話",
+字源來自漢字「不」，一筆寫完，發音 fu，字形是「不」的第一筆。","清音,片假名,ハ行,フ",,
+フルーツ,水果 ·外來語,fu ru u tsu,word,,"清音,ハ行,フ,食物",,名詞
+フロント,前檯,fu ro n to,word,,"清音,ハ行,フ,場所",,名詞
+フロア,地板,fu ro a,word,,"清音,ハ行,フ,物品",,名詞
+フック,掛鉤,fu k ku,word,,"清音,ハ行,フ,物品",,名詞
+フルート,橫笛,fu ru u to,word,,"清音,ハ行,フ,文化",,名詞
+がんばって！,加油！,ga n ba t te,sentence,對話 A｜互相加油｜,"清音,ハ行,フ,會話",,
+ファイト！,加油！,fu a i to,sentence,對話 B｜互相加油｜,"清音,ハ行,フ,會話",,

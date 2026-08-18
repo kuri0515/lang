@@ -168,6 +168,24 @@ def main():
     ap.add_argument("--apply", action="store_true", help="真正寫庫（預設為 dry-run）")
     args = ap.parse_args()
 
+    # ★ --slug-scope 只在 --append（雜湊 slug）模式下有意義。
+    #   沒有 --append 時 slug 是序號，這個參數完全不會被用到 ——
+    #   而它不會報錯，指令看起來下對了，結果卻是另一回事。
+    #
+    #   實際踩過（2026-08-18）：97 個 CSV 全部漏了 --append，
+    #   於是每個檔都從 0001 編起、彼此互相覆蓋，
+    #   原本 826 條完全沒被更新（要填的 pos 一個都沒進去），
+    #   另外堆出 27 條孤兒。全程沒有任何一行錯誤訊息。
+    #
+    #   所以這裡直接擋下來：與其讓人下一個「看起來對」的指令，
+    #   不如在還沒寫任何東西之前就說清楚。
+    if args.slug_scope != "ko" and not args.append:
+        sys.exit("❌ --slug-scope 需要搭配 --append 才有作用。\n"
+                 "   沒有 --append 時 slug 用序號（同一詞庫多批匯入會互相覆蓋），\n"
+                 "   --slug-scope 指定的身分算法根本不會被用到。\n"
+                 "   要嘛加上 --append，要嘛拿掉 --slug-scope。")
+
+
     if not os.path.exists(args.csv_path):
         sys.exit(f"❌ 找不到檔案：{args.csv_path}")
 

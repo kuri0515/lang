@@ -1,10 +1,10 @@
-ko,zh,romanization,type,note,tags,hanja
+ko,zh,romanization,type,note,tags,hanja,pos
 マ,ma ·片假名,ma,word,"マ･マ･マ！末･末･末，末班車，馬桶只剩右上角！
-字源來自漢字「末」，兩筆寫完，發音 ma，樣子就像馬桶的右上角部分。","清音,片假名,マ行,マ",
-マフラー,（毛製）圍巾,ma fu ra a,word,,"清音,マ行,マ,服裝",
-マスク,口罩,ma su ku,word,,"清音,マ行,マ,物品",
-マニュアル,說明手冊,ma nyu a ru,word,,"清音,マ行,マ,物品",
-マンゴー,芒果,ma n go o,word,,"清音,マ行,マ,食物",
-マッチ,火柴,ma c chi,word,,"清音,マ行,マ,物品",
-マッサージしましょう。,我幫你按摩。,ma s sa a ji shi ma sho u,sentence,對話 A｜按摩｜,"清音,マ行,マ,會話",
-気持ちいいですね。,很舒服耶。,ki mo chi i i de su ne,sentence,對話 B｜按摩｜,"清音,マ行,マ,會話",気持[きも]ちいいですね。
+字源來自漢字「末」，兩筆寫完，發音 ma，樣子就像馬桶的右上角部分。","清音,片假名,マ行,マ",,
+マフラー,（毛製）圍巾,ma fu ra a,word,,"清音,マ行,マ,服裝",,名詞
+マスク,口罩,ma su ku,word,,"清音,マ行,マ,物品",,名詞
+マニュアル,說明手冊,ma nyu a ru,word,,"清音,マ行,マ,物品",,名詞
+マンゴー,芒果,ma n go o,word,,"清音,マ行,マ,食物",,名詞
+マッチ,火柴,ma c chi,word,,"清音,マ行,マ,物品",,名詞
+マッサージしましょう。,我幫你按摩。,ma s sa a ji shi ma sho u,sentence,對話 A｜按摩｜,"清音,マ行,マ,會話",,
+気持ちいいですね。,很舒服耶。,ki mo chi i i de su ne,sentence,對話 B｜按摩｜,"清音,マ行,マ,會話",気持[きも]ちいいですね。,

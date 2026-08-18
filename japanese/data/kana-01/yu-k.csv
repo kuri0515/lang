@@ -1,10 +1,10 @@
-ko,zh,romanization,type,note,tags,hanja
+ko,zh,romanization,type,note,tags,hanja,pos
 ユ,yu ·片假名,yu,word,"ユ･ユ･ユ！由･由･由，瘀青就由他去吧！
-字源來自漢字「由」，兩筆寫完，發音 yu。","清音,片假名,ヤ行,ユ",
-ユーカリ,尤加利樹（桉樹）,yu u ka ri,word,,"清音,ヤ行,ユ,植物",
-ユーモア,幽默,yu u mo a,word,,"清音,ヤ行,ユ,情緒",
-ユニホーム,制服,yu ni ho o mu,word,,"清音,ヤ行,ユ,服裝",
-ユダヤ,猶太（人）,yu da ya,word,,"清音,ヤ行,ユ,文化",
-ユースホステル,青年旅館,yu u su ho su te ru,word,,"清音,ヤ行,ユ,場所",
-ここはユー（U）ターン禁止ですよ。,這裡禁止迴轉喔。,ko ko wa yu u ta a n ki n shi de su yo,sentence,對話 A｜禁止迴轉｜,"清音,ヤ行,ユ,會話",ここはユー（U）ターン禁止[きんし]ですよ。
-本当だ、どうしましょう？,真的耶！怎麼辦？,"ho n to u da, do u shi ma sho u",sentence,對話 B｜禁止迴轉｜,"清音,ヤ行,ユ,會話",本当[ほんとう]だ、どうしましょう？
+字源來自漢字「由」，兩筆寫完，發音 yu。","清音,片假名,ヤ行,ユ",,
+ユーカリ,尤加利樹（桉樹）,yu u ka ri,word,,"清音,ヤ行,ユ,植物",,名詞
+ユーモア,幽默,yu u mo a,word,,"清音,ヤ行,ユ,情緒",,名詞
+ユニホーム,制服,yu ni ho o mu,word,,"清音,ヤ行,ユ,服裝",,名詞
+ユダヤ,猶太（人）,yu da ya,word,,"清音,ヤ行,ユ,文化",,固有名詞
+ユースホステル,青年旅館,yu u su ho su te ru,word,,"清音,ヤ行,ユ,場所",,名詞
+ここはユー（U）ターン禁止ですよ。,這裡禁止迴轉喔。,ko ko wa yu u ta a n ki n shi de su yo,sentence,對話 A｜禁止迴轉｜,"清音,ヤ行,ユ,會話",ここはユー（U）ターン禁止[きんし]ですよ。,
+本当だ、どうしましょう？,真的耶！怎麼辦？,"ho n to u da, do u shi ma sho u",sentence,對話 B｜禁止迴轉｜,"清音,ヤ行,ユ,會話",本当[ほんとう]だ、どうしましょう？,

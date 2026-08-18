@@ -1,10 +1,10 @@
-ko,zh,romanization,type,note,tags,hanja
+ko,zh,romanization,type,note,tags,hanja,pos
 ナ,na ·片假名,na,word,"ナ･ナ･ナ！奈･奈･奈，在奈良拿十字架！
-字源來自漢字「奈」，兩筆寫完，發音 na。長相很像十字架。","清音,片假名,ナ行,ナ",
-ナンバー,號碼,na n ba a,word,,"清音,ナ行,ナ,物品",
-ナイフ,刀子,na i fu,word,,"清音,ナ行,ナ,物品",
-ナイター,夜間棒球賽,na i ta a,word,,"清音,ナ行,ナ,運動",
-ナプキン,餐巾,na pu ki n,word,,"清音,ナ行,ナ,物品",
-ナイトマーケット,夜市,na i to ma a ke t to,word,,"清音,ナ行,ナ,場所",
-ナイス キャッチ！,接得好！,na i su kya c chi,sentence,對話 A｜球場接球｜,"清音,ナ行,ナ,會話",
-よく取りましたね。,接得不錯呢。,yo ku to ri ma shi ta ne,sentence,對話 B｜球場接球｜,"清音,ナ行,ナ,會話",よく取[と]りましたね。
+字源來自漢字「奈」，兩筆寫完，發音 na。長相很像十字架。","清音,片假名,ナ行,ナ",,
+ナンバー,號碼,na n ba a,word,,"清音,ナ行,ナ,物品",,名詞
+ナイフ,刀子,na i fu,word,,"清音,ナ行,ナ,物品",,名詞
+ナイター,夜間棒球賽,na i ta a,word,,"清音,ナ行,ナ,運動",,名詞
+ナプキン,餐巾,na pu ki n,word,,"清音,ナ行,ナ,物品",,名詞
+ナイトマーケット,夜市,na i to ma a ke t to,word,,"清音,ナ行,ナ,場所",,名詞
+ナイス キャッチ！,接得好！,na i su kya c chi,sentence,對話 A｜球場接球｜,"清音,ナ行,ナ,會話",,
+よく取りましたね。,接得不錯呢。,yo ku to ri ma shi ta ne,sentence,對話 B｜球場接球｜,"清音,ナ行,ナ,會話",よく取[と]りましたね。,

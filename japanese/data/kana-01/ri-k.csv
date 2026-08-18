@@ -1,10 +1,10 @@
-ko,zh,romanization,type,note,tags,hanja
+ko,zh,romanization,type,note,tags,hanja,pos
 リ,ri ·片假名,ri,word,"リ･リ･リ！利･利･利，一定要勝利！
-字源來自漢字「利」，兩筆寫完，發音 ri，樣子像比勝利的V手勢。","清音,片假名,ラ行,リ",
-リング,戒指 ·外來語,ri n gu,word,,"清音,ラ行,リ,物品",
-リーダー,領導者,ri i da a,word,,"清音,ラ行,リ,人物",
-リサイクル,資源回收,ri sa i ku ru,word,,"清音,ラ行,リ,生活",
-リズム,節奏,ri zu mu,word,,"清音,ラ行,リ,文化",
-リボン,緞帶,ri bo n,word,,"清音,ラ行,リ,物品",
-リコーダーの練習をしましたか。,你有練習直笛嗎？,ri ko o da a no re n shu u wo shi ma shi ta ka,sentence,對話 A｜問練習狀況｜,"清音,ラ行,リ,會話",リコーダーの練習[れんしゅう]をしましたか。
-はい、しました。,有，我有練習。,"ha i, shi ma shi ta",sentence,對話 B｜問練習狀況｜,"清音,ラ行,リ,會話",
+字源來自漢字「利」，兩筆寫完，發音 ri，樣子像比勝利的V手勢。","清音,片假名,ラ行,リ",,
+リング,戒指 ·外來語,ri n gu,word,,"清音,ラ行,リ,物品",,名詞
+リーダー,領導者,ri i da a,word,,"清音,ラ行,リ,人物",,名詞
+リサイクル,資源回收,ri sa i ku ru,word,,"清音,ラ行,リ,生活",,名詞
+リズム,節奏,ri zu mu,word,,"清音,ラ行,リ,文化",,名詞
+リボン,緞帶,ri bo n,word,,"清音,ラ行,リ,物品",,名詞
+リコーダーの練習をしましたか。,你有練習直笛嗎？,ri ko o da a no re n shu u wo shi ma shi ta ka,sentence,對話 A｜問練習狀況｜,"清音,ラ行,リ,會話",リコーダーの練習[れんしゅう]をしましたか。,
+はい、しました。,有，我有練習。,"ha i, shi ma shi ta",sentence,對話 B｜問練習狀況｜,"清音,ラ行,リ,會話",,

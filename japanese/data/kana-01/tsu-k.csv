@@ -1,10 +1,10 @@
-ko,zh,romanization,type,note,tags,hanja
+ko,zh,romanization,type,note,tags,hanja,pos
 ツ,tsu ·片假名,tsu,word,"ツ･ツ･ツ！川･川･川，四川麻辣鍋好滋味！
-字源來自漢字「川」，三筆寫完，發音 tsu。⚠️重點區分：ツ(tsu) 撇往右下；シ(shi) 撇往左下，考試超容易搞混。","清音,片假名,タ行,ツ",
-ツイン,雙胞胎,tsu i n,word,,"清音,タ行,ツ,人物",
-ツーピース,兩件式洋裝,tsu u pi i su,word,,"清音,タ行,ツ,服裝",
-ツーリング,巡迴旅遊,tsu u ri n gu,word,,"清音,タ行,ツ,生活",
-ツイード,粗花呢服裝,tsu i i do,word,,"清音,タ行,ツ,服裝",
-ツール,工具,tsu u ru,word,,"清音,タ行,ツ,物品",
-ツイッター、知ってる？,你知道推特（twitter）嗎？,"tsu i t ta a, shi t te ru",sentence,對話 A｜聊社群｜,"清音,タ行,ツ,會話",ツイッター、知[し]ってる？
-うん、アカウント持っているよ。,嗯，我也有帳號。,"u n, a ka u n to mo t te i ru yo",sentence,對話 B｜聊社群｜,"清音,タ行,ツ,會話",うん、アカウント持[も]っているよ。
+字源來自漢字「川」，三筆寫完，發音 tsu。⚠️重點區分：ツ(tsu) 撇往右下；シ(shi) 撇往左下，考試超容易搞混。","清音,片假名,タ行,ツ",,
+ツイン,雙胞胎,tsu i n,word,,"清音,タ行,ツ,人物",,名詞
+ツーピース,兩件式洋裝,tsu u pi i su,word,,"清音,タ行,ツ,服裝",,名詞
+ツーリング,巡迴旅遊,tsu u ri n gu,word,,"清音,タ行,ツ,生活",,名詞
+ツイード,粗花呢服裝,tsu i i do,word,,"清音,タ行,ツ,服裝",,名詞
+ツール,工具,tsu u ru,word,,"清音,タ行,ツ,物品",,名詞
+ツイッター、知ってる？,你知道推特（twitter）嗎？,"tsu i t ta a, shi t te ru",sentence,對話 A｜聊社群｜,"清音,タ行,ツ,會話",ツイッター、知[し]ってる？,
+うん、アカウント持っているよ。,嗯，我也有帳號。,"u n, a ka u n to mo t te i ru yo",sentence,對話 B｜聊社群｜,"清音,タ行,ツ,會話",うん、アカウント持[も]っているよ。,

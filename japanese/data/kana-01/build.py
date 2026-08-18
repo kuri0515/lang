@@ -61,8 +61,9 @@ LESSONS.sort(key=_order)
 
 from _furigana import FURIGANA   # noqa: E402
 from _grammar import GRAMMAR     # noqa: E402
+from _pos import pos_for, check_exceptions, VALID  # noqa: E402
 
-HEADER = ['ko', 'zh', 'romanization', 'type', 'note', 'tags', 'hanja']
+HEADER = ['ko', 'zh', 'romanization', 'type', 'note', 'tags', 'hanja', 'pos']
 
 
 def compose_note(L):
@@ -111,6 +112,7 @@ def rows_for(L):
                 # 規則名（長音／促音…）就是課程標籤；再帶一個書寫系統與主題
                 'tags': f"{L['rule']},{L.get('script', '平假名')},{topic}",
                 'hanja': FURIGANA.get(ja, ''),
+                'pos': pos_for(ja),
             })
         return rows
 
@@ -128,6 +130,8 @@ def rows_for(L):
         'note': compose_note(L)[0],
         'tags': f"清音,{script},{L['row']},{L['kana']}",
         'hanja': '',
+        # 假名卡不是單字，不掛詞性 —— 詳見 _pos.py
+        'pos': pos_for(L['kana'], is_kana_card=True),
     })
     # ② 單字
     # を 那一課教的是助詞用法（ごはんを食べる），那是詞組不是單字。
@@ -141,6 +145,7 @@ def rows_for(L):
             # 標註的判準是「這行字裡有沒有讀不出來的字」，
             # 與它是單字還是對話句無關。
             'hanja': FURIGANA.get(ja, ''),
+            'pos': pos_for(ja),
         })
     # ③ 對話。說話者 A/B 交替；情境名稱是我下的標籤，書上只給句子
     for i, (ja, ro, zh) in enumerate(L['dialogue']):
@@ -152,6 +157,8 @@ def rows_for(L):
             'tags': f"清音,{L['row']},{L['kana']},會話",
             # hanja 欄在日文站存「ko 的注音版本」，前端據此把假名標在漢字正上方
             'hanja': FURIGANA.get(ja, ''),
+            # 對話句不掛詞性 —— 一整句沒有單一詞性可言。
+            'pos': '',
         })
     return rows
 
@@ -325,10 +332,31 @@ def check_grammar():
     print(f'  ✅ 語法說明 {n} 條（共 {len(lines)} 句，其餘刻意留白）')
 
 
+def check_pos():
+    """詞性的兩種靜默失效，都在這裡擋掉。
+
+    ① 例外表裡的詞已經不在資料裡 —— 改了寫法卻忘了同步這張表，
+       那個詞會掉回預設的「名詞」，畫面上看不出任何異狀。
+    ② 詞性值打錯字 ——「動詞 」多一個空白就是一個新的詞性，
+       它同樣不報錯，只會讓那個詞永遠配不到同詞性的干擾項。
+    """
+    all_ja = set([ja for L in LESSONS for ja, _, _, _ in L['words']])
+    bad = check_exceptions(all_ja)
+    used = {pos_for(ja) for ja in all_ja} - {''}
+    for p in sorted(used - VALID):
+        bad.append(f'詞性「{p}」不在合法清單裡（打錯字？）')
+    if bad:
+        sys.exit('❌ 詞性有問題：\n   ' + '\n   '.join(bad))
+    from collections import Counter
+    c = Counter(pos_for(ja) for ja in all_ja)
+    print('  ✅ 詞性 ' + '、'.join(f'{k} {v}' for k, v in c.most_common()))
+
+
 def main():
     _selftest()
     check_furigana()
     check_grammar()
+    check_pos()
     review = []
     print('【展開對帳】')
     all_rows = []

@@ -1,10 +1,10 @@
-ko,zh,romanization,type,note,tags,hanja
+ko,zh,romanization,type,note,tags,hanja,pos
 モ,mo ·片假名,mo,word,"モ･モ･モ！毛･毛･毛，摸到毛毛蟲！
-字源來自漢字「毛」，三筆寫完，發音 mo，外形就是漢字「毛」少了中間那一豎。","清音,片假名,マ行,モ",
-モップ,拖把,mo p pu,word,,"清音,マ行,モ,物品",
-モデル,模特兒,mo de ru,word,,"清音,マ行,モ,職業",
-モノレール,單軌鐵路,mo no re e ru,word,,"清音,マ行,モ,物品",
-モーター,馬達,mo o ta a,word,,"清音,マ行,モ,物品",
-モニター,螢幕、顯示器,mo ni ta a,word,,"清音,マ行,モ,物品",
-これをモチーフにデッサンしましょう。,把這個當主題畫素描吧。,ko re wo mo chi i fu ni de s sa n shi ma sho u,sentence,對話 A｜畫素描｜,"清音,マ行,モ,會話",
-いいですね。,好啊。,i i de su ne,sentence,對話 B｜畫素描｜,"清音,マ行,モ,會話",
+字源來自漢字「毛」，三筆寫完，發音 mo，外形就是漢字「毛」少了中間那一豎。","清音,片假名,マ行,モ",,
+モップ,拖把,mo p pu,word,,"清音,マ行,モ,物品",,名詞
+モデル,模特兒,mo de ru,word,,"清音,マ行,モ,職業",,名詞
+モノレール,單軌鐵路,mo no re e ru,word,,"清音,マ行,モ,物品",,名詞
+モーター,馬達,mo o ta a,word,,"清音,マ行,モ,物品",,名詞
+モニター,螢幕、顯示器,mo ni ta a,word,,"清音,マ行,モ,物品",,名詞
+これをモチーフにデッサンしましょう。,把這個當主題畫素描吧。,ko re wo mo chi i fu ni de s sa n shi ma sho u,sentence,對話 A｜畫素描｜,"清音,マ行,モ,會話",,
+いいですね。,好啊。,i i de su ne,sentence,對話 B｜畫素描｜,"清音,マ行,モ,會話",,
