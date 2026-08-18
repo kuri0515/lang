@@ -620,5 +620,69 @@ console.log('\n【詞庫篩選收合】');
   chk('回到全部時摘要復原', $('b-filter-now').textContent === '全部');
 }
 
+
+// =====================================================================
+// 【另一種語言不該出現在這一站】
+//
+// 兩站共用大部分程式碼，所以某一站的字寫死在共用碼裡，是這個專案
+// 最容易犯、也最難自己發現的錯 —— 它不會報錯，只會在畫面上顯示錯的語言。
+//
+// 已經實際發生過三次：
+//   · 編輯視窗的詞性 placeholder 一直是韓文的「명사 / 동사」，使用者截圖才發現
+//   · 情境對話的方向標籤寫死韓文站的說法，把 HTML 裡正確的日文版蓋掉
+//   · 語音試聽寫死「안녕하세요」，日文站選了日語語音、按下去唸出韓文
+//
+// ★ 這一支只涵蓋前兩種（會進 DOM 的）。第三種抓不到 ——
+//   那個字串是丟給 TTS 的，從來沒有出現在畫面上。
+//   我實際把三個 bug 都重現一次去驗，才確定這件事；
+//   原本的註解寫「任何一處洩漏都會被抓到」是誇大的。
+//   進不了 DOM 的那一類由 arch.test.mjs 的原始碼掃描負責。
+//
+// 【為什麼用 Unicode 範圍而不是列舉字詞】
+//   列舉「안녕하세요、명사、동사…」只擋得住想得到的那幾個。
+//   之前就是這樣漏掉詞性 placeholder 的 —— 我列的清單裡沒有它。
+//   用字集判斷，漏不掉。
+// =====================================================================
+console.log('\n【語言洩漏】');
+{
+  const HANGUL = /[가-힣ᄀ-ᇿ]/;
+  const KANA = /[ぁ-ゖァ-ヺ]/;
+  // 這一站「自己的」文字是允許的，另一站的不行
+  const foreign = LANG.code === 'ja' ? HANGUL : KANA;
+  const foreignName = LANG.code === 'ja' ? '韓文' : '日文';
+
+  // 先把會顯示文字的畫面都掛上去（不碰網路的部分）
+  const voice = await import(SHARED + '/js/views/voice.js');
+  voice.initVoiceUI();
+
+  const leaks = [];
+  const walk = (el, path) => {
+    for (const n of el.childNodes) {
+      if (n.nodeType === 3) {
+        if (foreign.test(n.textContent)) leaks.push([path, n.textContent.trim().slice(0, 40)]);
+      } else if (n.nodeType === 1) {
+        for (const a of ['placeholder', 'title', 'value']) {
+          const v = n.getAttribute?.(a);
+          if (v && foreign.test(v)) leaks.push([`${path}>${n.tagName.toLowerCase()}[${a}]`, v.slice(0, 40)]);
+        }
+        walk(n, path + '>' + (n.id ? '#' + n.id : n.tagName.toLowerCase()));
+      }
+    }
+  };
+  walk(document.body, '');
+  chk(`畫面上沒有${foreignName}`, leaks.length === 0,
+      leaks.length ? leaks.map(([p, t]) => `${p} = ${t}`).join(' ｜ ') : '整份 DOM 逐節點掃過');
+
+  // ★ 反面樣本：證明這個掃描真的會抓。
+  //   沒有這一段，「沒有輸出」可能是掃描本身壞了 —— 那比沒有檢查更危險。
+  const probe = document.createElement('div');
+  probe.textContent = LANG.code === 'ja' ? '안녕하세요' : 'こんにちは';
+  document.body.appendChild(probe);
+  const before = leaks.length;
+  walk(document.body, '');
+  chk('反面樣本：植入一句就會被抓到', leaks.length > before);
+  probe.remove();
+}
+
 console.log(f?`\n❌ 失敗 ${f} 項`:'\n✅ 全部通過');
 process.exit(f?1:0);

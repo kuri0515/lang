@@ -381,5 +381,33 @@ for (const f of files.filter((f) => /\/views\//.test(f))) {
 }
 chk('印出 hanja 前先問站台', hanjaRaw, '韓文站是漢字詞源要印；日文站是注音原料不該印');
 
+// 【共用碼的字串常量不可以寫死某一站的語言】
+//
+// dom 測試會掃渲染後的畫面，但那只涵蓋「會進 DOM」的字串。
+// 語音試聽那個 bug 就漏掉了：speech.speak('안녕하세요') 丟給 TTS，
+// 從來不出現在畫面上，於是日文站選了日語語音、按下去唸出一句韓文，
+// 而任何看畫面的檢查都是綠的。
+//
+// 【為什麼只看字串常量】
+//   共用碼的註解裡本來就有大量兩種語言的字（解釋兩站差異時必然會舉例），
+//   整份檔案粗篩會被註解淹沒。所以先把註解剝掉，只看引號裡的東西。
+//
+// 【為什麼用字集而不是列舉字詞】
+//   列舉「안녕하세요、명사…」只擋得住想得到的那幾個 ——
+//   詞性 placeholder 當初就是這樣漏的，我列的清單裡沒有它。
+const stripComments = (src) => src
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/(^|[^:])\/\/.*$/gm, '$1');
+const SCRIPT = /[가-힣ᄀ-ᇿぁ-ゖァ-ヺ]/;
+const LITERAL = /(['"`])((?:\\.|(?!\1)[^\\])*)\1/g;
+const hardcoded = [];
+for (const f of files) {
+  for (const m of stripComments(read(f)).matchAll(LITERAL)) {
+    if (SCRIPT.test(m[2])) hardcoded.push(`${rel(f)}: ${m[0].slice(0, 40)}`);
+  }
+}
+chk('共用碼沒有寫死任何一站的語言文字', hardcoded,
+  '要顯示或朗讀的字一律由站台宣告（lang.config.js），共用碼不認得任何一種語言');
+
 console.log(fails ? `\n❌ ${fails} 項約束被違反` : '\n✅ 所有架構約束通過');
 process.exit(fails ? 1 : 0);
