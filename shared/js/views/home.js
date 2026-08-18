@@ -138,7 +138,7 @@ async function doLoad() {
     ]);
 
     $('s-due').textContent = due.total;
-    $('s-done').textContent = today.reviewed;
+    $('s-reviewed').textContent = today.reviewed;
     $('s-acc').textContent = pct(today.accuracy);
     $('s-all-acc').textContent = overall.mastered;
     renderStreak(daily);
@@ -154,6 +154,7 @@ async function doLoad() {
     renderGojuon(lang().taxonomy.grid ?? null, pron,
                  new Set(pron.filter((r) => r.total > 0).map((r) => r.tag)));
     dueNow = due.total;
+    renderRing(masteredToday(), dailyTarget(due.total));
     renderSuggestion(due.total, today, decks, due.carried);
 
     renderLife(life);
@@ -168,6 +169,50 @@ function renderStreak(daily) {
   $('streak').innerHTML = days
     ? `🔥 連續 <b>${days}</b> 天${startedToday ? '' : ' · 今天還沒開始'}`
     : '今天是新的開始 👋';
+  renderWeek(daily);
+}
+
+/**
+ * 最近七天，有學的填實。
+ *
+ * 【為什麼要有，明明已經有「連續 N 天」】
+ *   「連續 3 天」是一個結論，看不出昨天有沒有斷。
+ *   七格一字排開，「昨天有、今天空著」一眼就看得到 ——
+ *   而那比任何一句文案都更能讓人現在就打開。
+ *
+ * 【為什麼不畫更長（30 天）】
+ *   30 格在手機上每格不到 3 px，看起來像雜訊。
+ *   而且要回答的問題是「今天做了沒」，不是「這個月表現如何」——
+ *   後者在記錄分頁有完整的圖。
+ */
+export function renderWeek(daily) {
+  const box = $('week');
+  if (!box) return;
+  const has = new Set((daily || []).filter((d) => d.n > 0).map((d) => d.day));
+  const out = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+    out.push(`<i class="${has.has(d) ? 'on' : ''}${i === 0 ? ' today-mark' : ''}"></i>`);
+  }
+  box.innerHTML = out.join('');
+}
+
+/**
+ * 今日進度環：今天掌握了幾個 / 今天的目標。
+ *
+ * 【為什麼環裡放「已掌握」而不是「已答題數」】
+ *   答題數會隨著答錯而膨脹 —— 一直答錯的人數字反而更漂亮，
+ *   那是完全相反的訊號。掌握數只有真的連續答對才會動。
+ */
+export function renderRing(mastered, target) {
+  const el = $('ring-fg');
+  if (!el) return;
+  const pct = target > 0 ? Math.min(1, mastered / target) : 0;
+  const C = 2 * Math.PI * 44;
+  el.style.strokeDashoffset = String(C * (1 - pct));
+  el.classList.toggle('done', pct >= 1);
+  $('s-done').textContent = target ? `${Math.min(mastered, target)}/${target}` : String(mastered);
+  $('ring-sub').textContent = pct >= 1 ? '今日達標 ✓' : '今日已掌握';
 }
 
 let deckCounts = null;

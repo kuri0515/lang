@@ -1048,3 +1048,43 @@ ruby rt { line-height: 1; }
 /* 正解裡「你沒寫對的那幾個字」標出來 —— 只給正解，人會整串看過去而不知道差在哪 */
 .sp-result b { font-size: 26px; font-weight: 700; color: var(--text); letter-spacing: .04em; }
 .sp-result .miss { color: var(--no-fg); border-bottom: 3px solid var(--no-fg); }
+
+/* ── 首頁的今日進度 ─────────────────────────────────────
+   先前是四個等權並排的數字，沒有主次 —— 學習者不知道該看哪一個。
+   真正要回答的問題只有一個：「今天還剩多少」，所以它獨佔一個環，
+   其餘降成一行小字。 */
+.today { display: flex; align-items: center; gap: 18px; }
+
+.ring-wrap { position: relative; width: 96px; height: 96px; flex-shrink: 0; }
+.ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 8; }
+.ring-bg { stroke: var(--border); }
+.ring-fg {
+  stroke: var(--accent); stroke-linecap: round;
+  /* 2πr = 276.5。用 dasharray 畫弧，靠 dashoffset 控制比例 */
+  stroke-dasharray: 276.5; stroke-dashoffset: 276.5;
+  transition: stroke-dashoffset .6s cubic-bezier(.4, 0, .2, 1);
+}
+.ring-fg.done { stroke: var(--ok-fg); }
+.ring-text {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.ring-text b { font-size: 26px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.ring-text small { font-size: 10px; color: var(--faint); margin-top: 3px; }
+
+.today-side { flex: 1; min-width: 0; }
+.mini-stats {
+  display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 8px;
+  font-size: 12px; color: var(--faint);
+}
+.mini-stats b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* 最近七天：有學的填實。連續幾天不必用算的，看一眼就知道 ——
+   而「昨天有、今天空著」比一句「連續 3 天」更能催人打開。 */
+.week { display: flex; gap: 5px; margin-top: 11px; }
+.week i {
+  width: 100%; height: 5px; border-radius: 3px; background: var(--border);
+}
+.week i.on { background: var(--accent); }
+.week i.today-mark { box-shadow: 0 0 0 2px var(--accent-soft); }

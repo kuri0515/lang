@@ -494,5 +494,52 @@ console.log('\n【忘記密碼】');
       '一律回「若這個帳號存在，信已寄出」—— 對真的使用者沒差別，對試探的人沒資訊');
 }
 
+
+// =====================================================================
+// 【今日進度環】
+//
+// 先前首頁是四個等權並排的數字（待複習／今日已答／今日正確／已掌握），
+// 沒有主次 —— 學習者不知道該看哪一個，於是一個都不看。
+// 真正要回答的問題只有一個：「今天還剩多少」。
+// =====================================================================
+console.log('\n【今日進度環】');
+{
+  const home = await import(SHARED + '/js/views/home.js');
+  const ring = $('ring-fg');
+  const C = 2 * Math.PI * 44;
+
+  home.renderRing(0, 20);
+  chk('沒開始時環是空的', Math.abs(parseFloat(ring.style.strokeDashoffset) - C) < 0.5,
+      ring.style.strokeDashoffset);
+  chk('中間寫進度而不是單一數字', $('s-done').textContent === '0/20', $('s-done').textContent);
+
+  home.renderRing(10, 20);
+  chk('一半時環走一半', Math.abs(parseFloat(ring.style.strokeDashoffset) - C / 2) < 0.5);
+
+  home.renderRing(20, 20);
+  chk('達標時環滿格', Math.abs(parseFloat(ring.style.strokeDashoffset)) < 0.5);
+  chk('達標時換色（不是只有數字變）', ring.classList.contains('done'));
+  chk('達標時說出來', /達標/.test($('ring-sub').textContent), $('ring-sub').textContent);
+
+  // ★ 超過目標不能溢出。做了三輪就顯示 30/20 的話，
+  //   環會畫過頭，而「超額」本身不是要傳達的訊息。
+  home.renderRing(35, 20);
+  chk('★ 超過目標不溢出', Math.abs(parseFloat(ring.style.strokeDashoffset)) < 0.5
+      && $('s-done').textContent === '20/20', $('s-done').textContent);
+
+  // 最近七天：「昨天有、今天空著」一眼看得到，
+  // 而那比任何一句文案都更能讓人現在就打開。
+  const day = (i) => new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+  home.renderWeek([{ day: day(1), n: 5 }, { day: day(3), n: 2 }]);
+  const cells = [...$('week').children];
+  chk('七天條有七格', cells.length === 7, `${cells.length} 格`);
+  chk('有學的那兩天填實', cells.filter((c) => c.classList.contains('on')).length === 2);
+  chk('★ 最後一格是今天（沒學就空著）',
+      cells[6].classList.contains('today-mark') && !cells[6].classList.contains('on'),
+      '今天空著正是要讓人看到的東西');
+  home.renderWeek([{ day: day(0), n: 3 }]);
+  chk('今天學了就填實', [...$('week').children][6].classList.contains('on'));
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);

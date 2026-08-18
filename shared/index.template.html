@@ -67,13 +67,33 @@
   <section id="view-home" class="hidden">
 
     <div class="card hero">
-      <div class="hero-stats">
-        <div><b id="s-due">–</b><small>待複習</small></div>
-        <div><b id="s-done">–</b><small>今日已答</small></div>
-        <div><b id="s-acc">–</b><small>今日正確</small></div>
-        <div><b id="s-all-acc">–</b><small>已掌握</small></div>
+      <!-- 今日進度做成主視覺。
+           先前是四個等權並排的數字（待複習／今日已答／今日正確／已掌握），
+           沒有主次 —— 學習者不知道該看哪一個，於是一個都不看。
+           真正要回答的問題只有一個：「今天還剩多少」。
+           環的中間放它，其餘降成一行輔助資訊。 -->
+      <div class="today">
+        <div class="ring-wrap">
+          <svg class="ring" viewBox="0 0 100 100" aria-hidden="true">
+            <circle class="ring-bg" cx="50" cy="50" r="44"></circle>
+            <circle id="ring-fg" class="ring-fg" cx="50" cy="50" r="44"></circle>
+          </svg>
+          <div class="ring-text">
+            <b id="s-done">–</b>
+            <small id="ring-sub">今日已掌握</small>
+          </div>
+        </div>
+        <div class="today-side">
+          <div id="streak" class="streak"></div>
+          <div class="mini-stats">
+            <span><b id="s-due">–</b> 待複習</span>
+            <span><b id="s-reviewed">–</b> 今日答題</span>
+            <span><b id="s-acc">–</b> 今日正確</span>
+            <span><b id="s-all-acc">–</b> 累計掌握</span>
+          </div>
+          <div id="week" class="week"></div>
+        </div>
       </div>
-      <div id="streak" class="streak"></div>
 
       <div id="suggest" class="suggest"></div>
       <!-- 首頁只留三個入口：複習、學習新的、自由練習。
