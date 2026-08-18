@@ -448,6 +448,19 @@ console.log('\n【拼出來】');
     chk('★ 逐字標出錯的位置', !!$('sp-typed').querySelector('.no'),
         '只說「錯了」的話，學習者不知道自己錯在哪一個字');
     chk('顯示正解', /正確答案/.test($('sp-result').textContent));
+
+    // ★ 每次呈現都要重新排列。
+    //   一個詞要連對兩次才算掌握，所以它至少出現兩次 ——
+    //   鍵盤排列固定的話，第二次練到的是「っ 在右邊數來第三顆」，
+    //   不是那個字。手指記得住位置，腦子不會因此記住字。
+    const layouts = new Set();
+    for (let i = 0; i < 8; i++) {
+      spell.mount({ ...ctx, grade: () => {} });
+      layouts.add([...$('sp-keys').querySelectorAll('[data-c]')]
+        .map((b) => b.dataset.c).join(''));
+    }
+    chk(`★ 鍵盤每次重排（8 次出現 ${layouts.size} 種排列）`, layouts.size >= 2,
+        '固定排列會讓人靠位置記答案 —— 手指記得住，腦子不會');
   }
 }
 
