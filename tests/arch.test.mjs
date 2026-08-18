@@ -409,5 +409,54 @@ for (const f of files) {
 chk('共用碼沒有寫死任何一站的語言文字', hardcoded,
   '要顯示或朗讀的字一律由站台宣告（lang.config.js），共用碼不認得任何一種語言');
 
+// 【`ns.fn()` 呼叫的函式，對方模組真的有匯出嗎】
+//
+// 這個專案大量用命名空間匯入（import * as home from './views/home.js'），
+// 而 JS 對「呼叫一個不存在的匯出」沒有任何靜態檢查 ——
+// home.addMasteredToday(...) 在對方忘了 export 時就是 undefined is not a function。
+//
+// 實測過這個洞：把 addMasteredToday 的 export 拿掉，
+// 499 條測試全部照樣通過。而真實後果是「今天的掌握數永遠不累加、
+// 學習者永遠解鎖不了新課」，沒有任何錯誤訊息。
+//
+// 【為什麼靜態檢查就夠】
+//   要真的抓到得把每個分支都執行一遍，而 app.js 的分支多半要登入才走得到。
+//   比對「呼叫的名字」與「對方的匯出清單」不必執行，涵蓋率反而更完整。
+//
+// 【只查本專案的模組】
+//   外部套件（supabase 之類）沒有原始碼可比對，跳過。
+const exportsOf = (file) => {
+  const src = fs.readFileSync(file, 'utf8');
+  const names = new Set();
+  for (const m of src.matchAll(/^export\s+(?:async\s+)?function\s+(\w+)/gm)) names.add(m[1]);
+  for (const m of src.matchAll(/^export\s+(?:const|let|var|class)\s+(\w+)/gm)) names.add(m[1]);
+  // export { a, b as c }
+  for (const m of src.matchAll(/^export\s*\{([^}]*)\}/gm)) {
+    for (const part of m[1].split(',')) {
+      const bits = part.trim().split(/\s+as\s+/);
+      if (bits.length) names.add((bits[1] || bits[0]).trim());
+    }
+  }
+  return names;
+};
+const badCalls = [];
+for (const f of files) {
+  const src = read(f);
+  const ns = new Map();          // 別名 → 目標檔的絕對路徑
+  for (const m of src.matchAll(/import\s+\*\s+as\s+(\w+)\s+from\s+'(\.[^']+)'/g)) {
+    const target = path.resolve(path.dirname(f), m[2]);
+    if (fs.existsSync(target)) ns.set(m[1], target);
+  }
+  for (const [alias, target] of ns) {
+    const names = exportsOf(target);
+    const re = new RegExp(`\\b${alias}\\.(\\w+)\\s*\\(`, 'g');
+    for (const m of src.matchAll(re)) {
+      if (!names.has(m[1])) badCalls.push(`${rel(f)}: ${alias}.${m[1]}() → ${path.basename(target)} 沒有匯出它`);
+    }
+  }
+}
+chk('ns.fn() 呼叫的函式對方都有匯出', badCalls,
+  'JS 對此沒有任何靜態檢查，忘了 export 只會在使用者點到時變成 undefined is not a function');
+
 console.log(fails ? `\n❌ ${fails} 項約束被違反` : '\n✅ 所有架構約束通過');
 process.exit(fails ? 1 : 0);
