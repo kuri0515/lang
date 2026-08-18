@@ -458,5 +458,29 @@ for (const f of files) {
 chk('ns.fn() 呼叫的函式對方都有匯出', badCalls,
   'JS 對此沒有任何靜態檢查，忘了 export 只會在使用者點到時變成 undefined is not a function');
 
+// 【localStorage 的鍵一律要帶站台前綴】
+//
+// 兩站同在 kuri0515.github.io 這一個網域下，而 localStorage 是
+// **整個網域共用**的 —— 路徑不同不會隔開。
+// 於是 'session-resume-v1' 這種裸鍵，兩站寫的是同一格。
+//
+// 實際發生過（2026-08-18）：在韓文站學到一半，打開日文站，
+// 續跑把韓文站那一輪接了回來 —— 日文站上出現整輪韓文單字，
+// 而程式沒有任何錯誤。使用者的回報是「日文站串了韓文站的內容」。
+// theme 當時甚至寫死成 'kr.theme'，日文站也在寫同一格。
+//
+// 這種錯誤在單站測試裡永遠測不到：一次只跑一個站，不會撞。
+// 只有靜態檢查擋得住。
+const BARE_LS = /localStorage\.(?:get|set|remove)Item\(\s*(['"`])/g;
+const bareKeys = [];
+for (const f of files) {
+  for (const m of read(f).matchAll(BARE_LS)) {
+    const line = read(f).slice(m.index, m.index + 70).split('\n')[0];
+    bareKeys.push(`${rel(f)}: ${line}`);
+  }
+}
+chk('localStorage 的鍵都經過 lsKey()（帶站台前綴）', bareKeys,
+  '兩站同網域、localStorage 共用 —— 裸鍵會讓一站讀到另一站的資料，而且不報錯');
+
 console.log(fails ? `\n❌ ${fails} 項約束被違反` : '\n✅ 所有架構約束通過');
 process.exit(fails ? 1 : 0);

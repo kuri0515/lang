@@ -39,3 +39,20 @@ export function lang() {
 
 /** 測試用：讓每支測試各自裝配自己的語言設定 */
 export function _resetLang() { CFG = null; }
+
+/**
+ * localStorage 的鍵，一律加上站台前綴。
+ *
+ * 【為什麼一定要】
+ *   兩站同在 kuri0515.github.io 這一個網域下，
+ *   而 localStorage 是**整個網域共用**的 —— 路徑不同不會隔開。
+ *   所以 'session-resume-v1' 這種裸鍵，兩站寫的是同一格。
+ *
+ *   實際發生過（2026-08-18）：在韓文站學到一半，打開日文站，
+ *   續跑功能把韓文站那一輪接了回來 —— 日文站上出現整輪韓文單字。
+ *   使用者的回報是「日文站串了韓文站的內容」，而程式沒有任何錯誤。
+ *
+ *   theme（曾寫死 'kr.theme'）、導言展開狀態、今日掌握數，
+ *   當時也都是共用的，只是症狀沒有那麼明顯。
+ */
+export const lsKey = (name) => `${lang().storagePrefix}.${name}`;

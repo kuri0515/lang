@@ -14,7 +14,7 @@ import { openEditor } from './editor.js';
 import { lessonOutro } from '../core/taxonomy.js';
 import { parseLine } from '../core/dialogue.js';
 import { hasRuby, rubyHTML, stripRuby } from '../core/ruby.js';
-import { lang } from '../core/lang.js';
+import { lang, lsKey } from '../core/lang.js';
 
 const rubyFromHanja = () => !!lang().rubyFromHanja;
 
@@ -35,7 +35,7 @@ let onQuit = null;
  *   再開一個設定項只是把同一件事說兩遍。
  *   收起後仍留課名與「看說明」，隨時點得開，不會變成找不到的功能。
  */
-const LS_INTRO = 'lesson-intro-open';
+const LS_INTRO = () => lsKey('lesson-intro-open');
 
 // 外部注入：回顧清單的狀態查詢與切換。
 // 用注入而不是直接 import data 層 —— views 不該自己決定資料怎麼來，
@@ -50,8 +50,8 @@ export function setLesson(tag, intro) {
   $('lesson-title').textContent = tag;
   $('lesson-body').textContent = intro;
   // 預設展開：第一次進來的人要看得到。收起過就一直維持收起。
-  box.open = localStorage.getItem(LS_INTRO) !== '0';
-  box.ontoggle = () => localStorage.setItem(LS_INTRO, box.open ? '1' : '0');
+  box.open = localStorage.getItem(LS_INTRO()) !== '0';
+  box.ontoggle = () => localStorage.setItem(LS_INTRO(), box.open ? '1' : '0');
 }
 
 export function initStudy({ session: s, getCtx, onQuit: quitCb,

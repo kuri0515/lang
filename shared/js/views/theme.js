@@ -5,8 +5,10 @@
 // 「跟隨系統」不寫 data-theme，讓 CSS 的 prefers-color-scheme 生效。
 // =====================================================================
 import { $, qs } from '../core/dom.js';
+import { lsKey } from '../core/lang.js';
 
-const LS_THEME = 'kr.theme';
+// ★ 曾經寫死 'kr.theme' —— 日文站也在寫同一格（兩站同網域）
+const LS_THEME = () => lsKey('theme');
 
 export function applyTheme(t) {
   if (t === 'system') document.documentElement.removeAttribute('data-theme');
@@ -17,12 +19,12 @@ export function applyTheme(t) {
 }
 
 export function initTheme() {
-  const saved = localStorage.getItem(LS_THEME) || 'system';
+  const saved = localStorage.getItem(LS_THEME()) || 'system';
   applyTheme(saved);
   const el = qs(`#theme-pick input[value="${saved}"]`);
   if (el) el.checked = true;
   $('theme-pick')?.addEventListener('change', (e) => {
-    localStorage.setItem(LS_THEME, e.target.value);
+    localStorage.setItem(LS_THEME(), e.target.value);
     applyTheme(e.target.value);
   });
 }

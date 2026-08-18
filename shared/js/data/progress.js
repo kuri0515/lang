@@ -445,3 +445,46 @@ export async function fetchRecallEntries(userId, direction) {
   }
   return rows.map((r) => ({ item: r.item, direction, card: cards[r.item_id] ?? null }));
 }
+
+// ---------------------------------------------------------------------
+// 學習中斷後的續跑狀態（雲端）
+//
+// 瀏覽器端也存一份（app.js 的 localStorage）。兩邊都存的重點不是「寫兩份」，
+// 而是回來時該信哪一份 —— 判斷寫在 app.js，這裡只負責讀寫。
+//
+// 【為什麼失敗一律吞掉】
+//   續跑是加分功能。網路不通、表還沒建、RLS 擋掉 ——
+//   任何一種情況都不該讓學習者連學都學不了。
+//   本機那一份仍然有效，同一台裝置照樣接得上。
+// ---------------------------------------------------------------------
+
+/** 讀雲端的續跑狀態。沒有、讀不到、壞掉 → 一律回 null */
+export async function loadResume(userId) {
+  if (!userId) return null;
+  try {
+    const { data, error } = await sb.from('study_resume')
+      .select('state, saved_at').eq('user_id', userId).maybeSingle();
+    if (error || !data?.state) return null;
+    return { ...data.state, savedAt: Date.parse(data.saved_at) || 0 };
+  } catch { return null; }
+}
+
+/** 寫雲端。一個使用者一列，直接覆蓋 —— 續跑狀態是「現在做到哪」，不是歷史 */
+export async function saveResume(userId, state) {
+  if (!userId || !state) return;
+  try {
+    await sb.from('study_resume').upsert({
+      user_id: userId,
+      state,
+      // saved_at 用用戶端的時間：要比的是「哪一台裝置的進度比較新」。
+      // 用伺服器時間的話，網路慢的那一台會後到，於是先操作的蓋掉後操作的。
+      saved_at: new Date(state.savedAt || Date.now()).toISOString(),
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' });
+  } catch { /* 見檔頭：續跑不該擋住學習 */ }
+}
+
+export async function clearResume(userId) {
+  if (!userId) return;
+  try { await sb.from('study_resume').delete().eq('user_id', userId); } catch { /* 同上 */ }
+}

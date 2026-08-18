@@ -12,7 +12,7 @@ import { ROUND_SIZE } from '../study/session.js';
 import { ROUND_CRITERION } from '../core/srs.js';
 import { matchesType as matchesTypePure } from '../study/session.js';
 import { computeStreak } from '../core/stats.js';
-import { lang } from '../core/lang.js';
+import { lang, lsKey } from '../core/lang.js';
 
 let nextLessonTag = null;   // 給首頁建議區用：課程的下一步
 let nextLessonNo = 0;
@@ -194,7 +194,7 @@ let deckCounts = null;
 let dueNow = 0;        // 這次載入時的待複習量，按鈕據此判斷擋不擋
 const DAILY_MASTERY_TARGET = 20;
 
-const todayKey = () => 'mastered-' + new Date().toISOString().slice(0, 10);
+const todayKey = () => lsKey('mastered-' + new Date().toISOString().slice(0, 10));
 
 export function masteredToday() {
   return Number(localStorage.getItem(todayKey()) || 0);

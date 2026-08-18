@@ -328,7 +328,11 @@ console.log('\n【順延的可見性】');
 console.log('\n【每日複習任務】');
 {
   const home = await import(SHARED + '/js/views/home.js');
-  const key = 'mastered-' + new Date().toISOString().slice(0, 10);
+  // ★ 要用正式路徑取鍵。寫死 'mastered-...' 的話，
+  //   程式改成帶站台前綴（kr./ja.）之後，測試會去讀一個沒人寫的格子，
+  //   而斷言仍然「通過」—— 驗的其實是空氣。
+  const { lsKey } = await import(SHARED + '/js/core/lang.js');
+  const key = lsKey('mastered-' + new Date().toISOString().slice(0, 10));
   const set = (n) => localStorage.setItem(key, String(n));
 
   set(0);

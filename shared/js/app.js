@@ -28,7 +28,7 @@ let currentLesson = '';   // 本輪練的是哪一課，結束畫面要用
 import * as browse from './views/browse.js';
 import * as history from './views/history.js';
 import * as importer from './views/importer.js';
-import { lang } from './core/lang.js';
+import { lang, lsKey } from './core/lang.js';
 
 // ---------------------------------------------------------------------
 // 應用狀態：只有這三個是跨模組共享的，其餘各自封裝
@@ -117,6 +117,10 @@ async function begin(entries, { freeMode = false, kind = 'review', note = '', le
 // 三種進入學習的路徑
 // ---------------------------------------------------------------------
 // 一輪的題數定義在 study/session.js（單一來源，首頁的提示文字也讀它）
+
+// 學新課時一批拿幾條。這不是「每日上限」——
+// 每日上限已取消，這只是「一次點下去不要把整個詞庫灌進來」。
+const NEW_BATCH = 20;
 let reviewQueue = [];        // 這一批還沒做的（分輪用）
 let lastBatchIds = [];       // 剛做完那一輪的條目，供「再多練一些」使用
 
@@ -129,35 +133,76 @@ let lastBatchIds = [];       // 剛做完那一輪的條目，供「再多練一
 //   這三件事在手機上每天都會發生，而目前的結果都是整輪重來。
 //   一輪要答三十到八十題，重來一次的代價足以讓人今天不想再開。
 //
-// 【為什麼存在瀏覽器而不是雲端】
-//   這是「做到一半」的暫存，不是學習記錄（那個每答一題就寫進 reviews）。
-//   換裝置接不上的代價只是重做一輪；為它多一張表、多一次網路往返不值得。
+// 【本機 ＋ 雲端都存】
+//   本機（localStorage）：每答一題就寫，零延遲、離線也有效。
+//   雲端（study_resume）：換一台裝置也接得上 —— 手機做到一半、
+//   打開電腦想接著做，那是這個功能真正的用途。
+//
+//   兩邊都存的重點不是「寫兩份」，是**回來時該信哪一份**：
+//   取 savedAt 比較新的那一份。用用戶端的時間點而不是伺服器寫入時間 ——
+//   後者會讓網路慢的那一台後到，於是先操作的蓋掉後操作的。
+//
+// 【雲端為什麼不是每答一題就寫】
+//   一輪要答三十到八十題，每題一次網路寫入是三十到八十次請求，
+//   而其中七十九次的結果隔幾秒就被下一次覆蓋掉。
+//   本機負責「每一題都不丟」，雲端負責「換裝置接得上」——
+//   後者只需要在離開時是對的。
 //
 // 【為什麼要有時效】
 //   三天前中斷的那一輪，卡片的到期日早就變了，接回去會用過期的資料
 //   去覆蓋雲端。過期就丟掉，回到正常流程重新算。
 // ---------------------------------------------------------------------
-const RESUME_KEY = 'session-resume-v1';
+// 鍵一定要帶站台前綴 —— 兩站同網域，localStorage 是共用的（見 core/lang.js 的 lsKey）
+const RESUME_KEY = () => lsKey('session-resume-v1');
 const RESUME_MAX_AGE = 12 * 3600 * 1000;   // 超過 12 小時就當作是「另一天的事」
 
-function saveResume() {
-  try {
-    const snap = session.snapshot();
-    // 已經做完的不必存 —— 存了會在下次開啟時彈出一個空的學習畫面
-    if (!snap.queue.length || snap.idx >= snap.queue.length) return clearResume();
-    localStorage.setItem(RESUME_KEY, JSON.stringify({
-      ...snap, reviewQueue, lastBatchIds, lesson: currentLesson, savedAt: Date.now(),
-    }));
-  } catch { /* 容量滿或隱私模式：續跑是加分功能，不該讓它擋住學習 */ }
+let cloudPushAt = 0;
+const CLOUD_MIN_GAP = 20000;      // 雲端最多 20 秒寫一次
+
+function currentResumeState() {
+  const snap = session.snapshot();
+  if (!snap.queue.length || snap.idx >= snap.queue.length) return null;
+  return { ...snap, reviewQueue, lastBatchIds, lesson: currentLesson, savedAt: Date.now() };
+}
+
+/**
+ * @param toCloud 強制同步到雲端（離開頁面、切到背景時用）。
+ *   平時靠節流，因為每答一題寫一次雲端 = 一輪三十到八十次請求，
+ *   而其中絕大多數隔幾秒就被下一次覆蓋掉。
+ */
+function saveResume({ toCloud = false } = {}) {
+  const state = currentResumeState();
+  if (!state) return clearResume();
+  try { localStorage.setItem(RESUME_KEY(), JSON.stringify(state)); }
+  catch { /* 容量滿或隱私模式：續跑是加分功能，不該擋住學習 */ }
+
+  if (!user?.id) return;
+  if (toCloud || Date.now() - cloudPushAt > CLOUD_MIN_GAP) {
+    cloudPushAt = Date.now();
+    progress.saveResume(user.id, state);      // 失敗一律吞掉，見 data 層
+  }
 }
 function clearResume() {
-  try { localStorage.removeItem(RESUME_KEY); } catch { /* 同上 */ }
+  try { localStorage.removeItem(RESUME_KEY()); } catch { /* 同上 */ }
+  if (user?.id) progress.clearResume(user.id);
 }
-/** 有沒有可續跑的一輪？有就接回去並回傳 true */
-function tryResume() {
-  let s = null;
-  try { s = JSON.parse(localStorage.getItem(RESUME_KEY) || 'null'); } catch { return false; }
-  if (!s || Date.now() - (s.savedAt || 0) > RESUME_MAX_AGE) { clearResume(); return false; }
+/**
+ * 有沒有可續跑的一輪？有就接回去並回傳 true。
+ *
+ * 本機與雲端各有一份，取 savedAt 比較新的：
+ *   同一台裝置 → 幾乎永遠是本機（它每答一題就寫）
+ *   換一台裝置 → 本機是空的或很舊，雲端勝出
+ * 平手時取本機 —— 內容一樣，少一次不必要的狀態切換。
+ */
+async function tryResume() {
+  let local = null;
+  try { local = JSON.parse(localStorage.getItem(RESUME_KEY()) || 'null'); } catch { /* 壞掉就當沒有 */ }
+  const cloud = await progress.loadResume(user?.id);
+
+  const s = [local, cloud]
+    .filter((x) => x && Date.now() - (x.savedAt || 0) <= RESUME_MAX_AGE)
+    .sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0))[0];
+  if (!s) { clearResume(); return false; }
   reviewQueue = Array.isArray(s.reviewQueue) ? s.reviewQueue : [];
   lastBatchIds = Array.isArray(s.lastBatchIds) ? s.lastBatchIds : [];
   currentLesson = s.lesson || '';
@@ -214,11 +259,15 @@ async function nextRound() {
 
 async function startNew(deckId, tag = '') {
   try {
-    // 每日新卡上限：一次灌太多新詞，隔天的複習量會爆掉
-    const limit = profile?.daily_new_limit ?? 20;
-    const done = await progress.newCardsToday(user.id).catch(() => 0);
-    const room = Math.max(0, limit - done);
-    if (!room) return msg(`今日新卡已達上限（${limit} 張）。先把複習做完，明天再來 👍`, 'ok');
+    // ★ 每日新卡上限已取消（使用者的決定，2026-08-18）——
+    //   原本的理由是「一次灌太多新詞，隔天的複習量會爆掉」，
+    //   那個現象是真的（模擬過：每天 8 條新的，90 天後每日複習 45–75 條），
+    //   但要不要踩煞車是學習者自己的判斷，不該由系統代替他決定。
+    //
+    //   room 仍保留 —— 它現在的作用是「這一批最多拿幾條」，
+    //   不是「今天還剩幾條額度」。把它拿掉的話，一次點下去會把整個詞庫
+    //   的新詞全部灌進一輪。
+    const room = NEW_BATCH;
 
     const rows = await progress.fetchNewItems(user.id, deckId, [home.effectiveDir()], room, tag);
     if (!rows.length) {
@@ -246,10 +295,15 @@ async function startScene(scene) {
   if (!scene) return;
   const deck = (await content.listDecks()).find((d) => d.slug === 'life-01');
   if (!deck) return msg('找不到「生活 · 興趣」詞庫');
-  const limit = profile?.daily_new_limit ?? 20;
-  const done = await progress.newCardsToday(user.id).catch(() => 0);
-  const room = Math.max(0, limit - done);
-  if (!room) return msg(`今日新卡已達上限（${limit} 張）。先把複習做完，明天再來 👍`, 'ok');
+  // ★ 每日新卡上限已取消（使用者的決定，2026-08-18）——
+  //   原本的理由是「一次灌太多新詞，隔天的複習量會爆掉」，
+  //   那個現象是真的（模擬過：每天 8 條新的，90 天後每日複習 45–75 條），
+  //   但要不要踩煞車是學習者自己的判斷，不該由系統代替他決定。
+  //
+  //   room 仍保留 —— 它現在的作用是「這一批最多拿幾條」，
+  //   不是「今天還剩幾條額度」。把它拿掉的話，一次點下去會把整個詞庫
+  //   的新詞全部灌進一輪。
+  const room = NEW_BATCH;
 
   const rows = await progress.fetchNewItems(user.id, deck.id, [home.effectiveDir()],
                                             room, scene.tags);
@@ -480,7 +534,7 @@ async function onUser(u) {
   // ★ 有沒有做到一半的一輪？有就直接接回去。
   //   放在 show() 之前 —— 先閃一下首頁再跳進學習畫面，
   //   會讓人以為自己按錯了，而且那一閃會在每次重新整理時出現。
-  if (tryResume()) {
+  if (await tryResume()) {
     await show('view-study');
     msg('接著上次的進度繼續', 'ok');
     return;
@@ -492,9 +546,10 @@ async function onUser(u) {
 // onChange 已經每答一題存一次，這兩個事件是保險：
 // 停在「已翻面但還沒評分」的狀態時，只有它們會存到。
 window.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') saveResume();
+  // 切到背景就是「可能換到別台裝置」的時刻 —— 這一次一定要送上雲端
+  if (document.visibilityState === 'hidden') saveResume({ toCloud: true });
 });
-window.addEventListener('pagehide', saveResume);
+window.addEventListener('pagehide', () => saveResume({ toCloud: true }));
 
 auth.onChange(onUser);
 (async () => { await onUser(await auth.currentUser()); })();
