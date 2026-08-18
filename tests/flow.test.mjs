@@ -168,5 +168,83 @@ console.log('\n【每個題型有自己的進度】');
   chk('快照記得自己的題型', A.snapshot().modeId === 'flip', A.snapshot().modeId);
 }
 
+
+// =====================================================================
+// 【每一種進入學習的路徑都走一遍】
+//
+// 今天所有的 bug 都長在動線上，而不同的入口走的是不同的分支：
+//   複習     → 分輪、順延、計入今日任務
+//   學新課   → 連續答對三次才畢業
+//   自由練習 → 不動排程（而它曾經永遠結束不了）
+//   回顧清單 → 只縮不放
+// 各自都有單元測試，但沒有一支確認「從入口點進去會不會炸」。
+// =====================================================================
+console.log('\n【四種入口都走得通】');
+{
+  const three = () => pool.filter((x) => x.item_type === 'word').slice(0, 3)
+    .map((item) => ({ item, direction: 'ko2zh', card: { ...OLD } }));
+  const newCards = () => pool.filter((x) => x.item_type === 'word').slice(3, 6)
+    .map((item) => ({ item, direction: 'ko2zh', card: null }));
+
+  for (const [kind, mkEntries, opts, label] of [
+    ['review', three, {}, '複習'],
+    ['new', newCards, {}, '學新課'],
+    ['free', three, { freeMode: true }, '自由練習'],
+    ['drill', three, {}, '回顧清單'],
+  ]) {
+    let done = false, err = null;
+    const S = createSession({ save: async () => {}, onChange: (st) => { try { study.render(st); } catch (e) { err = e; } },
+                              onFinish: () => { done = true; } });
+    study.initStudy({ session: S, getCtx: () => ({ pool, modeId: 'flip' }),
+                      onQuit: () => {}, onPark: () => {},
+                      inRecallList: () => false, onToggleRecall: () => {} });
+    S.start(mkEntries(), { mode: 'flip', kind, ...opts });
+    try { study.render(S.state()); } catch (e) { err = e; }
+
+    let n = 0;
+    while (n < 80 && !done && !err) { S.grade(RATING.GOOD); n += 1; }
+    chk(`${label}：從進入到結束不炸（${n} 題）`, !err && done,
+        err ? err.message : (done ? '' : '沒有結束'));
+  }
+}
+
+// =====================================================================
+// 【卡片上該顯示的東西真的顯示了】
+//
+// 渲染不拋錯不等於畫面是對的 —— 空白的卡片同樣不會拋錯。
+// 這裡挑三樣「沒有就等於這張卡沒用」的：正面、背面、進度。
+// =====================================================================
+console.log('\n【卡片內容】');
+{
+  const item = pool.find((x) => x.item_type === 'word' && x.zh && x.ko);
+  const S = createSession({ save: async () => {}, onChange: (st) => study.render(st), onFinish: () => {} });
+  study.initStudy({ session: S, getCtx: () => ({ pool, modeId: 'flip' }),
+                    onQuit: () => {}, onPark: () => {},
+                    inRecallList: () => false, onToggleRecall: () => {} });
+  S.start([{ item, direction: 'ko2zh', card: { ...OLD } }], { mode: 'flip', kind: 'review' });
+  study.render(S.state());
+
+  chk('正面有字', $('c-front').textContent.trim().length > 0, $('c-front').textContent.slice(0, 12));
+  chk('揭曉前看不到答案', $('c-back').classList.contains('hidden'),
+      '提前顯示等於送分');
+  study.reveal();
+  chk('揭曉後有答案', $('c-back-text').textContent.trim().length > 0);
+  // ★ 進度條要驗「會動」，不是「有值」。
+  //   一開始是 0%（還沒做完任何一題，那是對的），
+  //   所以只檢查有沒有 % 的話，一條永遠不動的進度條也會通過。
+  const S2 = createSession({ save: async () => {}, onChange: (st) => study.render(st), onFinish: () => {} });
+  study.initStudy({ session: S2, getCtx: () => ({ pool, modeId: 'flip' }),
+                    onQuit: () => {}, onPark: () => {},
+                    inRecallList: () => false, onToggleRecall: () => {} });
+  S2.start(pool.filter((x) => x.item_type === 'word').slice(0, 4)
+    .map((it) => ({ item: it, direction: 'ko2zh', card: { ...OLD } })),
+    { mode: 'flip', kind: 'review' });
+  study.render(S2.state());
+  const w0 = $('prog').style.width;
+  S2.grade(RATING.EASY);
+  const w1 = $('prog').style.width;
+  chk('★ 進度條會前進', parseFloat(w1) > parseFloat(w0), `${w0} → ${w1}`);
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);
