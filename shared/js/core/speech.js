@@ -150,6 +150,7 @@ function diagnosis() {
     const ss = window.speechSynthesis || {};
     return `［可用語音 ${list.length}／選中 ${v ? v.name : '無'}`
       + `／引擎 speaking=${!!ss.speaking} pending=${!!ss.pending} paused=${!!ss.paused}`
+      + `／其中本機 ${list.filter((x) => x.localService).length}`
       + `／全部語音 ${(ss.getVoices?.() || []).length}］`
       + '把這一段截圖給開發者最快。';
   } catch (e) { return `［診斷失敗：${e.message}］`; }
@@ -163,7 +164,10 @@ function speakWarn(msg) {
   import('./dom.js').then((d) => d.msg?.(msg)).catch(() => {});
 }
 
-function speakTTS(text, { rate: override, slow = false, retry = false } = {}) {
+// 這一輪有沒有試過「完全不指定語音」的最後一招
+let noVoiceTried = false;
+
+function speakTTS(text, { rate: override, slow = false, retry = false, bare = false } = {}) {
   if (!('speechSynthesis' in window)) {
     return speakWarn('這個瀏覽器不支援朗讀。換 Safari 或 Chrome 試試。');
   }
@@ -199,7 +203,8 @@ function speakTTS(text, { rate: override, slow = false, retry = false } = {}) {
   const base = override ?? autoRate(text, rate());
   u.rate = slow ? Math.max(0.4, base - 0.25) : base;
   u.pitch = 1;
-  const v = currentVoice();
+  // bare = 不指定語音，只靠 u.lang 讓瀏覽器挑引擎（最後一招，見 onerror）
+  const v = bare ? null : currentVoice();
   if (v) u.voice = v;
 
   // canceled / interrupted 不是錯誤，是我們自己造成的：
@@ -229,8 +234,26 @@ function speakTTS(text, { rate: override, slow = false, retry = false } = {}) {
           setTimeout(() => speakTTS(text, { rate: override, slow }), 60);
           return;
         }
+        // ★ 一個本機語音都沒有（使用者的實際情況：3 個日語語音全是 Online）。
+        //   最後一招：完全不指定語音，只給 lang，讓瀏覽器自己挑引擎 ——
+        //   有時候這樣反而發得出聲（不走那個連不上的網路語音）。
+        if (!noVoiceTried) {
+          noVoiceTried = true;
+          setTimeout(() => speakTTS(text, { rate: override, slow, bare: true }), 60);
+          return;
+        }
       }
-      if (retry) return speakWarn(`朗讀被取消，重試也一樣。${diagnosis()}`);
+      if (retry || bare) {
+        const L2 = lang();
+        const locals = targetVoices().filter((x) => x.localService).length;
+        return speakWarn(locals === 0
+          ? `系統裡的${L2.langLabel}語音全是「Online」網路語音，`
+            + '這個瀏覽器送不出聲音。請安裝本機語音：'
+            + 'Mac：系統設定 → 輔助使用 → 朗讀內容 → 系統聲音 → 管理聲音 → 下載日文/韓文語音；'
+            + 'Windows：設定 → 時間與語言 → 語音 → 新增語音。'
+            + '或改用 Microsoft Edge（它支援 Online 語音）。'
+          : `朗讀被取消，重試也一樣。${diagnosis()}`);
+      }
       setTimeout(() => speakTTS(text, { rate: override, slow, retry: true }), 120);
       return;
     }
