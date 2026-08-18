@@ -117,5 +117,56 @@ let n = 0;
 while (n < 60 && !finished) { session.grade(RATING.GOOD); n += 1; }
 chk(`答完會結束（再答 ${n} 題）`, finished === 1);
 
+
+// =====================================================================
+// 【每個題型有自己的進度】
+//
+// 使用者用翻卡做到一半 → 到設定換成拼出來 → 回學習畫面。
+// 該接的是拼出來那一份，不是記憶體裡的翻卡 ——
+// 每個題型是一種不同的練習（認得／選得出來／寫得出來），
+// 換題型是「換一件事做」，不是「同一件事換個樣子」。
+//
+// 而舊題型那一輪不能因此消失：換回去時它要還在。
+// =====================================================================
+console.log('\n【每個題型有自己的進度】');
+{
+  // 用快照當作「各題型各自存一份」的模型，驗的是鍵與比對規則
+  const store = new Map();
+  const keyOf = (uid, mode) => `${uid}::${mode}`;
+
+  const mk = () => createSession({ save: async () => {}, onChange: () => {}, onFinish: () => {} });
+  const three = () => pool.filter((x) => x.item_type === 'word').slice(0, 3)
+    .map((item) => ({ item, direction: 'ko2zh', card: { ...OLD } }));
+
+  // 翻卡做到第 2 題
+  const A = mk();
+  A.start(three(), { mode: 'flip', kind: 'review' });
+  A.grade(RATING.GOOD);
+  store.set(keyOf('u1', 'flip'), JSON.parse(JSON.stringify(A.snapshot())));
+
+  // 換成四選一，從頭做到第 1 題
+  const B = mk();
+  B.start(three(), { mode: 'choice', kind: 'review' });
+  store.set(keyOf('u1', 'choice'), JSON.parse(JSON.stringify(B.snapshot())));
+
+  chk('★ 兩個題型各存一份', store.size === 2, [...store.keys()].join('、'));
+  chk('翻卡那一份記得做到第 2 題',
+      store.get(keyOf('u1', 'flip')).idx === 1);
+  chk('四選一那一份是從頭', store.get(keyOf('u1', 'choice')).idx === 0);
+
+  // 回到翻卡 → 接回第 2 題
+  const C = mk();
+  C.resume(store.get(keyOf('u1', 'flip')));
+  chk('★ 換回翻卡，進度還在', C.state().idx === 1 && C.state().mode === 'flip',
+      `第 ${C.state().idx + 1} 題／題型 ${C.state().mode}`);
+
+  // ★ 換使用者拿不到別人的
+  chk('★ 換使用者拿不到別人的進度', !store.has(keyOf('u2', 'flip')),
+      '鍵不帶使用者的話，換帳號會接到上一個人的那一輪');
+
+  // 快照裡要記得自己是哪個題型 —— 否則回去時無從判斷該不該接
+  chk('快照記得自己的題型', A.snapshot().modeId === 'flip', A.snapshot().modeId);
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);

@@ -159,7 +159,12 @@ let currentKind = 'review';  // 這一輪是什麼性質（決定掌握數算不
 //   去覆蓋雲端。過期就丟掉，回到正常流程重新算。
 // ---------------------------------------------------------------------
 // 鍵一定要帶站台前綴 —— 兩站同網域，localStorage 是共用的（見 core/lang.js 的 lsKey）
-const RESUME_KEY = () => lsKey('session-resume-v1');
+// ★ 每個使用者 × 每個題型一份。
+//   不帶使用者：換帳號會接到別人的進度（localStorage 整個網域共用）。
+//   不帶題型：用翻卡做到一半、換成拼出來，回去會接到翻卡那一輪 ——
+//   而每個題型是一種不同的練習（認得／選得出來／寫得出來），
+//   換題型是「換一件事做」，不是「同一件事換個樣子」。
+const RESUME_KEY = (mode) => lsKey(`resume.${user?.id || 'anon'}.${mode}`);
 const RESUME_MAX_AGE = 12 * 3600 * 1000;   // 超過 12 小時就當作是「另一天的事」
 
 let cloudPushAt = 0;
@@ -179,18 +184,18 @@ function currentResumeState() {
 function saveResume({ toCloud = false } = {}) {
   const state = currentResumeState();
   if (!state) return clearResume();
-  try { localStorage.setItem(RESUME_KEY(), JSON.stringify(state)); }
+  try { localStorage.setItem(RESUME_KEY(state.modeId), JSON.stringify(state)); }
   catch { /* 容量滿或隱私模式：續跑是加分功能，不該擋住學習 */ }
 
   if (!user?.id) return;
   if (toCloud || Date.now() - cloudPushAt > CLOUD_MIN_GAP) {
     cloudPushAt = Date.now();
-    progress.saveResume(user.id, state);      // 失敗一律吞掉，見 data 層
+    progress.saveResume(user.id, state.modeId, state);   // 失敗一律吞掉，見 data 層
   }
 }
-function clearResume() {
-  try { localStorage.removeItem(RESUME_KEY()); } catch { /* 同上 */ }
-  if (user?.id) progress.clearResume(user.id);
+function clearResume(mode = session.state().mode) {
+  try { localStorage.removeItem(RESUME_KEY(mode)); } catch { /* 同上 */ }
+  if (user?.id) progress.clearResume(user.id, mode);
 }
 /**
  * 有沒有可續跑的一輪？有就接回去並回傳 true。
@@ -200,22 +205,54 @@ function clearResume() {
  *   換一台裝置 → 本機是空的或很舊，雲端勝出
  * 平手時取本機 —— 內容一樣，少一次不必要的狀態切換。
  */
-async function tryResume() {
+/**
+ * 讀某個題型的續跑狀態：本機與雲端取比較新的那一份。
+ *
+ * 同一台裝置 → 幾乎永遠是本機（每答一題就寫）
+ * 換一台裝置 → 本機是空的或很舊，雲端勝出
+ * 平手取本機 —— 內容一樣，少一次不必要的狀態切換。
+ */
+async function readResume(mode) {
   let local = null;
-  try { local = JSON.parse(localStorage.getItem(RESUME_KEY()) || 'null'); } catch { /* 壞掉就當沒有 */ }
-  const cloud = await progress.loadResume(user?.id);
-
-  const s = [local, cloud]
+  try { local = JSON.parse(localStorage.getItem(RESUME_KEY(mode)) || 'null'); }
+  catch { /* 壞掉就當沒有 */ }
+  const cloud = await progress.loadResume(user?.id, mode);
+  return [local, cloud]
     .filter((x) => x && Date.now() - (x.savedAt || 0) <= RESUME_MAX_AGE)
-    .sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0))[0];
-  if (!s) { clearResume(); return false; }
-  reviewQueue = Array.isArray(s.reviewQueue) ? s.reviewQueue : [];
-  lastBatchIds = Array.isArray(s.lastBatchIds) ? s.lastBatchIds : [];
-  currentLesson = s.lesson || '';
-  if (!session.resume(s)) { clearResume(); return false; }
+    .sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0))[0] || null;
+}
+
+/**
+ * 回到「目前這個題型」進行中的那一輪。回傳是否真的有一輪可以回。
+ *
+ * ★ 記憶體裡那一輪不一定是目前的題型。
+ *   使用者可能用翻卡做到一半、去設定換成拼出來、再回到學習畫面 ——
+ *   這時該接的是拼出來那一份，不是記憶體裡的翻卡。
+ *   每個題型是一種不同的練習（認得／選得出來／寫得出來），
+ *   各自的進度本來就該分開。
+ *
+ * ★ 舊題型那一輪不會因此消失：每答一題就存，而鍵帶著題型 ——
+ *   換回去時它還在。
+ *
+ * 開機與從分頁列回去走的是同一條路：兩條路各寫一份判斷必然漂移。
+ */
+async function resumeRound() {
+  const want = home.studyMode();
+  const st = session.state();
+  if (st.total > 0 && st.idx < st.total && st.mode === want) {
+    show('view-study'); study.render(st); return true;      // 記憶體裡就是這個題型
+  }
+  const snap = await readResume(want);
+  if (!snap || !session.resume(snap)) return false;
+  reviewQueue = Array.isArray(snap.reviewQueue) ? snap.reviewQueue : [];
+  lastBatchIds = Array.isArray(snap.lastBatchIds) ? snap.lastBatchIds : [];
+  currentLesson = snap.lesson || '';
   study.setLesson(currentLesson, '');
+  show('view-study'); study.render(session.state());
   return true;
 }
+
+const tryResume = () => resumeRound();
 
 async function startReview() {
   try {
@@ -376,14 +413,6 @@ initEdits();
 initVoiceUI();
 initImporterAndAdmin();
 
-/** 回到進行中的那一輪。回傳是否真的有一輪可以回 */
-function resumeRound() {
-  const st = session.state();
-  if (!(st.total > 0 && st.idx < st.total)) return false;
-  show('view-study');
-  study.render(st);
-  return true;
-}
 // 分頁列的「首頁」：有進行中的一輪就回到那一輪
 setTabResume(resumeRound);
 
@@ -593,8 +622,7 @@ async function onUser(u) {
   // ★ 有沒有做到一半的一輪？有就直接接回去。
   //   放在 show() 之前 —— 先閃一下首頁再跳進學習畫面，
   //   會讓人以為自己按錯了，而且那一閃會在每次重新整理時出現。
-  if (await tryResume()) {
-    await show('view-study');
+  if (await tryResume()) {          // resumeRound 自己會切到學習畫面
     msg('接著上次的進度繼續', 'ok');
     return;
   }

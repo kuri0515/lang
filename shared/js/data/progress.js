@@ -454,32 +454,35 @@ export async function fetchRecallEntries(userId, direction) {
 // ---------------------------------------------------------------------
 
 /** 讀雲端的續跑狀態。沒有、讀不到、壞掉 → 一律回 null */
-export async function loadResume(userId) {
-  if (!userId) return null;
+export async function loadResume(userId, mode) {
+  if (!userId || !mode) return null;
   try {
     const { data, error } = await sb.from('study_resume')
-      .select('state, saved_at').eq('user_id', userId).maybeSingle();
+      .select('state, saved_at').eq('user_id', userId).eq('mode', mode).maybeSingle();
     if (error || !data?.state) return null;
     return { ...data.state, savedAt: Date.parse(data.saved_at) || 0 };
   } catch { return null; }
 }
 
 /** 寫雲端。一個使用者一列，直接覆蓋 —— 續跑狀態是「現在做到哪」，不是歷史 */
-export async function saveResume(userId, state) {
-  if (!userId || !state) return;
+export async function saveResume(userId, mode, state) {
+  if (!userId || !mode || !state) return;
   try {
     await sb.from('study_resume').upsert({
       user_id: userId,
+      mode,
       state,
       // saved_at 用用戶端的時間：要比的是「哪一台裝置的進度比較新」。
       // 用伺服器時間的話，網路慢的那一台會後到，於是先操作的蓋掉後操作的。
       saved_at: new Date(state.savedAt || Date.now()).toISOString(),
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id' });
+    }, { onConflict: 'user_id,mode' });
   } catch { /* 見檔頭：續跑不該擋住學習 */ }
 }
 
-export async function clearResume(userId) {
-  if (!userId) return;
-  try { await sb.from('study_resume').delete().eq('user_id', userId); } catch { /* 同上 */ }
+export async function clearResume(userId, mode) {
+  if (!userId || !mode) return;
+  try {
+    await sb.from('study_resume').delete().eq('user_id', userId).eq('mode', mode);
+  } catch { /* 同上 */ }
 }
