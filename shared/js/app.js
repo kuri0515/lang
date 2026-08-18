@@ -8,6 +8,7 @@
 // =====================================================================
 import { $, esc, msg, shuffle } from './core/dom.js';
 import { on, emit, EVENTS } from './core/bus.js';
+import { difficultyScore } from './core/srs.js';
 import * as auth from './data/auth.js';
 import * as content from './data/content.js';
 import * as progress from './data/progress.js';
@@ -55,6 +56,9 @@ const session = createSession({
   onChange: (state) => study.render(state),
   // 收尾話要知道剛練的是哪一課；自由練習不算推進課程，所以不帶
   onFinish: (stats, free) => {
+    // 這一輪掌握了幾個，累加到今天的進度。
+    // 自由練習不算 —— 它不動排程，也不該讓人靠它解鎖新課。
+    if (!free) home.addMasteredToday(stats.mastered || 0);
     // 只有複習才有「還剩多少」—— 學新課、自由練習都是一次一批，沒有續攤的概念
     study.renderDone(stats, free, free ? '' : currentLesson, reviewQueue.length);
     show('view-done');
@@ -119,7 +123,15 @@ async function startReview() {
     //   但那個需求只存在於一輪之內，不該把跨輪的優先權一起打散 ——
     //   打散之後，逾期三天的卡可能排在第四輪，而使用者往往只做一輪。
     //   正確的做法是：輪次照優先權切，輪內再打散（見 nextRound）。
-    reviewQueue = rows.map((c) => ({ item: c.items, direction: c.direction, card: c }));
+    // 難度分高的排前面，同分再照逾期久的先。
+    //
+    // 只照 due_at 排的話，剛答錯的卡（due_at 被設成一分鐘後）會排到最後面 ——
+    // 比所有逾期的卡都「新」。使用者往往只做前面幾輪，
+    // 等於最該練的那些永遠輪不到，而畫面上完全看不出來。
+    reviewQueue = rows
+      .map((c) => ({ item: c.items, direction: c.direction, card: c }))
+      .sort((a, b) => difficultyScore(b.card) - difficultyScore(a.card)
+                   || Date.parse(a.card.due_at) - Date.parse(b.card.due_at));
     await nextRound();
   } catch (e) { msg(e.message || e); }
 }

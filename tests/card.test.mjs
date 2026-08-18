@@ -306,8 +306,41 @@ console.log('\n【順延的可見性】');
   //   這兩個數字原本散在三個檔案，改一處漏兩處不會報錯 ——
   //   只會讓畫面寫「一輪 20 題」而實際做 10 題。
   chk(`畫面寫的題數＝實際的一輪（${ROUND_SIZE}）`,
-    box.textContent.includes(`一輪 ${ROUND_SIZE} 題`)
-    && $('btn-primary').textContent.includes(`一輪 ${ROUND_SIZE} 題`));
+    box.textContent.includes(`一輪 ${ROUND_SIZE} 個詞`)
+    && $('btn-primary').textContent.includes(`一輪 ${ROUND_SIZE} 個詞`));
+}
+
+
+// =====================================================================
+// 【每日複習任務：掌握 20 個才解鎖新課】
+// =====================================================================
+console.log('\n【每日複習任務】');
+{
+  const home = await import(SHARED + '/js/views/home.js');
+  const key = 'mastered-' + new Date().toISOString().slice(0, 10);
+  const set = (n) => localStorage.setItem(key, String(n));
+
+  set(0);
+  chk('目標預設 20', home.dailyTarget(60) === 20);
+  // ★ 到期數不足 20 時要以到期數為準，否則剛開始學的人永遠解鎖不了 ——
+  //   而他正是每天只有幾個詞到期的那種人，這個死結會擋在最前面。
+  chk('★ 到期只有 8 個時，目標就是 8', home.dailyTarget(8) === 8);
+
+  set(5);
+  chk('已掌握的算進目標基數', home.dailyTarget(3) === 8,
+      '掌握過的已經不在待複習裡了，不加回去的話目標會越做越小');
+  chk('沒達標時擋住新課', /還沒完成/.test(home.newLessonBlocked(3) || ''));
+  chk('訊息裡有進度數字', /5\/8/.test(home.newLessonBlocked(3) || ''),
+      home.newLessonBlocked(3));
+
+  set(20);
+  chk('★ 達標後放行，即使還有沒複習完的', home.newLessonBlocked(40) === null,
+      '剩下的照順延排到明天最前面，間隔不變 —— 把人留在「還沒做完」只會讓他明天不想打開');
+
+  set(0);
+  home.renderSuggestion(60, { reviewed: 0 }, [], 0);
+  chk('首頁顯示掌握進度', /0\/20/.test($('suggest').textContent), $('suggest').textContent.slice(0, 40));
+  localStorage.removeItem(key);
 }
 
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');

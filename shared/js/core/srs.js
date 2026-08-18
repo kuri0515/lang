@@ -50,7 +50,18 @@ const DAY_MS = 86400000;
  * @param {Date}   now
  * @returns {object} 新的卡片字段（可直接 upsert 进 user_cards）
  */
-export function schedule(card, rating, now = new Date()) {
+/**
+ * @param opts.forceGraduate 這一輪已經連續答對達標了，不要再留在學習步驟。
+ *
+ *   學習步驟（1 分鐘、10 分鐘）原本自己決定何時畢業。
+ *   但現在畢業的判準是「一輪之內連續答對三次」，
+ *   兩套判準併存會互相打架：達標了卻還卡在第二步，
+ *   那張卡會永遠排回隊尾，一輪永遠結束不了。
+ *
+ *   不用「把 repetitions 塞成 99」那種做法 —— 那個假數字會寫進資料庫，
+ *   之後任何讀 repetitions 的地方都拿到錯的值，而且看不出來是誰塞的。
+ */
+export function schedule(card, rating, now = new Date(), opts = {}) {
   let {
     state = 'new',
     interval_days: interval = 0,
@@ -76,7 +87,7 @@ export function schedule(card, rating, now = new Date()) {
     }
     // HARD / GOOD：沿学习步骤前进
     repetitions += 1;
-    if (repetitions < LEARNING_STEPS_MIN.length) {
+    if (!opts.forceGraduate && repetitions < LEARNING_STEPS_MIN.length) {
       return commit('learning', minutes(LEARNING_STEPS_MIN[repetitions]));
     }
     // 毕业 → 階梯第一階
@@ -201,3 +212,44 @@ export function scheduleRecall(card, rating, now = new Date()) {
     last_reviewed_at: now.toISOString(),
   };
 }
+
+/**
+ * 難度分：越高，下一輪越該先複習。
+ *
+ * 【為什麼需要它 —— 只照 due_at 排會把最該練的排到最後】
+ *   答錯的卡會被排進學習階段，due_at 設成一分鐘後。
+ *   而佇列照 due_at 由舊到新排，所以「一分鐘後」比所有逾期的卡都新 ——
+ *   剛答錯的那張，反而排到整個佇列的最後面。
+ *   使用者往往只做前面幾輪，等於最該練的那些永遠輪不到。
+ *   這個錯誤不會報錯，畫面上也看不出來，只會讓難的詞一直難。
+ *
+ * 【三個訊號，由重到輕】
+ *   state==='learning'  剛剛才答錯，還沒畢業 —— 最該馬上再見到
+ *   lapses              曾經忘掉幾次 —— 忘過的比沒忘過的更容易再忘
+ *   ease_factor         一直覺得難的（2.5 是預設，越低表示越常按「有點難」）
+ *
+ *   ease_factor 已經不參與排程（費氏階梯不乘係數），但它仍在記錄難度，
+ *   拿來排序正好 —— 資料已經有了，不必新增欄位。
+ */
+export function difficultyScore(card) {
+  if (!card) return 0;
+  const ease = Number(card.ease_factor ?? 2.5);
+  return (card.state === 'learning' ? 100 : 0)
+    + (Number(card.lapses) || 0) * 10
+    + Math.round((2.5 - ease) * 4);
+}
+
+/**
+ * 一輪之內要連續答對幾次才算學會。
+ *
+ * 【為什麼是「答對」而不是「完全記住」】
+ *   嚴格只認「很簡單」的話，誠實按「記得」的人進度永遠不前進 ——
+ *   他可以按二十次「記得」而那個詞畢不了業。
+ *   「記得」與「很簡單」都算數，「有點難」與「忘了」歸零重來。
+ *
+ * 【為什麼只用在學新課，不用在複習】
+ *   複習卡在一輪內被評分三次，費氏階梯會爬三階：1 天 → 3 → 8 → 21。
+ *   而那三次評分只隔五分鐘 —— 那不是三次成功回憶，是同一次。
+ *   把它當三次會讓間隔嚴重灌水，而灌水的後果要三週後才看得到。
+ */
+export const ROUND_CRITERION = 3;

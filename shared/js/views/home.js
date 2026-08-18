@@ -9,6 +9,7 @@ import { pronOrder, nextLesson, LESSON_DONE,
 import * as progress from '../data/progress.js';
 import { MODES, getMode, forcedDirection } from '../study/modes/index.js';
 import { ROUND_SIZE } from '../study/session.js';
+import { ROUND_CRITERION } from '../core/srs.js';
 import { matchesType as matchesTypePure } from '../study/session.js';
 import { computeStreak } from '../core/stats.js';
 import { lang } from '../core/lang.js';
@@ -130,6 +131,7 @@ export async function load() {
     // ら行 的內容還沒進來時，格子要看得出「還沒加入」而不是「還沒學」。
     renderGojuon(lang().taxonomy.grid ?? null, pron,
                  new Set(pron.filter((r) => r.total > 0).map((r) => r.tag)));
+    dueNow = due.length;
     renderSuggestion(due.length, today, decks, carriedOver(due));
 
     renderDecks(decks);
@@ -165,6 +167,70 @@ let deckCounts = null;
  * 但這件事對學習者是隱形的：他只看到「待複習 63」，
  * 不知道其中 40 條是上週的，也就不知道該調整的是新課的速度。
  */
+
+// ---------------------------------------------------------------------
+// 每天先複習：掌握 20 個詞，今天的複習任務就算完成
+//
+// 【判準是「掌握」，不是「答過」】
+//   一個詞要在同一輪之內連續答對三次才算掌握。
+//   答過一次就算的話，胡亂點四個按鈕也會前進 ——
+//   那個數字會變成「今天點了幾下」，而不是「今天學會了幾個」。
+//
+// 【為什麼要擋著不讓學新的】
+//   學新的比複習有成就感 —— 新東西一直進來，舊的一直沒回頭看，
+//   兩週後就是「學過 300 個詞、一個都想不起來」。
+//   準時複習沒有任何即時回饋，靠自制力永遠打不過新鮮感，所以由系統擋。
+//
+// 【達標之後不強迫繼續】
+//   剩下的複習照順延邏輯排到明天最前面，間隔不變。
+//   要繼續複習可以，要去學新的也可以 —— 今天的責任已經盡了。
+//   把人留在「還沒做完」的狀態，只會讓他明天不想打開。
+//
+// 【目標要以實際到期數封頂】
+//   今天只有 8 個詞到期時，硬要湊 20 個永遠湊不到 ——
+//   那會變成「一個新課都學不了」的死結，而且看不出原因。
+//   剛開始學的人正是每天只有幾個詞到期的人，這個死結會擋在最前面。
+// ---------------------------------------------------------------------
+let dueNow = 0;        // 這次載入時的待複習量，按鈕據此判斷擋不擋
+const DAILY_MASTERY_TARGET = 20;
+
+const todayKey = () => 'mastered-' + new Date().toISOString().slice(0, 10);
+
+export function masteredToday() {
+  return Number(localStorage.getItem(todayKey()) || 0);
+}
+/** 一輪結束後累加。key 帶日期，跨日自動歸零，不必清理 */
+export function addMasteredToday(n) {
+  if (n > 0) localStorage.setItem(todayKey(), String(masteredToday() + n));
+}
+/** 今天要掌握幾個才算完成 —— 到期數不足 20 時以到期數為準 */
+export function dailyTarget(dueCount) {
+  return Math.min(DAILY_MASTERY_TARGET, dueCount + masteredToday());
+}
+/**
+ * 學新課的統一入口。擋下來時只給訊息，不做任何事。
+ *
+ * 所有「學新的」按鈕都走這裡 —— 分散在各處自己判斷的話，
+ * 漏掉一個入口不會報錯，只會讓那個按鈕變成繞過限制的後門，
+ * 而使用者會很自然地一直用那一個。
+ */
+function startLesson(run) {
+  const why = newLessonBlocked(dueNow);
+  if (why) return msg(why);
+  run();
+}
+
+/** 現在可以學新的嗎？回傳 null 表示可以，否則回傳擋下來的理由 */
+export function newLessonBlocked(dueCount) {
+  const target = dailyTarget(dueCount);
+  const got = masteredToday();
+  if (got >= target) return null;
+  return `今天的複習還沒完成（已掌握 ${got}/${target}）。`
+    + '先把複習做完再學新的 —— 一直學新的、舊的不回頭，'
+    + '兩週後會變成「學過三百個詞、一個都想不起來」。'
+    + `\n一個詞要在同一輪之內連續答對 ${ROUND_CRITERION} 次才算掌握。`;
+}
+
 export function carriedOver(due) {
   const yesterday = Date.now() - 86400000;
   return due.filter((c) => Date.parse(c.due_at) < yesterday).length;
@@ -180,18 +246,21 @@ export function renderSuggestion(dueCount, today, decks, carried = 0) {
     // 超過兩輪就把「做不完沒關係」講清楚 ——
     // 看到 63 而不知道可以分次做，很多人會直接關掉。
     const rounds = Math.ceil(dueCount / ROUND_SIZE);
-    box.innerHTML = `今天有 <b>${dueCount}</b> 個詞到期`
+    const target = dailyTarget(dueCount);
+    const got = masteredToday();
+    box.innerHTML = `今天的複習任務 <b>${Math.min(got, target)}/${target}</b> 個已掌握`
+      + `（連續答對 ${ROUND_CRITERION} 次才算）<br>還有 <b>${dueCount}</b> 個詞到期`
       + (carried ? `（其中 <b>${carried}</b> 條是之前順延過來的）` : '')
       + '，先把複習做完最划算 —— 間隔重複的效果全靠準時複習。'
       + (rounds > 2
-        ? `<br><span class="muted">一輪 ${ROUND_SIZE} 題，做不完沒關係：`
+        ? `<br><span class="muted">一輪 ${ROUND_SIZE} 個詞，做不完沒關係：`
           + '沒做到的會排到明天最前面，複習間隔不會因此變長。'
           + (carried > dueCount / 2
             ? '<br>★ 順延的已經超過一半，先暫停學新課幾天，讓它降下來。'
             : '')
           + '</span>'
         : '');
-    btn.textContent = `開始複習（一輪 ${ROUND_SIZE} 題，共 ${dueCount}）`;
+    btn.textContent = `開始複習（一輪 ${ROUND_SIZE} 個詞，共 ${dueCount}）`;
     btn.disabled = false;
     primaryAction = () => deps.onReview();
     return;
@@ -210,7 +279,7 @@ export function renderSuggestion(dueCount, today, decks, carried = 0) {
       : `✓ 今天沒有到期的複習。接著上第 ${nextLessonNo} 課 —— 一課約 8 條，一次坐下來走得完。`;
     btn.textContent = `開始第 ${nextLessonNo} 課：${nextLessonTag}`;
     btn.disabled = false;
-    primaryAction = () => deps.onStudyTag(nextLessonTag);
+    primaryAction = () => startLesson(() => deps.onStudyTag(nextLessonTag));
     return;
   }
 
@@ -316,7 +385,7 @@ function renderPron(rows) {
   }).join('');
 
   qsa('[data-pron]').forEach((b) => {
-    b.onclick = () => deps.onStudyTag(b.dataset.pron);
+    b.onclick = () => startLesson(() => deps.onStudyTag(b.dataset.pron));
   });
 }
 
@@ -472,7 +541,7 @@ export function renderGojuon(grid, rows, available) {
   renderDakuon(lang().taxonomy.dakuon, by);
 
   qsa('#gojuon [data-pron], #dakuon [data-pron]').forEach((b) => {
-    b.onclick = () => deps.onStudyTag(b.dataset.pron);
+    b.onclick = () => startLesson(() => deps.onStudyTag(b.dataset.pron));
   });
 }
 

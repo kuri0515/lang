@@ -7,7 +7,7 @@
 //     node tests/session.test.mjs
 // =====================================================================
 import { createSession, matchesType, orderForDiscrimination } from '../shared/js/study/session.js';
-import { RATING, scheduleRecall, schedule } from '../shared/js/core/srs.js';
+import { ROUND_CRITERION, RATING, scheduleRecall, schedule } from '../shared/js/core/srs.js';
 
 let fails = 0;
 const chk = (n, c, e = '') => {
@@ -91,7 +91,10 @@ chk('第一題不可上一個', !S.state().canPrev);
 chk('唯一一題不可下一個', !S.state().canNext);
 chk('越界導覽回 false', S.go(-1) === false && S.go(99) === false);
 finished = null;
-S.grade(RATING.EASY);          // 直接畢業，才會走到「這一輪結束」
+// 要連續答對三次才畢業，之前只按一次就結束是舊規則。
+// 這裡刻意按滿三次 —— 「答完最後一題觸發完成」驗的是收尾流程，
+// 不是畢業條件，別讓兩件事混在同一條斷言裡。
+S.grade(RATING.EASY); S.grade(RATING.EASY); S.grade(RATING.EASY);
 chk('答完最後一題觸發完成', finished !== null);
 
 console.log('\n【內容類型過濾】');
@@ -196,13 +199,59 @@ console.log('\n【今日畢業：新卡在本輪內循環到會為止】');
       '學習步驟本來就在排程資料裡，先前只有「忘了」會重排 —— '
       + '於是「今天學到會為止」根本做不到');
   T.grade(RATING.GOOD);
-  chk('第二次「記得」就畢業，不再排回', T.state().total === 2);
+  chk('第二次答對還不算過，繼續排回', T.state().total === 3,
+      `一輪之內要連續答對 ${ROUND_CRITERION} 次才算學會`);
+  T.grade(RATING.GOOD);
+  chk(`★ 第 ${ROUND_CRITERION} 次答對才畢業`, T.state().total === 3);
 
+  // 「很簡單」也要三次 —— 這是刻意的改變。
+  // 舊規則是「很簡單」直接畢業，理由是「本來就會的不該被逼著再看一次」，
+  // 那個理由本身沒錯；但一輪看三次的目的不是測驗，是把它壓進記憶。
+  // 第一次看就按「很簡單」，往往只是剛剛才看過答案。
   const T2 = createSession({ save: async () => {}, onChange: () => {}, onFinish: () => {} });
   T2.start(one(), { mode: 'flip', kind: 'new' });
   T2.grade(RATING.EASY);
-  chk('「很簡單」直接畢業', T2.state().total === 1,
-      '本來就會的不該被逼著再看一次');
+  T2.grade(RATING.EASY);
+  chk('「很簡單」同樣要滿三次', T2.state().total === 3);
+  T2.grade(RATING.EASY);
+  chk('滿三次後畢業', T2.state().total === 3);
+
+  // 中途答錯要歸零重數 —— 不歸零的話「對錯對錯對」也算三次，
+  // 而那正是還沒學會的樣子。
+  const T4 = createSession({ save: async () => {}, onChange: () => {}, onFinish: () => {} });
+  T4.start(one(), { mode: 'flip', kind: 'new' });
+  T4.grade(RATING.GOOD); T4.grade(RATING.GOOD); T4.grade(RATING.AGAIN);
+  T4.grade(RATING.GOOD); T4.grade(RATING.GOOD);
+  chk('★ 答錯會把次數歸零，重新數起', T4.state().total === 6,
+      '「對對錯對對」不算學會 —— 不歸零的話中間那次錯等於沒發生');
+
+  // 複習輪不套三次 —— 一張複習卡在一輪內被評分三次，
+  // 費氏階梯會爬三階（1 天 → 3 → 8 → 21），而那三次只隔五分鐘。
+  // ★ 樣本要用「已經畢業的卡」。用全新卡（card: null）驗不到這件事 ——
+  //   全新卡進學習階段本來就該重排，與是不是複習輪無關。
+  const T5 = createSession({ save: async () => {}, onChange: () => {}, onFinish: () => {} });
+  T5.start([{ item: { id: 'x', ko: 'あ', zh: 'a' }, direction: 'ko2zh',
+              card: { state: 'review', interval_days: 3, ease_factor: 2.5,
+                      repetitions: 2, lapses: 0 } }],
+           { mode: 'flip', kind: 'review' });
+  T5.grade(RATING.GOOD);
+  chk('複習輪同樣要連續三次才算掌握', T5.state().total === 2);
+  T5.grade(RATING.GOOD); T5.grade(RATING.GOOD);
+  chk(`★ 複習卡滿三次後畢業`, T5.state().total === 3);
+
+  // ★ 這是整個機制最危險的地方：一輪內評分三次，
+  //   若每次都拿上一次的結果去排程，1 天會變成 21 天。
+  //   baseCard 讓每次都從「進這一輪時的卡況」重算，最後一次就是結論。
+  const T6 = createSession({ save: async (p) => { T6.last = p; },
+                             onChange: () => {}, onFinish: () => {} });
+  T6.start([{ item: { id: 'y', ko: 'い', zh: 'i' }, direction: 'ko2zh',
+              card: { state: 'review', interval_days: 1, ease_factor: 2.5,
+                      repetitions: 3, lapses: 0 } }], { mode: 'flip', kind: 'review' });
+  T6.grade(RATING.EASY); T6.grade(RATING.EASY); T6.grade(RATING.EASY);
+  T6.quit();
+  chk('★ 一輪內評分三次，間隔只前進一次', T6.last?.next.interval_days === 3,
+      `1 天的卡按三次「很簡單」應該是 3 天（前進兩階一次），`
+      + `不是 1→3→8→21。實得 ${T6.last?.next.interval_days} 天`);
 
   const T3 = createSession({ save: async () => {}, onChange: () => {}, onFinish: () => {} });
   T3.start(one(), { mode: 'flip', kind: 'new' });

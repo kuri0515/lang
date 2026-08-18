@@ -9,7 +9,7 @@
 //   這樣做的好處是這段最容易出錯的邏輯（撤銷、回看不重複計分、
 //   延遲寫入的競態）可以被單獨測試，不需要瀏覽器。
 // =====================================================================
-import { schedule, RATING } from '../core/srs.js';
+import { schedule, RATING, ROUND_CRITERION } from '../core/srs.js';
 
 // 評分後延遲多久才寫庫。這段時間內可完整撤銷。
 // 為什麼延遲而非「寫了再刪」：reviews 是只追加日誌，RLS 沒開 delete，
@@ -25,9 +25,16 @@ export const UNDO_MS = 2500;
  *   但一輪 87 題會讓人今天不想打開 App，而排程再好也救不了沒打開的那天。
  *
  * 【為什麼是 10】
- *   10 題約 2–3 分鐘，是「等紅燈也做得完」的長度。
- *   一開始定 20（約 5 分鐘），使用者實際用過之後說 10 就好 ——
- *   這個數字沒有理論最佳解，只有「會不會想打開」，那要問真的在用的人。
+ *   一開始定 20，使用者說 10 就好。這個數字沒有理論最佳解，
+ *   只有「會不會想打開」，那要問真的在用的人。
+ *
+ * 【★ 這是 10 個「詞」，不是 10 道「題」】
+ *   加上「連續答對三次才算掌握」之後，一輪實際要答的題數是：
+ *     正確率 100% → 30 題（約 3 分鐘）
+ *     正確率  80% → 47 題（約 5 分鐘）
+ *     正確率  60% → 85 題（約 8 分鐘）
+ *   畫面文案一律寫「個詞」——寫「題」會讓人以為十下就結束，
+ *   做到第三十下還沒完會覺得這個 App 在騙人。
  *
  * 【為什麼放在這裡而不是各檔各寫一個 20】
  *   這個數字原本散在三個檔案：app.js 的常數、首頁的提示文字、
@@ -37,6 +44,9 @@ export const UNDO_MS = 2500;
 export const ROUND_SIZE = 10;
 
 export function createSession({ save, onChange, onFinish, onError }) {
+  // 這一輪達到「連續答對三次」的條目 id。用 Set 而不是計數 ——
+  // 同一張卡達標後若又被排回（不會，但防呆），不該重複計入。
+  const mastered = new Set();
   let queue = [];
   let idx = 0;
   let free = false;              // 自由練習：只記錄不動排程
@@ -81,7 +91,8 @@ export function createSession({ save, onChange, onFinish, onError }) {
       modeId = mode;
       activity = kind;
       sessionId = (globalThis.crypto?.randomUUID?.()) || null;
-      stats = { n: 0, correct: 0 };
+      stats = { n: 0, correct: 0, mastered: 0 };
+      mastered.clear();
       graded.clear();
       shownAt = Date.now();
       notify();
@@ -103,11 +114,51 @@ export function createSession({ save, onChange, onFinish, onError }) {
 
       const entry = queue[idx];
       if (!entry) return;
-      const next = schedule(entry.card || {}, rating);
+      // ★ 一律從「進這一輪時的卡況」重算，不從上一次的結果累積。
+      //
+      //   同一張卡在一輪內會被評分多次（要連續答對三次才算過）。
+      //   若每次都拿上一次的結果去排程，費氏階梯會爬三階：
+      //   1 天 → 3 → 8 → 21。而那三次評分只隔幾分鐘，
+      //   不是三次成功回憶，是同一次。灌水的後果要三週後才看得到。
+      //
+      //   改成每次都從 baseCard 算，最後一次評分的結果就是這一輪的結論。
+      if (entry.baseCard === undefined) entry.baseCard = entry.card || null;
+      // 先算這次答對後的連續次數，再決定要不要讓它畢業
+      const hits = rating >= RATING.GOOD ? (entry.hits || 0) + 1 : 0;
+      const reached = !free && hits >= ROUND_CRITERION;
+      let next = schedule(entry.baseCard || {}, rating, new Date(),
+                          { forceGraduate: reached });
+
+      // ★ 連續答對 ROUND_CRITERION 次才算學會。
+      //
+      //   「記得」與「很簡單」都算數，「有點難」與「忘了」歸零重來 ——
+      //   嚴格只認「很簡單」的話，誠實按「記得」的人進度永遠不前進，
+      //   他可以按二十次「記得」而那個詞畢不了業。
+      //
+      //   還沒達標就強制留在學習階段，不讓它畢業。這一步很重要：
+      //   放它畢業再重排的話，同一張卡在一輪內會被排程三次，
+      //   而費氏階梯會爬三階（1 天 → 3 → 8 → 21）——
+      //   那三次評分只隔五分鐘，不是三次成功回憶，是同一次。
+      //
+      //   只用在學新課。複習輪一張卡評一次就好：
+      //   它本來就是「隔了幾天還記不記得」的測驗，當場再問三遍沒有意義。
+      //   複習輪同樣要三次 —— 每天要有 20 個詞達到這個標準才解鎖新課，
+      //   所以「達標」的定義必須兩邊一致。
+      //   自由練習（free）不套：那是不計排程的隨意練習。
+      if (!free) {
+        entry.hits = hits;
+        if (reached) mastered.add(entry.item.id);
+        else if (next.state === 'review') {
+          // 還沒達標就不讓它畢業，繼續留在這一輪
+          next = { ...next, state: 'learning', interval_days: 0,
+                   due_at: new Date(Date.now() + 60000).toISOString() };
+        }
+      }
       const snapshot = { idx, queueLen: queue.length, stats: { ...stats } };
 
       graded.add(idx);
-      stats = { n: stats.n + 1, correct: stats.correct + (rating >= 3 ? 1 : 0) };
+      stats = { n: stats.n + 1, correct: stats.correct + (rating >= 3 ? 1 : 0),
+                mastered: mastered.size };
       idx += 1;
       // ★ 還在學習階段的卡，當輪末尾再出現一次 —— 直到它畢業為止。
       //
@@ -123,7 +174,8 @@ export function createSession({ save, onChange, onFinish, onError }) {
       //   卡在同一張出不去是使用者自己的選擇（他一直按「忘了」），
       //   而且重排是加到隊尾，中間隔著其他題，不會變成連續轟炸。
       if (next.state === 'learning') {
-        queue.push({ ...entry, card: { ...(entry.card || {}), ...next } });
+        queue.push({ ...entry, hits: entry.hits, baseCard: entry.baseCard,
+                   card: { ...(entry.card || {}), ...next } });
       }
 
       pending = {
