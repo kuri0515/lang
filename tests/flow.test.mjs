@@ -351,5 +351,43 @@ console.log('\n【自由練習與循環池】');
       '寫死 true 的話「練過就進循環」永遠不會發生，而測試不會告訴你');
 }
 
+
+// =====================================================================
+// 【兩台裝置挑哪一份進度】
+//
+// savedAt 是用戶端的時鐘。兩台裝置的時鐘差得比兩次作答的間隔還多時，
+// 按時間挑會挑到較舊的那一份 —— 使用者的體感是「進度退回去了」，
+// 而他不會知道原因（誰會想到是時鐘）。
+//
+// 同一輪內「做到第幾題」不需要時鐘就比得出來。
+// =====================================================================
+console.log('\n【兩台裝置的進度取捨】');
+{
+  const now = Date.now();
+  const pick = (a, b) => {
+    if (a.sessionId && a.sessionId === b.sessionId) {
+      return (a.idx ?? 0) >= (b.idx ?? 0) ? a : b;
+    }
+    return [a, b].sort((x, y) => (y.savedAt || 0) - (x.savedAt || 0))[0];
+  };
+
+  // 同一輪：手機時鐘快兩小時，但只做到第 3 題
+  const phone = { sessionId: 'S1', idx: 3, savedAt: now - 3600e3 + 2 * 3600e3 };
+  const laptop = { sessionId: 'S1', idx: 8, savedAt: now - 600e3 };
+  chk('★ 同一輪比進度，時鐘偏移不影響', pick(phone, laptop).idx === 8,
+      `挑到第 ${pick(phone, laptop).idx} 題（時鐘快的那台只做到第 3 題）`);
+  chk('順序反過來也一樣', pick(laptop, phone).idx === 8);
+
+  // 不同輪：這時只能比時間 —— 不同輪之間沒有共同的進度可比
+  const oldRound = { sessionId: 'S1', idx: 9, savedAt: now - 6 * 3600e3 };
+  const newRound = { sessionId: 'S2', idx: 1, savedAt: now - 60e3 };
+  chk('★ 不同輪才比時間', pick(oldRound, newRound).sessionId === 'S2',
+      '進度數字跨輪沒有可比性 —— 第 9 題不代表比第 1 題「新」');
+
+  // 沒有 sessionId 的舊快照要能退回比時間，不能炸
+  chk('舊快照沒有 sessionId 也不炸',
+      pick({ idx: 2, savedAt: now - 10 }, { idx: 5, savedAt: now }).idx === 5);
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);

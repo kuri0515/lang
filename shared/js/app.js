@@ -218,9 +218,25 @@ async function readResume(mode) {
   try { local = JSON.parse(localStorage.getItem(RESUME_KEY(mode)) || 'null'); }
   catch { /* 壞掉就當沒有 */ }
   const cloud = await progress.loadResume(user?.id, mode);
-  return [local, cloud]
-    .filter((x) => x && Date.now() - (x.savedAt || 0) <= RESUME_MAX_AGE)
-    .sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0))[0] || null;
+  const both = [local, cloud]
+    .filter((x) => x && Date.now() - (x.savedAt || 0) <= RESUME_MAX_AGE);
+  if (both.length < 2) return both[0] || null;
+
+  // ★ 同一輪就比進度，不比時間。
+  //
+  //   savedAt 是用戶端的時鐘。兩台裝置的時鐘差得比兩次作答的間隔還多時，
+  //   按時間挑會挑到較舊的那一份 —— 使用者的體感是「進度退回去了」。
+  //   實測：手機時鐘快兩小時，手機做到第 3 題、電腦做到第 8 題，
+  //   按時間會挑第 3 題，五題白做。
+  //
+  //   而「做到第幾題」不需要時鐘就比得出來，同一輪內它就是我們要的答案。
+  //   不同輪才回頭比時間 —— 那時比的是「哪一輪比較新」，
+  //   而不同輪之間本來就沒有共同的進度可比。
+  const [a, b] = both;
+  if (a.sessionId && a.sessionId === b.sessionId) {
+    return (a.idx ?? 0) >= (b.idx ?? 0) ? a : b;
+  }
+  return both.sort((x, y) => (y.savedAt || 0) - (x.savedAt || 0))[0];
 }
 
 /**
