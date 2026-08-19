@@ -71,12 +71,25 @@ export function createSession({ save, onChange, onFinish, onError }) {
 
   const notify = () => onChange?.(state());
 
+  // 還在飛的寫入。頁面要離開之前得等它們落地 ——
+  // flush() 只是「發出」請求，導航會把還沒完成的請求砍掉。
+  let inFlight = new Set();
+
   function flush(write = true) {
     if (!pending) return;
     const { timer, payload } = pending;
     clearTimeout(timer);
     pending = null;
-    if (write) Promise.resolve(save(payload)).catch((e) => onError?.(e));
+    if (!write) return;
+    const p = Promise.resolve(save(payload)).catch((e) => onError?.(e));
+    inFlight.add(p);
+    p.finally(() => inFlight.delete(p));
+  }
+
+  /** 把待寫入的送出並等它們真的完成。離開頁面前用。 */
+  async function settle() {
+    flush(true);
+    while (inFlight.size) await Promise.allSettled([...inFlight]);
   }
 
   return {
@@ -304,6 +317,12 @@ export function createSession({ save, onChange, onFinish, onError }) {
 
     /** 離開頁面前把還沒定案的那題寫掉 */
     flushNow() { flush(true); },
+    /**
+     * 送出並等待落地。★ 與 flushNow 的差別是「等不等」——
+     * 導航前只有這支才保得住最後一題：flushNow 發完就返回，
+     * 而 location.replace() 會把還在飛的請求砍掉。
+     */
+    settle,
 
     /** 條目內容被編輯後同步進佇列（由事件匯流排觸發） */
     syncItem(saved) {

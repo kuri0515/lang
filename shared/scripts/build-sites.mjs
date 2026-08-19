@@ -45,21 +45,45 @@ const template = fs.readFileSync(`${ROOT}/shared/index.template.html`, 'utf8');
  *   時間戳會讓每次跑 build 都產生差異，即使一個字都沒改 ——
  *   那會讓 --check 永遠失敗，也讓 git 每次都有雜訊。
  */
-function buildId() {
-  const h = crypto.createHash('sha1');
-  const walk = (dir) => {
+/**
+ * 參與版號計算的檔案。
+ *
+ * ★ 這份清單曾經只有 `.js` —— 於是改樣板或 CSS 之後版號不變，
+ *   而 version.json 的比對正是判斷「上線了沒」的依據：
+ *   一個 CSS-only 的部署會被讀成「線上與本地一致」，
+ *   實際上使用者拿到的還是舊樣式。錯誤方向是**假的通過**，最糟的那種。
+ *
+ *   產生出來的 index.html 刻意不列入 —— 它裡面就嵌著版號，會自我循環。
+ *   列的是它的來源：樣板。
+ */
+export function buildInputs() {
+  const files = [];
+  const walk = (dir, ext) => {
     for (const name of fs.readdirSync(dir).sort()) {
       if (name === 'node_modules' || name.startsWith('.')) continue;
       const full = `${dir}/${name}`;
-      if (fs.statSync(full).isDirectory()) walk(full);
-      else if (name.endsWith('.js')) h.update(fs.readFileSync(full));
+      if (fs.statSync(full).isDirectory()) walk(full, ext);
+      else if (ext.some((e) => name.endsWith(e))) files.push(full);
     }
   };
-  walk(`${ROOT}/shared/js`);
+  walk(`${ROOT}/shared/js`, ['.js']);
+  walk(`${ROOT}/shared/css`, ['.css']);
+  files.push(`${ROOT}/shared/index.template.html`);
   for (const site of SITES) {
     for (const f of ['main.js', 'lang.config.js', 'taxonomy.js']) {
-      h.update(fs.readFileSync(`${ROOT}/${site}/${f}`));
+      files.push(`${ROOT}/${site}/${f}`);
     }
+  }
+  return files;
+}
+
+export function buildId() {
+  const h = crypto.createHash('sha1');
+  // 路徑也要進雜湊：只雜湊內容的話，把一個檔案改名（內容不動）
+  // 算出來的版號一模一樣，而那確實是一次會影響線上的變更。
+  for (const f of buildInputs()) {
+    h.update(f.slice(ROOT.length));
+    h.update(fs.readFileSync(f));
   }
   return h.digest('hex').slice(0, 8);
 }

@@ -2,7 +2,9 @@
 // 學習狀態層（user_cards / reviews）—— 與內容層完全解耦
 // 換 SRS 演算法只改 srs.js，換詞表只動 content.js，兩者互不影響。
 // =====================================================================
+import { lang } from '../core/lang.js';
 import { sb, ITEM_FIELDS, DIRECTIONS, fetchAll } from './client.js';
+import { accessToken } from './auth.js';
 import { dayKey } from '../core/dom.js';
 import { scheduleRecall } from '../core/srs.js';
 
@@ -479,6 +481,43 @@ export async function loadResume(userId, mode) {
 }
 
 /** 寫雲端。一個使用者一列，直接覆蓋 —— 續跑狀態是「現在做到哪」，不是歷史 */
+/**
+ * 頁面正在關閉時把進度送上雲端。
+ *
+ * ★ 用 fetch 的 keepalive 而不是 supabase-js ——
+ *   關分頁、切 App、鎖螢幕時，一般的請求會隨頁面一起被砍掉，
+ *   而 keepalive 是瀏覽器保證「即使頁面沒了也要送出去」的那條路。
+ *   代價是得自己組請求（supabase-js 沒有這個選項），
+ *   換來的是「切走的那一刻答的最後一題不會消失」。
+ *
+ *   失敗不重試也不報錯：這是保險機制，主路徑仍然是每答一題就寫。
+ */
+export function saveResumeBeacon(userId, mode, state) {
+  if (!userId || !mode || !state) return;
+  try {
+    const { url, anonKey } = lang().supabase;
+    const token = accessToken();
+    if (!token) return;
+    fetch(`${url}/rest/v1/study_resume?on_conflict=user_id,mode`, {
+      method: 'POST',
+      keepalive: true,
+      headers: {
+        apikey: anonKey,
+        // 沒有 token 就別送 —— 用 anon 身分寫別人的 user_id，RLS 會擋，
+        // 送出去只是白費一次請求
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify({
+        user_id: userId, mode, state,
+        saved_at: new Date(state.savedAt || Date.now()).toISOString(),
+        updated_at: new Date().toISOString(),
+      }),
+    }).catch(() => {});
+  } catch { /* 保險機制，壞了不該影響任何事 */ }
+}
+
 export async function saveResume(userId, mode, state) {
   if (!userId || !mode || !state) return;
   try {

@@ -162,6 +162,23 @@ chk('JS 取用的 DOM id 都存在於 index.html', missingIds);
   if (/correct_reviews:\s*\(/.test(prog)) bad.push('progress.js 又在客戶端算 correct_reviews');
   chk('★ 答題計數不在客戶端累加', bad);
   // 正規複習與自由練習都必須走 RPC —— 兩個寫入分開做就不是同進同退
+  // 離開頁面前必須等寫入落地 —— flush 只是「發出」，導航會把還在飛的砍掉
+  const app = fs.readFileSync(new URL('../shared/js/app.js', import.meta.url).pathname, 'utf8');
+  // 切到 window.location.replace（真正的導航），不是註解裡提到的那次 ——
+  // 第一版切到註解就截斷了，於是明明寫對了卻報違反。
+  const upd = app.slice(app.indexOf("bar.onclick"),
+                        app.indexOf("window.location.replace", app.indexOf("bar.onclick")));
+  chk('★ 版本更新前先等答題寫入落地',
+      /await\s+session\.settle\(\)/.test(upd) ? []
+        : ['更新按鈕沒有等 session.settle() —— 剛答的那題會被導航砍掉']);
+  chk('★ 版本更新前也等續跑進度上雲',
+      /await\s+progress\.saveResume\(/.test(upd) ? []
+        : ['更新按鈕沒有等進度上雲']);
+  const hide = app.slice(app.indexOf("addEventListener('pagehide'"));
+  chk('★ 關分頁時用 keepalive 送出',
+      /saveResumeBeacon/.test(hide.slice(0, 400)) ? []
+        : ['pagehide 沒走 keepalive —— 一般請求會隨頁面一起被砍掉']);
+
   chk('saveReview 走 RPC（卡片與記錄同一個交易）',
       /rpc\('log_review'/.test(prog) ? [] : ['saveReview 沒有走 log_review RPC']);
 }

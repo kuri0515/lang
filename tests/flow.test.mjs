@@ -441,5 +441,25 @@ console.log('\n【回歸：輪練／偏好】');
   chk('登出與換人仍會重跑', boots === 3);
 }
 
+// settle() 必須等到寫入真的完成，不能像 flushNow 發完就返回
+console.log('\n【離開頁面前的落地保證】');
+{
+  let done = 0, resolvers = [];
+  const slowSave = () => new Promise((res) => resolvers.push(() => { done++; res(); }));
+  // 照 session.js 的契約重跑一次：flush 發出、settle 等待
+  const inFlight = new Set();
+  const flush = () => { const p = slowSave(); inFlight.add(p); p.finally(() => inFlight.delete(p)); };
+  const settle = async () => { while (inFlight.size) await Promise.allSettled([...inFlight]); };
+
+  flush(); flush();
+  chk('flushNow 發完就返回，寫入還沒完成', done === 0,
+      '這正是導航會砍掉它們的原因');
+  const p = settle();
+  resolvers.forEach((r) => r());
+  await p;
+  chk('★ settle() 等到寫入真的完成', done === 2 && inFlight.size === 0,
+      `完成 ${done} 筆，還在飛 ${inFlight.size} 筆`);
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);

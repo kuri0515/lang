@@ -786,7 +786,14 @@ window.addEventListener('visibilitychange', () => {
   // 切到背景就是「可能換到別台裝置」的時刻 —— 這一次一定要送上雲端
   if (document.visibilityState === 'hidden') saveResume({ toCloud: true });
 });
-window.addEventListener('pagehide', () => saveResume({ toCloud: true }));
+// 關分頁、切 App、鎖螢幕 —— 這時來不及等請求完成，
+// 改用 keepalive：瀏覽器保證即使頁面沒了也會把它送出去。
+window.addEventListener('pagehide', () => {
+  session.flushNow();                       // 待寫入的答題先發出去
+  const st = currentResumeState();
+  if (st && user?.id) progress.saveResumeBeacon(user.id, st.modeId, st);
+  saveResume();                             // 本機那份照存
+});
 
 // ---------------------------------------------------------------------
 // 清掉沒有站台前綴的舊鍵（一次性）
@@ -841,7 +848,18 @@ async function checkVersion() {
     const bar = document.createElement('button');
     bar.className = 'update-bar';
     bar.textContent = '有新版本 · 點此更新';
-    bar.onclick = () => {
+    bar.onclick = async () => {
+      // ★ 先把還沒落地的答題寫完再導航。
+      //   評分後有 2.5 秒的延遲寫入（為了讓「撤銷」等於沒發生過），
+      //   而且 flush 只是發出請求 —— location.replace() 會把還在飛的砍掉。
+      //   使用者按更新是主動行為，等一下是可以的；丟掉剛答的那題不行。
+      bar.disabled = true;
+      bar.textContent = '正在儲存進度…';
+      try {
+        await session.settle();                       // 答題記錄：等它真的寫進去
+        const st = currentResumeState();               // 續跑進度：也等
+        if (st && user?.id) await progress.saveResume(user.id, st.modeId, st);
+      } catch { /* 存不上也得讓人更新 —— 卡在這裡更糟 */ }
       const u = new URL(window.location.href);
       u.searchParams.set('v', build);
       window.location.replace(u.toString());

@@ -19,7 +19,7 @@
 
   <!-- ↓ 由 shared/scripts/build-sites.mjs 從真實的 import 圖產生，不要手改。
        沒有它的話瀏覽器要一層一層發現模組，實測 4 層 × 每次往返。 -->
-<meta name="build" content="80fbf154">
+<meta name="build" content="09ae732d">
   <link rel="modulepreload" href="https://esm.sh/@supabase/supabase-js@2" crossorigin>
   <link rel="modulepreload" href="main.js">
   <link rel="modulepreload" href="../shared/js/core/lang.js">
@@ -155,6 +155,45 @@
         <button id="btn-free" class="entry"><b>輪練</b><small id="e-free">–</small></button>
       </div>
     </div>
+
+      <!-- 練習方式就放在三個入口下面。
+           先前在「我的」裡 —— 而題型／方向／內容類型是**每次開始學之前**
+           會想調的東西，不是設定完就不再碰的偏好。
+           放在別的分頁等於每次都要：離開首頁 → 調 → 走回來。
+           預設收合：它是「要改的時候才展開」，攤開會把三個入口擠下去，
+           而首頁的主體是那三個入口。收合狀態的摘要行（#opt-summary）
+           已經寫著目前是什麼設定，不展開也看得到。 -->
+      <details class="card details" id="opt-box">
+          <summary>
+          <span>練習方式</span>
+          <span id="opt-summary" class="muted"></span>
+        </summary>
+        <div class="details-body">
+          <label class="field-label">題型</label>
+          <!-- 由題型註冊表產生（見 views/home.js 的 initHome）。
+               寫死在這裡的後果實際發生過兩次：
+                 · 新增「拼出來」之後選單上沒有它 —— 功能做完了卻沒有人點得到
+                 · 日文站關閉了「詞序重組」，選單卻照樣顯示，
+                   選了會靜靜退回翻卡自評（getMode 對關閉的題型回退 flip）
+               兩者都不會報錯。 -->
+          <div class="seg" id="mode-pick"></div>
+          <p id="mode-hint" class="hint"></p>
+
+
+          <label class="field-label">內容類型</label>
+          <div class="seg" id="type-pick">
+            <label><input type="radio" name="itype" value="all" checked><span>全部</span></label>
+            <label><input type="radio" name="itype" value="word"><span>單字</span></label>
+            <label><input type="radio" name="itype" value="sentence"><span>句子</span></label>
+          </div>
+
+          <label class="field-label">方向</label>
+          <div class="seg" id="dir-pick">
+            <label><input type="radio" name="dir" value="ko2zh" checked><span>韓 → 中</span></label>
+            <label><input type="radio" name="dir" value="zh2ko"><span>中 → 韓</span></label>
+          </div>
+        </div>
+      </details>
 
 
 
@@ -330,37 +369,6 @@
 
   <!-- ══════════════ ④ 我的 ══════════════ -->
   <section id="view-me" class="hidden">
-    <details class="card details" id="opt-box">
-      <summary>
-        <span>練習方式</span>
-        <span id="opt-summary" class="muted"></span>
-      </summary>
-      <div class="details-body">
-        <label class="field-label">題型</label>
-        <!-- 由題型註冊表產生（見 views/home.js 的 initHome）。
-             寫死在這裡的後果實際發生過兩次：
-               · 新增「拼出來」之後選單上沒有它 —— 功能做完了卻沒有人點得到
-               · 日文站關閉了「詞序重組」，選單卻照樣顯示，
-                 選了會靜靜退回翻卡自評（getMode 對關閉的題型回退 flip）
-             兩者都不會報錯。 -->
-        <div class="seg" id="mode-pick"></div>
-        <p id="mode-hint" class="hint"></p>
-
-
-        <label class="field-label">內容類型</label>
-        <div class="seg" id="type-pick">
-          <label><input type="radio" name="itype" value="all" checked><span>全部</span></label>
-          <label><input type="radio" name="itype" value="word"><span>單字</span></label>
-          <label><input type="radio" name="itype" value="sentence"><span>句子</span></label>
-        </div>
-
-        <label class="field-label">方向</label>
-        <div class="seg" id="dir-pick">
-          <label><input type="radio" name="dir" value="ko2zh" checked><span>韓 → 中</span></label>
-          <label><input type="radio" name="dir" value="zh2ko"><span>中 → 韓</span></label>
-        </div>
-      </div>
-    </details>
 
     <div class="card">
       <h2>外觀</h2>

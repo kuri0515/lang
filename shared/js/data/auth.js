@@ -61,8 +61,18 @@ export async function currentUser() {
  *   把事件丟掉的話，呼叫端無從分辨「使用者換人了」與「只是換了一張 token」，
  *   只能每次都重跑一遍啟動流程。
  */
+// 目前的 access token。給「頁面關閉時用 keepalive 送出」那條路用 ——
+// 那時來不及等 getSession()（它是非同步的），而 keepalive 的請求
+// 必須當場帶好授權標頭。onAuthStateChange 每次都給我們最新的 session，
+// 順手記下來就好。
+let _token = null;
+export const accessToken = () => _token;
+
 export const onChange = (cb) =>
-  sb.auth.onAuthStateChange((event, s) => cb(s?.user ?? null, event));
+  sb.auth.onAuthStateChange((event, s) => {
+    _token = s?.access_token ?? null;
+    cb(s?.user ?? null, event);
+  });
 
 export const displayName = (u) =>
   u?.user_metadata?.display_name || u?.user_metadata?.username || toUsername(u?.email);
