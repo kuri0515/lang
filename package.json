@@ -28,7 +28,8 @@
     "test:flow": "node --import ./tests/_cdn-stub.mjs tests/flow.test.mjs tests/fixtures/pool.json",
     "test:flow:ja": "SITE=japanese node --import ./tests/_cdn-stub.mjs tests/flow.test.mjs tests/fixtures/pool-ja.json",
     "test:round": "node tests/round.test.mjs",
-    "test:build": "node tests/build.test.mjs"
+    "test:build": "node tests/build.test.mjs",
+    "build:vendor": "node shared/scripts/build-vendor.mjs"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.112.3",

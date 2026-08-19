@@ -47,6 +47,16 @@ const render = (item, direction = 'ko2zh') => {
   study.reveal();
 };
 
+// ★ 先確認替身真的攔到了。
+//   攔截條件是用 import 路徑判斷的，而路徑會變（esm.sh → 自託管就變過一次）。
+//   失效時測試不會說「替身沒生效」，它會去打真的網路，
+//   然後在十秒後以 ConnectTimeout 整支掛掉 —— 訊息裡看不出原因。
+{
+  const { sb } = await import(`${SHARED}/js/data/client.js`);
+  chk('★ supabase 用的是測試替身，沒有連線上資料庫', sb.__stub === true,
+      '替身沒攔到的話，測試會打到線上專案');
+}
+
 console.log(`【卡片渲染】（站台：${SITE}）`);
 const word = items.find((x) => x.item_type === 'word' && !x.note);
 render(word);

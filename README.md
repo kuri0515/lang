@@ -14,6 +14,8 @@
 | `japanese/` | 上線中，826 條（五十音入門書已完整收錄） | `kuri0515.github.io/lang/japanese/` |
 
 - 前端：純靜態 HTML + ES Module（零建置，GitHub Pages 直接部署）
+- 相依：**零第三方執行期來源** —— supabase-js 自託管於 `shared/vendor/`
+  （`node shared/scripts/build-vendor.mjs` 重新產生，只在升級時跑）
 - 後端：Supabase（Auth + Postgres + RLS），**每站一個獨立專案**
 - 演算法：**費氏階梯**（1,2,3,5,8,13,21,34,55,89 天），封裝在 `shared/js/core/srs.js`
 
