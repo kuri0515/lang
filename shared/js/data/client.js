@@ -2,11 +2,13 @@
 // Supabase 客戶端與共用常量
 // 只有本檔認識 supabase-js；其餘 data/* 透過 sb 使用它。
 // =====================================================================
-// ★ 版本釘死到修訂號。
-//   用 '@2' 的話 esm.sh 每次解析出來的子模組網址可能不同，
-//   而 index.html 裡的 modulepreload 清單是建置時算好的靜態網址 ——
-//   對不上就只是白抓一份沒人用的東西，不會報錯（見 shared/cdn-graph.json）。
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.112.3';
+// ★ 自託管，不走第三方 CDN。
+//   先前是 esm.sh：17 個檔、83 KB gzip、相依深度 4 層，而且在另一個網域
+//   （手機上多一次 DNS + TLS，約 300–600 ms）。
+//   更要緊的是 esm.sh 掛掉這個站就開不起來 ——
+//   一個學習網站不該把「能不能開」交給第三方。
+//   產物由 shared/scripts/build-vendor.mjs 產生並進版控，升級時才重跑。
+import { createClient } from '../../vendor/supabase.js';
 import { lang } from '../core/lang.js';
 
 /**

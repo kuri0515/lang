@@ -69,7 +69,7 @@ export function buildInputs() {
   walk(`${ROOT}/shared/js`, ['.js']);
   walk(`${ROOT}/shared/css`, ['.css']);
   files.push(`${ROOT}/shared/index.template.html`);
-  files.push(`${ROOT}/shared/cdn-graph.json`);
+  walk(`${ROOT}/shared/vendor`, ['.js']);
   for (const site of SITES) {
     for (const f of ['main.js', 'lang.config.js', 'taxonomy.js']) {
       files.push(`${ROOT}/${site}/${f}`);
@@ -95,7 +95,7 @@ const BUILD = buildId();
  *
  * 【為什麼需要】
  *   ES module 是逐層發現的：瀏覽器要先載完 app.js 才知道它要 dom.js，
- *   載完 dom.js 才知道下一層。實測這個站有 4 層、再加 esm.sh 的 2 層，
+ *   載完 dom.js 才知道下一層。實測這個站有 4 層，
  *   等於開站前要 6 次往返，每次約 500 ms。
  *   modulepreload 讓瀏覽器一開始就並行抓全部，深度不再乘以延遲。
  *
@@ -136,29 +136,9 @@ function render(lang, site) {
     ...moduleGraph(`${ROOT}/${site}/main.js`),
     ...moduleGraph(`${ROOT}/shared/js/app.js`),
   ];
-  // ★ CDN 上那一整張相依圖都要預載，不是只有入口。
-  //
-  //   supabase-js 是本站模組瀑布的第 4 層（main → app → client → 它），
-  //   而它自己還有 4 層、17 個檔（實測 83 KB gzip）。
-  //   只預載入口的話，那 16 個子檔仍然是逐層發現的 ——
-  //   手機上每層 150–300 ms，光「發現」就吃掉半秒到一秒。
-  //   把整張圖攤平寫進去，4 次序列往返變成 1 波。
-  //
-  //   圖存在 shared/cdn-graph.json（用 refresh-cdn-graph.mjs 重抓）——
-  //   建置時現抓的話會離線建不出來，而且 esm.sh 多回一個檔就讓 --check 變紅。
-  const clientSrc = fs.readFileSync(`${ROOT}/shared/js/data/client.js`, 'utf8');
-  const cdn = clientSrc.match(/from\s+'(https:\/\/[^']+)'/)?.[1];
-  const graph = JSON.parse(fs.readFileSync(`${ROOT}/shared/cdn-graph.json`, 'utf8'));
-  // ★ 對不上就停下來。預載一批舊版網址不會報錯 ——
-  //   它只是白抓一份沒人用的東西，而真正要用的那批又回到逐層發現。
-  //   那正是「優化悄悄失效」的典型：數字看起來還在，效果沒了。
-  if (graph.entry !== cdn) {
-    throw new Error(`cdn-graph.json 過期了：\n  程式在用 ${cdn}\n  清單記的是 ${graph.entry}\n`
-      + '  請跑 node shared/scripts/refresh-cdn-graph.mjs');
-  }
-
+  // supabase 現在是自託管的一般模組（shared/vendor/supabase.js），
+  // 會被上面的 moduleGraph 掃到並一起預載 —— 不再需要 CDN 專用的處理。
   const links = [
-    ...graph.urls.map((u) => `  <link rel="modulepreload" href="${u}" crossorigin>`),
     ...[...new Set(files)]
       .map((f) => f.replace(`${ROOT}/${site}/`, '').replace(`${ROOT}/`, '../'))
       .map((href) => `  <link rel="modulepreload" href="${href}">`),

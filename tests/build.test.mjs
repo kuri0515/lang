@@ -82,35 +82,38 @@ chk('★ 驗完之後工作區乾淨（每個 probe 都還原了）', checkPasse
     'finally 沒還原的話會留下髒檔案，而下一次 build 會靜靜地把它帶上線');
 
 
-console.log('\n【CDN 相依圖要攤平預載】');
+console.log('\n【開站不依賴任何第三方來源】');
 {
-  // supabase-js 在 esm.sh 上有 4 層、17 個檔。只預載入口的話，
-  // 那 16 個子檔仍然逐層發現 —— 手機上每層 150–300 ms。
-  const graph = JSON.parse(fs.readFileSync(`${ROOT}/shared/cdn-graph.json`, 'utf8'));
+  // 先前 supabase-js 走 esm.sh：17 個檔、83 KB gzip、深度 4 層、另一個網域。
+  // 預載可以把深度攤平，但 DNS + TLS 攤不平，而且 esm.sh 掛掉這個站就開不起來。
+  // 改成自託管之後，這裡守的是「別再飄回去」。
   const html = fs.readFileSync(`${ROOT}/korean/index.html`, 'utf8');
-  const missing = graph.urls.filter((u) => !html.includes(`href="${u}"`));
-  chk(`★ 整張 CDN 圖都預載了（${graph.urls.length} 個）`, missing.length === 0,
-      missing.slice(0, 3).join(' / ') || '每一層都攤平成第 0 層');
-  chk('圖不是只有入口一個', graph.urls.length > 5, `只有 ${graph.urls.length} 個`);
-  chk('★ 版本有釘到修訂號', !/@\d+$/.test(graph.entry),
-      `${graph.entry} —— 用 @2 的話子模組網址會漂，預載清單靜靜失效`);
+  // 只看**程式碼**來源（script / modulepreload / stylesheet）。
+  // 連到自己 Supabase 專案的 preconnect 是資料 API，該留 ——
+  // 它是這個站的後端，不是第三方程式碼。
+  const codeSrc = [...html.matchAll(/<(?:script[^>]*\bsrc|link[^>]*\brel="(?:modulepreload|stylesheet)"[^>]*\bhref)="([^"]+)"/g)]
+    .map((m) => m[1])
+    .filter((u) => /^https?:/.test(u));
+  chk('★ 沒有任何第三方程式碼來源', codeSrc.length === 0, codeSrc.slice(0, 3).join(' / '));
 
-  // 清單過期必須讓建置停下來。預載一批舊網址不會報錯，
-  // 它只是白抓、而真正要用的那批回到逐層發現 —— 優化悄悄失效。
-  const orig = fs.readFileSync(`${ROOT}/shared/cdn-graph.json`, 'utf8');
-  let stopped = false;
-  try {
-    fs.writeFileSync(`${ROOT}/shared/cdn-graph.json`,
-      orig.replace(graph.entry, 'https://esm.sh/@supabase/supabase-js@9.9.9'));
-    try {
-      execFileSync('node', [`${ROOT}/shared/scripts/build-sites.mjs`], { stdio: 'pipe' });
-    } catch { stopped = true; }
-  } finally {
-    fs.writeFileSync(`${ROOT}/shared/cdn-graph.json`, orig);
-    build();
-  }
-  chk('★ 清單與程式對不上時，建置會停下來', stopped,
-      '不停的話會產生一批白抓的預載，而效果沒了、數字還在');
+  const clientSrc = fs.readFileSync(`${ROOT}/shared/js/data/client.js`, 'utf8');
+  chk('★ client.js 不從 CDN import', !/from\s+'https?:/.test(clientSrc),
+      'esm.sh 掛掉時整個站開不起來 —— 那不該是一個學習網站的失敗模式');
+
+  chk('打包好的 supabase 有被預載', html.includes('vendor/supabase.js'),
+      '不預載的話它仍然是模組瀑布的第 4 層');
+
+  // 產物與 node_modules 的版本必須一致。
+  // 不一致代表有人升級了套件卻沒重跑 build-vendor —— 而那不會報錯：
+  // 線上跑的是舊版，package.json 說的是新版。
+  const meta = JSON.parse(fs.readFileSync(`${ROOT}/shared/vendor/supabase.version.json`, 'utf8'));
+  const pkg = JSON.parse(fs.readFileSync(
+    `${ROOT}/node_modules/@supabase/supabase-js/package.json`, 'utf8'));
+  chk('★ 打包產物與 node_modules 版本一致', meta.version === pkg.version,
+      `產物 ${meta.version} / 安裝的 ${pkg.version} —— 升級了卻沒重跑 build-vendor.mjs`);
+
+  chk('產物比原本的 CDN 版小', meta.gzip < 83 * 1024,
+      `${(meta.gzip / 1024).toFixed(0)} KB gzip（esm.sh 那條鏈是 83 KB）`);
 }
 
 console.log(fails ? `\n❌ ${fails} 項未過` : '\n✅ 全部通過');

@@ -31,6 +31,8 @@
     "test:build": "node tests/build.test.mjs"
   },
   "devDependencies": {
+    "@supabase/supabase-js": "^2.112.3",
+    "esbuild": "^0.28.2",
     "jsdom": "^25.0.0"
   }
 }

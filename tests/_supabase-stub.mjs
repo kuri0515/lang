@@ -29,7 +29,14 @@ function query(table) {
   return self;
 }
 
+// ★ 蓋一個印，讓測試驗得出「載到的真的是替身」。
+//   沒有這個印的話，攔截條件哪天失效（例如 import 路徑改了）
+//   測試會靜靜地載入真的 supabase-js 去打網路 ——
+//   而症狀是十秒後的 ConnectTimeout，看不出跟替身有關。
+export const IS_STUB = true;
+
 export const createClient = () => ({
+  __stub: true,
   from: (t) => query(t),
   rpc: () => query(null),
   auth: {

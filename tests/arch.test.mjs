@@ -179,6 +179,30 @@ chk('JS 取用的 DOM id 都存在於 index.html', missingIds);
       /saveResumeBeacon/.test(hide.slice(0, 400)) ? []
         : ['pagehide 沒走 keepalive —— 一般請求會隨頁面一起被砍掉']);
 
+  // ★ 靜態站的部署不是原子的：新版推上去後，舊版仍會在使用者的瀏覽器裡
+  //   活十分鐘以上（GitHub Pages max-age=600，分頁不關就更久）。
+  //   所以「刪欄位」與「程式碼停止使用該欄位」不能在同一次做 ——
+  //   2026-08-19 這樣做的結果是兩站都打不開。
+  //   這條檢查擋的是：migration 裡有 drop column，而它刪的欄位
+  //   在 shared/js 裡還找得到引用。
+  {
+    const mig = fs.readdirSync(new URL('../shared/supabase/migrations', import.meta.url).pathname)
+      .filter((f) => f.endsWith('.sql'));
+    const js = ['app.js', 'data/auth.js', 'data/progress.js', 'data/content.js']
+      .map((f) => { try { return fs.readFileSync(new URL(`../shared/js/${f}`, import.meta.url).pathname, 'utf8'); } catch { return ''; } })
+      .join('\n');
+    const dropped = new Set();
+    for (const f of mig) {
+      const sql = fs.readFileSync(new URL(`../shared/supabase/migrations/${f}`, import.meta.url).pathname, 'utf8');
+      for (const m of sql.matchAll(/drop\s+column\s+(?:if\s+exists\s+)?([a-z_]+)/gi)) dropped.add(m[1]);
+      // 之後又加回來的就不算刪過
+      for (const m of sql.matchAll(/add\s+column\s+(?:if\s+not\s+exists\s+)?([a-z_]+)/gi)) dropped.delete(m[1]);
+    }
+    const stillUsed = [...dropped].filter((c) => new RegExp(`\\b${c}\\b`).test(js));
+    chk('★ 已刪除的欄位不得還被程式碼引用',
+        stillUsed.map((c) => `${c} 已被 drop，但 shared/js 還在用 —— 舊版快取會打不開`));
+  }
+
   chk('saveReview 走 RPC（卡片與記錄同一個交易）',
       /rpc\('log_review'/.test(prog) ? [] : ['saveReview 沒有走 log_review RPC']);
 }

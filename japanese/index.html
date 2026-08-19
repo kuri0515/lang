@@ -13,30 +13,12 @@
   <meta name="apple-mobile-web-app-title" content="日語單字卡">
   <!-- 先連上這兩個主機：TLS 握手與 DNS 可以和 HTML 解析同時進行，
        不必等到真的要抓資料時才開始。 -->
-  <link rel="preconnect" href="https://esm.sh" crossorigin>
   <link rel="preconnect" href="https://ihkrmcbhzmzlczedswyv.supabase.co" crossorigin>
   <link rel="stylesheet" href="../shared/css/style.css">
 
   <!-- ↓ 由 shared/scripts/build-sites.mjs 從真實的 import 圖產生，不要手改。
        沒有它的話瀏覽器要一層一層發現模組，實測 4 層 × 每次往返。 -->
-<meta name="build" content="d4474b22">
-  <link rel="modulepreload" href="https://esm.sh/@supabase/auth-js@2.112.3/es2022/auth-js.mjs" crossorigin>
-  <link rel="modulepreload" href="https://esm.sh/@supabase/functions-js@2.112.3/es2022/functions-js.mjs" crossorigin>
-  <link rel="modulepreload" href="https://esm.sh/@supabase/phoenix@0.4.5/es2022/phoenix.mjs" crossorigin>
-  <link rel="modulepreload" href="https://esm.sh/@supabase/postgrest-js@2.112.3/es2022/postgrest-js.mjs" crossorigin>
-  <link rel="modulepreload" href="https://esm.sh/@supabase/realtime-js@2.112.3/es2022/realtime-js.mjs" crossorigin>
-  <link rel="modulepreload" href="https://esm.sh/@supabase/storage-js@2.112.3/es2022/storage-js.mjs" crossorigin>
-  <link rel="modulepreload" href="https://esm.sh/@supabase/supabase-js@2.112.3" crossorigin>
-  <link rel="modulepreload" href="https://esm.sh/@supabase/supabase-js@2.112.3/es2022/dist/tracingRegistry.mjs" crossorigin>
-  <link rel="modulepreload" href="https://esm.sh/@supabase/supabase-js@2.112.3/es2022/supabase-js.mjs" crossorigin>
-  <link rel="modulepreload" href="https://esm.sh/iceberg-js@0.8.1/es2022/iceberg-js.mjs" crossorigin>
-  <link rel="modulepreload" href="https://esm.sh/iceberg-js@^0.8.1?target=es2022" crossorigin>
-  <link rel="modulepreload" href="https://esm.sh/node/async_hooks.mjs" crossorigin>
-  <link rel="modulepreload" href="https://esm.sh/node/buffer.mjs" crossorigin>
-  <link rel="modulepreload" href="https://esm.sh/node/events.mjs" crossorigin>
-  <link rel="modulepreload" href="https://esm.sh/node/process.mjs" crossorigin>
-  <link rel="modulepreload" href="https://esm.sh/node/tty.mjs" crossorigin>
-  <link rel="modulepreload" href="https://esm.sh/tslib@2.8.1/es2022/tslib.mjs" crossorigin>
+<meta name="build" content="41eb9915">
   <link rel="modulepreload" href="main.js">
   <link rel="modulepreload" href="../shared/js/core/lang.js">
   <link rel="modulepreload" href="lang.config.js">
@@ -48,6 +30,7 @@
   <link rel="modulepreload" href="../shared/js/core/srs.js">
   <link rel="modulepreload" href="../shared/js/data/auth.js">
   <link rel="modulepreload" href="../shared/js/data/client.js">
+  <link rel="modulepreload" href="../shared/vendor/supabase.js">
   <link rel="modulepreload" href="../shared/js/core/auth-map.js">
   <link rel="modulepreload" href="../shared/js/data/content.js">
   <link rel="modulepreload" href="../shared/js/data/progress.js">

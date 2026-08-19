@@ -77,7 +77,16 @@ export const onChange = (cb) =>
 export const displayName = (u) =>
   u?.user_metadata?.display_name || u?.user_metadata?.username || toUsername(u?.email);
 
-/** 讀自己的 profile（含 role）。isAdmin 僅供 UX，真門禁在 RLS。 */
+/**
+ * 讀自己的 profile（含 role）。isAdmin 僅供 UX，真門禁在 RLS。
+ *
+ * ★ select 清單只列真正要用的欄位。
+ *   2026-08-19 的事故：把不再使用的欄位從這裡拿掉、同一次也把資料庫欄位刪了，
+ *   結果使用者瀏覽器裡快取的舊版 JS 仍然 select 那些欄位，
+ *   查詢回 42703，兩站都打不開。
+ *   教訓不是「不要精簡 select」，是「刪欄位要等舊版 JS 從所有快取裡消失」。
+ *   多選一個不用的欄位不會怎樣；少一個存在的欄位會讓整個查詢失敗。
+ */
 export async function myProfile(userId) {
   const { data, error } = await sb.from('profiles')
     .select('username, display_name, role, study_prefs')
