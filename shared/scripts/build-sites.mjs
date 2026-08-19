@@ -62,6 +62,9 @@ export function buildInputs() {
     for (const name of fs.readdirSync(dir).sort()) {
       if (name === 'node_modules' || name.startsWith('.')) continue;
       const full = `${dir}/${name}`;
+      // ★ build.js 是產生物。算進雜湊的話版號會依賴自己 ——
+      //   每跑一次 build 就變一次，永遠對不上。
+      if (full === `${ROOT}/shared/js/build.js`) continue;
       if (fs.statSync(full).isDirectory()) walk(full, ext);
       else if (ext.some((e) => name.endsWith(e))) files.push(full);
     }
@@ -204,6 +207,31 @@ for (const site of SITES) {
     fs.writeFileSync(path, out);
     console.log(`  ✅ ${site}/index.html ${cur === out ? '（無變化）' : '已更新'}`);
   }
+}
+
+// shared/js/build.js —— 讓 JS 自己也帶版號。
+//
+// 【為什麼需要】
+//   原本只有 HTML 帶 <meta name="build">，執行期拿它跟 version.json 比。
+//   但瀏覽器對 HTML 與 JS 的快取是各自到期的：
+//   HTML 換新了、app.js 還是舊的那一份，兩邊對版本的看法都「正確」——
+//   meta 是新的、version.json 是新的，檢查一片綠，而 App 已經壞了。
+//   （2026-08-19 日文站就是這樣：新 HTML 配舊 JS，
+//     堆疊指向的行號在線上檔案裡根本對不上。）
+//
+//   所以 JS 也要帶自己的版號，執行期比對「我這份 JS」與「這個 HTML」。
+//   ★ 這個檔案不進 buildInputs —— 它是產生物，
+//     把它算進雜湊會讓版號依賴自己，每跑一次就變一次。
+const bPath = `${ROOT}/shared/js/build.js`;
+const bBody = `// 產生檔案，勿手改（node shared/scripts/build-sites.mjs）\n`
+            + `export const BUILD = '${BUILD}';\n`;
+if (check) {
+  const cur = fs.existsSync(bPath) ? fs.readFileSync(bPath, 'utf8') : null;
+  if (cur !== bBody) { bad++; console.log('  ❌ shared/js/build.js 與程式碼不一致'); }
+  else console.log(`  ✅ shared/js/build.js 一致（${BUILD}）`);
+} else {
+  fs.writeFileSync(bPath, bBody);
+  console.log(`  ✅ shared/js/build.js ${BUILD}`);
 }
 
 // version.json 供執行期比對。放在網站根目錄，兩站共用一份 ——

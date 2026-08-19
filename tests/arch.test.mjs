@@ -203,6 +203,21 @@ chk('JS 取用的 DOM id 都存在於 index.html', missingIds);
         stillUsed.map((c) => `${c} 已被 drop，但 shared/js 還在用 —— 舊版快取會打不開`));
   }
 
+  // JS 也要帶版號 —— 只有 HTML 帶的話，新 HTML 配舊 JS 時檢查會一片綠，
+  // 而 App 已經壞了（2026-08-19 日文站）。
+  {
+    const bj = fs.readFileSync(new URL('../shared/js/build.js', import.meta.url).pathname, 'utf8');
+    const ver = JSON.parse(fs.readFileSync(new URL('../version.json', import.meta.url).pathname, 'utf8'));
+    const m = /BUILD = '([0-9a-f]+)'/.exec(bj);
+    chk('★ shared/js/build.js 的版號與 version.json 一致',
+        m && m[1] === ver.build ? []
+          : [`build.js=${m?.[1]} version.json=${ver.build} —— 跑 npm run build:sites`]);
+    const appSrc = fs.readFileSync(new URL('../shared/js/app.js', import.meta.url).pathname, 'utf8');
+    chk('★ 執行期會比對 JS 版號與 HTML 版號',
+        /BUILD\s*!==\s*mine/.test(appSrc) ? []
+          : ['checkVersion 沒有比對 BUILD 與 meta —— 舊 JS 配新 HTML 不會被發現']);
+  }
+
   chk('saveReview 走 RPC（卡片與記錄同一個交易）',
       /rpc\('log_review'/.test(prog) ? [] : ['saveReview 沒有走 log_review RPC']);
 }

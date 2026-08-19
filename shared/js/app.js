@@ -6,6 +6,7 @@
 //   資料存取 → data/*      題型 → study/modes/*
 //   會話邏輯 → study/session.js   畫面 → views/*
 // =====================================================================
+import { BUILD } from './build.js';
 import { $, esc, msg, shuffle } from './core/dom.js';
 import { on, emit, EVENTS } from './core/bus.js';
 import { difficultyScore } from './core/srs.js';
@@ -841,31 +842,44 @@ window.addEventListener('pagehide', () => {
 async function checkVersion() {
   const mine = document.querySelector('meta[name="build"]')?.content;
   if (!mine) return;
+
+  // ★ 先比「我這份 JS」與「這個 HTML」——
+  //   瀏覽器對 HTML 與 JS 的快取各自到期，可能出現新 HTML 配舊 JS。
+  //   那時 meta 與 version.json 都是新的，檢查一片綠，而 App 已經壞了
+  //   （2026-08-19 日文站就是這樣：堆疊指向的行號在線上檔案裡根本對不上）。
+  //   這一比不必連網，最快也最準。
+  if (BUILD !== mine) return showUpdateBar(mine, '程式版本不一致');
+
   try {
     const r = await fetch('../version.json', { cache: 'no-store' });
     const { build } = await r.json();
     if (!build || build === mine) return;
-    const bar = document.createElement('button');
-    bar.className = 'update-bar';
-    bar.textContent = '有新版本 · 點此更新';
-    bar.onclick = async () => {
-      // ★ 先把還沒落地的答題寫完再導航。
-      //   評分後有 2.5 秒的延遲寫入（為了讓「撤銷」等於沒發生過），
-      //   而且 flush 只是發出請求 —— location.replace() 會把還在飛的砍掉。
-      //   使用者按更新是主動行為，等一下是可以的；丟掉剛答的那題不行。
-      bar.disabled = true;
-      bar.textContent = '正在儲存進度…';
-      try {
-        await session.settle();                       // 答題記錄：等它真的寫進去
-        const st = currentResumeState();               // 續跑進度：也等
-        if (st && user?.id) await progress.saveResume(user.id, st.modeId, st);
-      } catch { /* 存不上也得讓人更新 —— 卡在這裡更糟 */ }
-      const u = new URL(window.location.href);
-      u.searchParams.set('v', build);
-      window.location.replace(u.toString());
-    };
-    document.body.appendChild(bar);
+    showUpdateBar(build);
   } catch { /* 離線或檔案還沒部署：不打擾，維持現狀 */ }
+}
+
+/**
+ * 更新提示條。點下去之前先把還沒落地的寫入寫完 ——
+ * 評分後有 2.5 秒的延遲寫入，而 location.replace() 會把還在飛的請求砍掉。
+ */
+function showUpdateBar(build, why = '') {
+  if (document.querySelector('.update-bar')) return;      // 只放一條
+  const bar = document.createElement('button');
+  bar.className = 'update-bar';
+  bar.textContent = why ? `${why} · 點此更新` : '有新版本 · 點此更新';
+  bar.onclick = async () => {
+    bar.disabled = true;
+    bar.textContent = '正在儲存進度…';
+    try {
+      await session.settle();                            // 答題記錄：等它真的寫進去
+      const st = currentResumeState();                    // 續跑進度：也等
+      if (st && user?.id) await progress.saveResume(user.id, st.modeId, st);
+    } catch { /* 存不上也得讓人更新 —— 卡在這裡更糟 */ }
+    const u = new URL(window.location.href);
+    u.searchParams.set('v', build);
+    window.location.replace(u.toString());
+  };
+  document.body.appendChild(bar);
 }
 checkVersion();
 // 從背景切回來時再看一次 —— 手機把分頁留在背景好幾天是常態
