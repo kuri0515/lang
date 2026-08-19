@@ -18,7 +18,7 @@
 
   <!-- ↓ 由 shared/scripts/build-sites.mjs 從真實的 import 圖產生，不要手改。
        沒有它的話瀏覽器要一層一層發現模組，實測 4 層 × 每次往返。 -->
-<meta name="build" content="41eb9915">
+<meta name="build" content="23d8d461">
   <link rel="modulepreload" href="main.js">
   <link rel="modulepreload" href="../shared/js/core/lang.js">
   <link rel="modulepreload" href="lang.config.js">
@@ -599,6 +599,42 @@
   </div>
 </div>
 
+<!-- ★ 開站失敗時，畫面要自己說出原因。
+     模組在載入或求值階段爆掉的話，整頁是白的、而手機上沒有主控台可以看 ——
+     使用者能回報的只有「打不開」，而那句話裡沒有任何可以下手的資訊。
+     這段刻意用一般 script（不是 module）且放在 module 之前：
+     它要在任何模組開始求值之前就掛好，否則最早的那個錯誤攔不到。 -->
+<script>
+(function () {
+  var shown = false;
+  function boom(what, err) {
+    if (shown) return;
+    shown = true;
+    var msg = (err && (err.stack || err.message)) || String(err || '');
+    var box = document.createElement('div');
+    box.setAttribute('style', 'position:fixed;inset:0;z-index:99999;overflow:auto;'
+      + 'background:#fff;color:#111;padding:20px;font:13px/1.6 ui-monospace,monospace');
+    box.innerHTML = '<h2 style="font:600 17px/1.4 system-ui;margin:0 0 6px">開啟失敗</h2>'
+      + '<p style="font:14px/1.6 system-ui;color:#555;margin:0 0 14px">'
+      + '把下面這段截圖回報，就能知道是哪裡壞了。</p>'
+      + '<div style="background:#f5f5f7;border-radius:10px;padding:12px;'
+      + 'white-space:pre-wrap;word-break:break-word"></div>'
+      + '<p style="font:13px/1.6 system-ui;color:#555;margin:14px 0 0">'
+      + '先試試重新整理；還是一樣的話，這通常是快取沒更新。</p>';
+    box.querySelector('div').textContent =
+      what + '\n' + msg + '\n\n版本 ' + (document.querySelector('meta[name=build]') || {}).content
+      + '\n' + navigator.userAgent;
+    document.body.appendChild(box);
+  }
+  addEventListener('error', function (e) {
+    // 圖片/樣式載入失敗不算開站失敗，只有腳本與模組才算
+    var t = e.target;
+    if (t && t !== window && t.tagName !== 'SCRIPT') return;
+    boom(t && t.src ? '載入失敗：' + t.src : '執行錯誤', e.error || e.message);
+  }, true);
+  addEventListener('unhandledrejection', function (e) { boom('未處理的錯誤', e.reason); });
+})();
+</script>
 <script type="module" src="main.js"></script>
 </body>
 </html>
