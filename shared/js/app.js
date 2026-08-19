@@ -68,9 +68,7 @@ const session = createSession({
     // 可練的內容＝剛做完那一輪 ＋ 今天還沒做的。
     // 刻意不從整個詞庫抓 —— 那會把還沒學過的詞端出來，
     // 等於繞過「先複習完才能學新的」那道閘門，而使用者會很自然地一直用它。
-    const extra = [...lastBatchIds, ...reviewQueue.map((e) => e.item.id)];
-    study.renderDone(stats, free, free ? '' : currentLesson,
-                     reviewQueue.length, extra.length > 0);
+    study.renderDone(stats, free, free ? '' : currentLesson, reviewQueue.length);
     home.refreshRoundLabel();      // 這一組做完了，按鈕上的剩餘數要跟著動
     show('view-done');
   },
@@ -137,7 +135,6 @@ async function begin(entries, { freeMode = false, kind = 'review', note = '', le
 // 每日上限已取消，這只是「一次點下去不要把整個詞庫灌進來」。
 const NEW_BATCH = 20;
 let reviewQueue = [];        // 這一批還沒做的（分輪用）
-let lastBatchIds = [];       // 剛做完那一輪的條目，供「再多練一些」使用
 let currentKind = 'review';  // 這一輪是什麼性質（決定掌握數算不算進今日任務）
 
 // ---------------------------------------------------------------------
@@ -183,7 +180,7 @@ const CLOUD_MIN_GAP = 20000;      // 雲端最多 20 秒寫一次
 function currentResumeState() {
   const snap = session.snapshot();
   if (!snap.queue.length || snap.idx >= snap.queue.length) return null;
-  return { ...snap, reviewQueue, lastBatchIds, lesson: currentLesson, savedAt: Date.now() };
+  return { ...snap, reviewQueue, lesson: currentLesson, savedAt: Date.now() };
 }
 
 /**
@@ -271,7 +268,6 @@ async function resumeRound() {
   const snap = await readResume(want);
   if (!snap || !session.resume(snap)) return false;
   reviewQueue = Array.isArray(snap.reviewQueue) ? snap.reviewQueue : [];
-  lastBatchIds = Array.isArray(snap.lastBatchIds) ? snap.lastBatchIds : [];
   currentLesson = snap.lesson || '';
   study.setLesson(currentLesson, '');
   show('view-study'); study.render(session.state());
@@ -320,7 +316,6 @@ async function startReview() {
  */
 async function nextRound() {
   const batch = orderForDiscrimination(reviewQueue.splice(0, ROUND_SIZE), confusableOf);
-  lastBatchIds = batch.map((e) => e.item.id);
   if (!batch.length) return msg('複習已清空 ✓', 'ok');
   await begin(batch, { kind: 'review' });
 }
@@ -706,11 +701,6 @@ function initImporterAndAdmin() {
     show('view-home');
   };
   $('btn-again').onclick = () => nextRound().catch((e) => msg(e.message || e));
-  $('btn-extra').onclick = () => {
-    const ids = [...new Set([...lastBatchIds, ...reviewQueue.map((e) => e.item.id)])];
-    if (!ids.length) return msg('沒有可以練的內容');
-    startFree({ ids });
-  };
 }
 
 // 內容變動 → 干擾項池失效，下輪重抓
