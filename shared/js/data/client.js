@@ -2,7 +2,11 @@
 // Supabase 客戶端與共用常量
 // 只有本檔認識 supabase-js；其餘 data/* 透過 sb 使用它。
 // =====================================================================
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+// ★ 版本釘死到修訂號。
+//   用 '@2' 的話 esm.sh 每次解析出來的子模組網址可能不同，
+//   而 index.html 裡的 modulepreload 清單是建置時算好的靜態網址 ——
+//   對不上就只是白抓一份沒人用的東西，不會報錯（見 shared/cdn-graph.json）。
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.112.3';
 import { lang } from '../core/lang.js';
 
 /**

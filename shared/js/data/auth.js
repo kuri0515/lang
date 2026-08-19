@@ -80,7 +80,7 @@ export const displayName = (u) =>
 /** 讀自己的 profile（含 role）。isAdmin 僅供 UX，真門禁在 RLS。 */
 export async function myProfile(userId) {
   const { data, error } = await sb.from('profiles')
-    .select('username, display_name, role, study_mode, daily_new_limit, study_prefs')
+    .select('username, display_name, role, study_prefs')
     .eq('id', userId).maybeSingle();
   if (error) throw error;
   return data;

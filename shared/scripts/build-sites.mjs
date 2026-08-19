@@ -69,6 +69,7 @@ export function buildInputs() {
   walk(`${ROOT}/shared/js`, ['.js']);
   walk(`${ROOT}/shared/css`, ['.css']);
   files.push(`${ROOT}/shared/index.template.html`);
+  files.push(`${ROOT}/shared/cdn-graph.json`);
   for (const site of SITES) {
     for (const f of ['main.js', 'lang.config.js', 'taxonomy.js']) {
       files.push(`${ROOT}/${site}/${f}`);
@@ -135,18 +136,29 @@ function render(lang, site) {
     ...moduleGraph(`${ROOT}/${site}/main.js`),
     ...moduleGraph(`${ROOT}/shared/js/app.js`),
   ];
-  // ★ 連 CDN 上那一個也要預載。
-  //   supabase-js 是瀑布的第 4 層 —— 要先載 main → app → client 才輪到它，
-  //   而它自己還要再帶 5 個子套件（實測 187 KB）。
-  //   網址是靜態的 import 字串，所以能在 HTML 一到手就開始抓，
-  //   把它從第 4 層搬到第 0 層。
-  //   ★ 從原始碼掃出來而不是寫死 —— 版本號哪天升級，這裡要跟著動，
-  //     而預載一個舊版網址不會報錯，只會白抓一份沒人用的東西。
+  // ★ CDN 上那一整張相依圖都要預載，不是只有入口。
+  //
+  //   supabase-js 是本站模組瀑布的第 4 層（main → app → client → 它），
+  //   而它自己還有 4 層、17 個檔（實測 83 KB gzip）。
+  //   只預載入口的話，那 16 個子檔仍然是逐層發現的 ——
+  //   手機上每層 150–300 ms，光「發現」就吃掉半秒到一秒。
+  //   把整張圖攤平寫進去，4 次序列往返變成 1 波。
+  //
+  //   圖存在 shared/cdn-graph.json（用 refresh-cdn-graph.mjs 重抓）——
+  //   建置時現抓的話會離線建不出來，而且 esm.sh 多回一個檔就讓 --check 變紅。
   const clientSrc = fs.readFileSync(`${ROOT}/shared/js/data/client.js`, 'utf8');
   const cdn = clientSrc.match(/from\s+'(https:\/\/[^']+)'/)?.[1];
+  const graph = JSON.parse(fs.readFileSync(`${ROOT}/shared/cdn-graph.json`, 'utf8'));
+  // ★ 對不上就停下來。預載一批舊版網址不會報錯 ——
+  //   它只是白抓一份沒人用的東西，而真正要用的那批又回到逐層發現。
+  //   那正是「優化悄悄失效」的典型：數字看起來還在，效果沒了。
+  if (graph.entry !== cdn) {
+    throw new Error(`cdn-graph.json 過期了：\n  程式在用 ${cdn}\n  清單記的是 ${graph.entry}\n`
+      + '  請跑 node shared/scripts/refresh-cdn-graph.mjs');
+  }
 
   const links = [
-    ...(cdn ? [`  <link rel="modulepreload" href="${cdn}" crossorigin>`] : []),
+    ...graph.urls.map((u) => `  <link rel="modulepreload" href="${u}" crossorigin>`),
     ...[...new Set(files)]
       .map((f) => f.replace(`${ROOT}/${site}/`, '').replace(`${ROOT}/`, '../'))
       .map((href) => `  <link rel="modulepreload" href="${href}">`),

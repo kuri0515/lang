@@ -81,5 +81,37 @@ chk('改站台設定，版號要跟著變',
 chk('★ 驗完之後工作區乾淨（每個 probe 都還原了）', checkPasses(),
     'finally 沒還原的話會留下髒檔案，而下一次 build 會靜靜地把它帶上線');
 
+
+console.log('\n【CDN 相依圖要攤平預載】');
+{
+  // supabase-js 在 esm.sh 上有 4 層、17 個檔。只預載入口的話，
+  // 那 16 個子檔仍然逐層發現 —— 手機上每層 150–300 ms。
+  const graph = JSON.parse(fs.readFileSync(`${ROOT}/shared/cdn-graph.json`, 'utf8'));
+  const html = fs.readFileSync(`${ROOT}/korean/index.html`, 'utf8');
+  const missing = graph.urls.filter((u) => !html.includes(`href="${u}"`));
+  chk(`★ 整張 CDN 圖都預載了（${graph.urls.length} 個）`, missing.length === 0,
+      missing.slice(0, 3).join(' / ') || '每一層都攤平成第 0 層');
+  chk('圖不是只有入口一個', graph.urls.length > 5, `只有 ${graph.urls.length} 個`);
+  chk('★ 版本有釘到修訂號', !/@\d+$/.test(graph.entry),
+      `${graph.entry} —— 用 @2 的話子模組網址會漂，預載清單靜靜失效`);
+
+  // 清單過期必須讓建置停下來。預載一批舊網址不會報錯，
+  // 它只是白抓、而真正要用的那批回到逐層發現 —— 優化悄悄失效。
+  const orig = fs.readFileSync(`${ROOT}/shared/cdn-graph.json`, 'utf8');
+  let stopped = false;
+  try {
+    fs.writeFileSync(`${ROOT}/shared/cdn-graph.json`,
+      orig.replace(graph.entry, 'https://esm.sh/@supabase/supabase-js@9.9.9'));
+    try {
+      execFileSync('node', [`${ROOT}/shared/scripts/build-sites.mjs`], { stdio: 'pipe' });
+    } catch { stopped = true; }
+  } finally {
+    fs.writeFileSync(`${ROOT}/shared/cdn-graph.json`, orig);
+    build();
+  }
+  chk('★ 清單與程式對不上時，建置會停下來', stopped,
+      '不停的話會產生一批白抓的預載，而效果沒了、數字還在');
+}
+
 console.log(fails ? `\n❌ ${fails} 項未過` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);
