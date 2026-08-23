@@ -693,7 +693,10 @@ onEnter('view-history', () => Promise.all([history.open(), home.load()]));
 // 而沒宣告這個功能的站台不該為它付預載的代價。
 if (opt('b-pane-script')) {
   import('./views/script.js')
-    .then((m) => m.initScript({ userId: () => user?.id || null }))
+    .then((m) => m.initScript({
+      userId: () => user?.id || null,
+      onPractice: (ids) => startFree({ ids }),
+    }))
     .catch(() => { /* 沒載到就是這一格不能用，不該擋住整站啟動 */ });
 }
 onEnter('view-me', () => home.syncModeUI());

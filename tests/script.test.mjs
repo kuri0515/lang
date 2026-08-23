@@ -116,6 +116,39 @@ chk('回到對照兩者都在',
 chk('★ 詞來自斷詞結果，不是字串比對', /4 個/.test($('sc-words-n').textContent),
     `第 1 幕的 tokens 去重後是 4 個（${$('sc-words-n').textContent}）`);
 
+// ── 練這一幕的詞 ─────────────────────────────────────────
+// 那 768 張卡在這之前唯一的入口是「詞庫 → 篩選那一副 → 學這組」，
+// 沒有人會自己走到那裡。內容從哪來與拿它做什麼，該接在一起。
+{
+  const sent = [];
+  view.initScript({ userId: () => 'u1', onPractice: (ids) => { sent.push(ids); } });
+  document.querySelector('#sc-scenes [data-scene="1"]').click();
+  await new Promise((r) => setTimeout(r, 0));
+  chk('★ 有「練這一幕」的入口', !$('sc-practice').classList.contains('hidden'));
+  chk('按鈕上寫著幾個詞', /練這一幕（4）/.test($('sc-practice').textContent),
+      $('sc-practice').textContent);
+  $('sc-practice').click();
+  await new Promise((r) => setTimeout(r, 0));
+  chk('★ 送出的是這一幕的詞', sent.length === 1 && sent[0].length === 4,
+      JSON.stringify(sent[0] || []));
+
+  // ★ 換到沒有詞的幕，按鈕與清單都必須跟著清掉。
+  //   本來是「沒有詞就提早 return」，於是上一幕的清單留著 ——
+  //   按下去練到的是上一幕的詞，而畫面上寫著這一幕。
+  document.querySelector('#sc-scenes [data-scene="2"]').click();
+  await new Promise((r) => setTimeout(r, 0));
+  const n2 = $('sc-practice').textContent;
+  chk('換幕後按鈕跟著換', /練這一幕（3）/.test(n2), n2);
+  $('sc-practice').click();
+  await new Promise((r) => setTimeout(r, 0));
+  chk('★ 送出的是新那一幕的詞，不是上一幕的',
+      sent.length === 2 && sent[1].length === 3 && sent[1].join() !== sent[0].join(),
+      JSON.stringify(sent[1] || []));
+  view.initScript({ userId: () => 'u1' });
+  document.querySelector('#sc-scenes [data-scene="1"]').click();
+  await new Promise((r) => setTimeout(r, 0));
+}
+
 // ── 讀完 / 取消 ──────────────────────────────────────────
 const before = $('sc-done').textContent;
 $('sc-done').click();

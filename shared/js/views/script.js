@@ -16,7 +16,7 @@
 //   沒有辦法自動判斷一個人「讀懂了」。既然是自評，就必須能反悔 ——
 //   標錯了卻收不回來，下次就沒有人敢按。
 // =====================================================================
-import { $, esc, msg, qsa } from '../core/dom.js';
+import { $, esc, msg, qsa, busy } from '../core/dom.js';
 import { rubyHTML, stripRuby, hasRuby } from '../core/ruby.js';
 import * as speech from '../core/speech.js';
 import * as script from '../data/script.js';
@@ -32,6 +32,7 @@ let scene = 0;            // 目前這一幕（1 起；0＝還沒選）
 let mode = 'both';        // both | ja | zh
 let showRuby = true;
 let wordCache = new Map();
+let sceneWordIds = [];    // 這一幕的詞對應到哪些卡片（給「練這一幕」用）
 
 export function initScript(d) {
   deps = d;
@@ -43,6 +44,14 @@ export function initScript(d) {
   $('sc-ruby').onclick = () => { showRuby = !showRuby; syncRubyBtn(); renderLines(); };
   $('sc-done').onclick = () => toggleDone();
   $('sc-continue').onclick = () => openScene(nextUnread());
+  // ★ 讀完一幕，最想做的事就是把剛遇到的詞練熟 ——
+  //   而在這之前，那 768 張卡唯一的入口是
+  //   「詞庫 → 篩選那一副 → 學這組」，沒有人會自己走到那裡。
+  //   內容從哪來（精讀）與拿它做什麼（練習）本來就該接在一起。
+  $('sc-practice').onclick = (e) => busy(e.currentTarget, () => {
+    if (!sceneWordIds.length) return msg('這一幕的詞還沒有建卡');
+    return deps.onPractice?.(sceneWordIds.slice());
+  });
   qsa('input[name="scmode"]').forEach((r) => {
     r.onchange = () => { mode = r.value; renderLines(); };
   });
@@ -200,6 +209,12 @@ function renderLines() {
 async function renderWords(rows) {
   const want = [...new Set(rows.flatMap((l) => l.tokens || []))];
   const box = $('sc-words');
+  // ★ 先清空上一幕的狀態再算這一幕。
+  //   本來是「沒有詞就提早 return」，於是 sceneWordIds 與按鈕
+  //   都留著上一幕的 —— 按下去練到的是上一幕的詞，而畫面上
+  //   寫著這一幕。不報錯，只是練錯東西。
+  sceneWordIds = [];
+  $('sc-practice').classList.add('hidden');
   $('sc-words-n').textContent = want.length ? `${want.length} 個` : '';
   if (!want.length) { box.innerHTML = '<p class="muted nomargin">這一幕沒有需要另外背的詞。</p>'; return; }
 
@@ -211,6 +226,9 @@ async function renderWords(rows) {
     for (const w of miss) if (!wordCache.has(w)) wordCache.set(w, null);
   }
   const items = want.map((w) => wordCache.get(w)).filter(Boolean);
+  sceneWordIds = items.map((it) => it.id);
+  $('sc-practice').classList.toggle('hidden', !items.length);
+  $('sc-practice').textContent = `練這一幕（${items.length}）`;
   box.innerHTML = items.map((it) => `
     <div class="sc-word">
       <b>${hasRuby(it.hanja) ? rubyHTML(it.hanja) : esc(it.ko)}</b>
