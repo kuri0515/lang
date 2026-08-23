@@ -1,5 +1,5 @@
 // 詞庫瀏覽：搜尋、標籤、雙向學習狀態、批次下架（管理員）
-import { $, esc, msg, qsa, debounce, skeleton, emptyState, createPager } from '../core/dom.js';
+import { $, esc, msg, qsa, debounce, skeleton, emptyState, createPager, opt } from '../core/dom.js';
 import { wordHTML } from '../core/ruby.js';
 import { lang } from '../core/lang.js';
 import { on, emit, EVENTS } from '../core/bus.js';
@@ -7,6 +7,7 @@ import { STATE_LABEL, TYPE_LABEL, dirShort } from '../data/client.js';
 import * as content from '../data/content.js';
 import { groupTags, groups } from '../core/taxonomy.js';
 import * as dialogue from './dialogue.js';
+import * as script from './script.js';
 import * as admin from '../data/admin.js';
 import * as progress from '../data/progress.js';
 import { openEditor } from './editor.js';
@@ -40,14 +41,23 @@ let tagsLoaded = false;
 let deckId = '';          // '' = 全部詞庫
 let deckTitle = '';
 
-/** 單字／對話 子分頁。對話是另一種學習形態，不該混在單字清單裡 */
+/**
+ * 子分頁：單字／情境對話／精讀。
+ * 三者都是「內容從哪來」，而底部導覽回答的是「我要做什麼」——
+ * 所以它們並列在這裡，不各佔一個底部入口。
+ *
+ * 精讀那一格只有宣告了 scriptReading 的站台才有，
+ * 所以 pane 用 opt() 取 —— 沒有的站台整塊畫面不存在。
+ */
 function initTabs() {
+  const PANES = { words: 'b-pane-words', dialogue: 'b-pane-dialogue', script: 'b-pane-script' };
   qsa('input[name="btab"]').forEach((r) => {
     r.onchange = () => {
-      const dlg = r.value === 'dialogue';
-      $('b-pane-words').classList.toggle('hidden', dlg);
-      $('b-pane-dialogue').classList.toggle('hidden', !dlg);
-      if (dlg) dialogue.open().catch((e) => msg(e.message || e));
+      for (const [val, id] of Object.entries(PANES)) {
+        opt(id)?.classList.toggle('hidden', val !== r.value);
+      }
+      if (r.value === 'dialogue') dialogue.open().catch((e) => msg(e.message || e));
+      if (r.value === 'script') script.open().catch((e) => msg(e.message || e));
     };
   });
 }

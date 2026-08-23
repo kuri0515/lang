@@ -31,10 +31,10 @@ console.log(`【精讀】（站台：${SITE}）`);
 
 // ── 沒宣告的站台，這個畫面根本不該存在 ──────────────────────
 if (!LANG.scriptReading) {
-  chk('★ 沒宣告 scriptReading 的站台不該有這塊畫面', !$('view-script'),
+  chk('★ 沒宣告 scriptReading 的站台不該有這塊畫面', !$('b-pane-script'),
       '藏起來的話 $() 還是找得到，某支程式會對著永遠空白的畫面做事，而且不報錯');
-  chk('分頁列也不該有這個入口',
-      !document.querySelector('#tabbar [data-tab="view-script"]'));
+  chk('詞庫的子分頁也不該多出這一格',
+      ![...document.querySelectorAll('input[name="btab"]')].some((r) => r.value === 'script'));
   console.log(fails ? `\n❌ ${fails} 項未過` : '\n✅ 全部通過');
   process.exit(fails ? 1 : 0);
 }
@@ -43,6 +43,19 @@ const view = await import(`${SHARED}/js/views/script.js`);
 const data = await import(`${SHARED}/js/data/script.js`);
 chk('★ 用的是假資料層，沒有連線上資料庫', data.IS_STUB === true,
     '攔截失效的話這支測試會打到線上專案');
+
+// ★ 精讀掛在「詞庫」底下，不是底部導覽的一個入口。
+//   底部導覽回答「我要做什麼」，而精讀跟單字、對話一樣是
+//   「內容從哪來」—— 多一個底部入口就多一次猶豫。
+//   （使用者的決定，2026-08-24）反過來寫：有人加回去這裡會紅。
+chk('★ 精讀不是底部導覽的入口',
+    !document.querySelector('#tabbar [data-tab="view-script"]'),
+    '底部導覽維持四個');
+chk('底部導覽維持四個',
+    new Set([...document.querySelectorAll('#tabbar button')].map((b) => b.dataset.tab)).size === 4);
+chk('★ 它是「詞庫」底下的第三格子分頁',
+    [...document.querySelectorAll('input[name="btab"]')].map((r) => r.value)
+      .join(',') === 'words,dialogue,script');
 
 view.initScript({ userId: () => 'u1' });
 await view.open();
@@ -111,6 +124,41 @@ chk('★ 標記可以取消', /取消/.test(before),
     '讀完是自評，而自評會後悔 —— 收不回來就沒有人敢按');
 chk('取消後寫到資料層', data.marked.some((m) => m.scene === 1 && m.done === false),
     JSON.stringify(data.marked));
+
+
+// ── 整幕朗讀：換幕要停 ─────────────────────────────────────
+// 朗讀是逐句 await 的，而使用者隨時會換幕。
+// 沒有停下來的話，畫面是新的一幕、聲音還在唸上一幕 ——
+// 那不會報錯，只會讓人以為朗讀壞了。
+//
+// 全程用真實的 DOM 點擊驅動 —— 正式程式裡不開測試後門，
+// 要控制的是語音，就換掉語音模組（見 tests/_speech-stub.mjs）。
+{
+  const sp = await import(`${SHARED}/js/core/speech.js`);
+  chk('用的是語音替身', sp.IS_STUB === true);
+
+  document.querySelector('#sc-scenes [data-scene="1"]').click();
+  await new Promise((r) => setTimeout(r, 0));
+  sp.reset();
+
+  $('sc-play').click();
+  await new Promise((r) => setTimeout(r, 0));
+  chk('朗讀從第一句開始', sp.spoken.length === 1, `唸了 ${sp.spoken.length} 句`);
+
+  // 唸到一半換幕
+  document.querySelector('#sc-scenes [data-scene="2"]');
+  $('sc-next').click();
+  await new Promise((r) => setTimeout(r, 0));
+  const atSwitch = sp.spoken.length;
+  sp.finishOne();                       // 剛才那一句唸完了
+  await new Promise((r) => setTimeout(r, 0));
+  await new Promise((r) => setTimeout(r, 0));
+  chk('★ 換幕後不再唸上一幕的下一句', sp.spoken.length === atSwitch,
+      `換幕後又唸了 ${sp.spoken.length - atSwitch} 句 —— 畫面是新的一幕，聲音還在唸舊的`);
+
+  $('sc-prev').click();
+  await new Promise((r) => setTimeout(r, 0));
+}
 
 // ── 幕之間移動 ───────────────────────────────────────────
 $('sc-next').click();

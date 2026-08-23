@@ -689,10 +689,9 @@ onEnter('view-history', () => Promise.all([history.open(), home.load()]));
 // 精讀分頁只有宣告了 scriptReading 的站台才有這塊畫面。
 // 用 $() 先確認元素在，不在就整個不接線 ——
 // 對著不存在的元素綁事件會在啟動時丟錯，而那會讓整站白畫面。
-if (opt('view-script')) {
-  script.initScript({ userId: () => user?.id || null });
-  onEnter('view-script', () => script.open().catch((e) => msg(e.message || e)));
-}
+// 精讀掛在「詞庫」底下的子分頁（見 views/browse.js），
+// 所以這裡只做初始化 —— 什麼時候開由那邊決定。
+if (opt('b-pane-script')) script.initScript({ userId: () => user?.id || null });
 onEnter('view-me', () => home.syncModeUI());
 onEnter('view-import', () => importer.open());
 

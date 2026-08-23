@@ -157,10 +157,18 @@ function render(lang, site) {
     grid: !!lang.taxonomy?.grid,        // 五十音表
     script: !!lang.scriptReading,       // 精讀分頁
   };
+  //    {{#name}}…{{/name}} 有這個功能才留；{{^name}}…{{/name}} 反過來。
+  //    需要反向的原因：同一塊東西的兩種版本（例如子分頁是兩格還是三格），
+  //    沒有反向就得把「兩格」那一版也包成正向的另一個旗標 ——
+  //    兩個旗標描述同一件事，遲早會有一天只改到其中一個。
   for (const [name, on] of Object.entries(BLOCKS)) {
-    out = out.replace(
-      new RegExp(`\\{\\{#${name}\\}\\}\\n([\\s\\S]*?)\\{\\{\\/${name}\\}\\}\\n`, 'g'),
-      (_, body) => (on ? body : ''));
+    const block = (mark, keep) => {
+      out = out.replace(
+        new RegExp(`\\{\\{${mark}${name}\\}\\}\\n([\\s\\S]*?)\\{\\{\\/${name}\\}\\}\\n`, 'g'),
+        (_, body) => (keep ? body : ''));
+    };
+    block('#', on);
+    block('\\^', !on);
   }
 
   // ② 可為空的屬性：{{attr readingSample placeholder}}

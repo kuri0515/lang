@@ -18,7 +18,7 @@
 
   <!-- ↓ 由 shared/scripts/build-sites.mjs 從真實的 import 圖產生，不要手改。
        沒有它的話瀏覽器要一層一層發現模組，實測 4 層 × 每次往返。 -->
-<meta name="build" content="139e8010">
+<meta name="build" content="0989a46d">
   <link rel="modulepreload" href="main.js">
   <link rel="modulepreload" href="../shared/js/core/lang.js">
   <link rel="modulepreload" href="lang.config.js">
@@ -206,8 +206,19 @@
 
   </section>
 
-  <!-- ══════════════ 精讀（照影片台詞一幕一幕讀）══════════════ -->
-  <section id="view-script" class="hidden">
+  <!-- ══════════════ ② 詞庫瀏覽 ══════════════ -->
+  <section id="view-browse" class="hidden">
+    <div class="seg seg-3 subtabs" id="b-tabs">
+      <label><input type="radio" name="btab" value="words" checked><span>單字</span></label>
+      <label><input type="radio" name="btab" value="dialogue"><span>情境對話</span></label>
+      <label><input type="radio" name="btab" value="script"><span>精讀</span></label>
+    </div>
+
+    <!-- 精讀：照影片台詞一幕一幕讀。
+         放在詞庫底下而不是自己一個分頁 —— 它跟單字、對話一樣是
+         「內容從哪來」的一種，而底部導覽是「我要做什麼」。
+         多一個底部入口就多一次猶豫，而三者的分工用子分頁講得更清楚。 -->
+    <div id="b-pane-script" class="hidden">
 
     <!-- 集清單 -->
     <div id="sc-list-pane">
@@ -274,13 +285,6 @@
         </div>
       </div>
     </div>
-  </section>
-
-  <!-- ══════════════ ② 詞庫瀏覽 ══════════════ -->
-  <section id="view-browse" class="hidden">
-    <div class="seg seg-2 subtabs" id="b-tabs">
-      <label><input type="radio" name="btab" value="words" checked><span>單字</span></label>
-      <label><input type="radio" name="btab" value="dialogue"><span>情境對話</span></label>
     </div>
 
     <div id="b-pane-dialogue" class="hidden">
@@ -636,7 +640,6 @@
 <!-- ══════════════ 底部導覽 ══════════════ -->
 <nav class="tabbar hidden" id="tabbar">
   <button data-tab="view-home"><span>📚</span>學習</button>
-  <button data-tab="view-script"><span>🎬</span>精讀</button>
   <button data-tab="view-browse"><span>🔍</span>詞庫</button>
   <button data-tab="view-history"><span>📈</span>記錄</button>
   <button data-tab="view-me"><span>⚙️</span>我的</button>

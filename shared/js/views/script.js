@@ -243,11 +243,25 @@ async function toggleDone() {
   }
 }
 
-/** 整幕連續朗讀。中途切走由 router 的 speech.cancel() 收掉 */
+/**
+ * 整幕連續朗讀。
+ *
+ * ★ 每唸一句都要重新確認「還在同一幕」。
+ *   本來寫的是 `if (scene === 0) return`，只擋得住「回到清單」——
+ *   換到別的幕時 scene 變成別的數字而不是 0，於是守衛不觸發，
+ *   畫面已經是新的一幕，聲音還在把舊那一幕唸完。
+ *   而它不會報錯，只會讓人以為朗讀壞了。
+ *
+ *   playId 則擋住「重複按播放」：第二次按下去時，
+ *   第一輪的迴圈還卡在 await 裡，兩輪會交錯著唸。
+ */
+let playId = 0;
 async function playScene() {
   const rows = sceneLines();
+  const at = scene;
+  const mine = ++playId;
   for (const l of rows) {
-    if (scene === 0) return;                 // 已經離開這一幕
+    if (scene !== at || playId !== mine) return;
     await speech.speakAwait(stripRuby(l.ruby || l.ja)).catch(() => {});
   }
 }
