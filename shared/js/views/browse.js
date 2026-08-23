@@ -7,7 +7,6 @@ import { STATE_LABEL, TYPE_LABEL, dirShort } from '../data/client.js';
 import * as content from '../data/content.js';
 import { groupTags, groups } from '../core/taxonomy.js';
 import * as dialogue from './dialogue.js';
-import * as script from './script.js';
 import * as admin from '../data/admin.js';
 import * as progress from '../data/progress.js';
 import { openEditor } from './editor.js';
@@ -57,7 +56,14 @@ function initTabs() {
         opt(id)?.classList.toggle('hidden', val !== r.value);
       }
       if (r.value === 'dialogue') dialogue.open().catch((e) => msg(e.message || e));
-      if (r.value === 'script') script.open().catch((e) => msg(e.message || e));
+      // ★ 精讀用動態 import：靜態 import 會讓它進入**每一站**的模組圖，
+      //   於是沒有這個功能的站台也要預載兩個永遠用不到的檔案。
+      //   宣告式的功能開關，代價不該由沒開的那一站付。
+      if (r.value === 'script') {
+        import('./script.js')
+          .then((m) => m.open())
+          .catch((e) => msg(e.message || e));
+      }
     };
   });
 }

@@ -139,6 +139,16 @@ function render(lang, site) {
     ...moduleGraph(`${ROOT}/${site}/main.js`),
     ...moduleGraph(`${ROOT}/shared/js/app.js`),
   ];
+
+  // ★ 功能模組是**動態** import 的，所以不在上面那張靜態圖裡。
+  //   動態是刻意的：靜態 import 會讓它進入每一站的模組圖，
+  //   沒有這個功能的站台也得預載幾個永遠用不到的檔案。
+  //   但宣告了的那一站不該因此變慢 —— 由這裡按宣告補回預載，
+  //   於是「誰付代價」與「誰拿到好處」終於對上了。
+  const FEATURE_ENTRIES = { scriptReading: 'shared/js/views/script.js' };
+  for (const [flag, entry] of Object.entries(FEATURE_ENTRIES)) {
+    if (lang[flag]) files.push(...moduleGraph(`${ROOT}/${entry}`));
+  }
   // supabase 現在是自託管的一般模組（shared/vendor/supabase.js），
   // 會被上面的 moduleGraph 掃到並一起預載 —— 不再需要 CDN 專用的處理。
   const links = [

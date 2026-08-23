@@ -116,5 +116,56 @@ console.log('\n【開站不依賴任何第三方來源】');
       `${(meta.gzip / 1024).toFixed(0)} KB gzip（esm.sh 那條鏈是 83 KB）`);
 }
 
+
+console.log('\n【沒宣告的功能不得滲進那一站的模組圖】');
+{
+  // 功能模組若用靜態 import，它會進入**每一站**的模組圖，
+  // 於是沒有這個功能的站台也要預載幾個永遠用不到的檔案。
+  // 宣告式的開關，代價不該由沒開的那一站付。
+  // （實際發生過：精讀改掛到詞庫底下時，browse.js 靜態 import 了它，
+  //   韓文站因此多預載 views/script.js 與 data/script.js。）
+  const FEATURE_MODULES = { scriptReading: ['views/script.js', 'data/script.js'] };
+
+  // ★ 判斷抽成純函式，這樣「證明它會報警」不必去改真的檔案。
+  //   種壞樣本的老做法是暫時把產出改壞再還原 —— 而還原失敗
+  //   就會把壞掉的產出留在工作區，下一次 build 靜靜地帶上線。
+  const violations = (sites) => {
+    const out = [];
+    for (const { name, config, html } of sites) {
+      for (const [flag, mods] of Object.entries(FEATURE_MODULES)) {
+        const on = new RegExp(`${flag}\\s*:\\s*true`).test(config);
+        for (const m of mods) {
+          const pre = html.includes(`href="../shared/js/${m}"`);
+          if (!on && pre) out.push(`${name} 沒宣告 ${flag} 卻預載了 ${m}`);
+          if (on && !pre) out.push(`${name} 宣告了 ${flag} 卻沒預載 ${m}`);
+        }
+      }
+    }
+    return out;
+  };
+
+  // 先證明它會報警（假資料，不碰任何檔案）
+  const fakePre = '<link rel="modulepreload" href="../shared/js/views/script.js">'
+                + '<link rel="modulepreload" href="../shared/js/data/script.js">';
+  chk('★ 壞樣本一：沒宣告卻被預載 → 會抓到',
+      violations([{ name: 'x', config: '{}', html: fakePre }]).length === 2,
+      '抓不到的話，這道閘門對真正要防的那件事是瞎的');
+  chk('★ 壞樣本二：宣告了卻沒預載 → 會抓到',
+      violations([{ name: 'y', config: 'scriptReading: true', html: '' }]).length === 2,
+      '反方向也要抓 —— 否則功能會靜靜地少載一半');
+  chk('乾淨樣本不會誤報',
+      violations([{ name: 'z', config: 'scriptReading: true', html: fakePre },
+                  { name: 'w', config: '{}', html: '' }]).length === 0);
+
+  // 再套到真的兩站
+  const real = ['korean', 'japanese'].map((name) => ({
+    name,
+    config: fs.readFileSync(`${ROOT}/${name}/lang.config.js`, 'utf8'),
+    html: fs.readFileSync(`${ROOT}/${name}/index.html`, 'utf8'),
+  }));
+  const bad = violations(real);
+  chk('★ 功能模組只出現在宣告了它的站台', bad.length === 0, bad.join(' / '));
+}
+
 console.log(fails ? `\n❌ ${fails} 項未過` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);

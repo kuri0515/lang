@@ -18,7 +18,7 @@
 
   <!-- ↓ 由 shared/scripts/build-sites.mjs 從真實的 import 圖產生，不要手改。
        沒有它的話瀏覽器要一層一層發現模組，實測 4 層 × 每次往返。 -->
-<meta name="build" content="0989a46d">
+<meta name="build" content="67af39c3">
   <link rel="modulepreload" href="main.js">
   <link rel="modulepreload" href="../shared/js/core/lang.js">
   <link rel="modulepreload" href="lang.config.js">
@@ -59,11 +59,11 @@
   <link rel="modulepreload" href="../shared/js/core/dialogue.js">
   <link rel="modulepreload" href="../shared/js/views/browse.js">
   <link rel="modulepreload" href="../shared/js/views/dialogue.js">
-  <link rel="modulepreload" href="../shared/js/views/script.js">
-  <link rel="modulepreload" href="../shared/js/data/script.js">
   <link rel="modulepreload" href="../shared/js/views/history.js">
   <link rel="modulepreload" href="../shared/js/views/importer.js">
   <link rel="modulepreload" href="../shared/js/core/parse-table.js">
+  <link rel="modulepreload" href="../shared/js/views/script.js">
+  <link rel="modulepreload" href="../shared/js/data/script.js">
 </head>
 <body>
 
@@ -213,7 +213,6 @@
       <label><input type="radio" name="btab" value="dialogue"><span>情境對話</span></label>
       <label><input type="radio" name="btab" value="script"><span>精讀</span></label>
     </div>
-
     <!-- 精讀：照影片台詞一幕一幕讀。
          放在詞庫底下而不是自己一個分頁 —— 它跟單字、對話一樣是
          「內容從哪來」的一種，而底部導覽是「我要做什麼」。

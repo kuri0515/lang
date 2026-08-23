@@ -30,7 +30,6 @@ import { introFor, confusableOf } from './core/taxonomy.js';
 
 let currentLesson = '';   // 本輪練的是哪一課，結束畫面要用
 import * as browse from './views/browse.js';
-import * as script from './views/script.js';
 import * as history from './views/history.js';
 import * as importer from './views/importer.js';
 import { lang, lsKey } from './core/lang.js';
@@ -689,9 +688,14 @@ onEnter('view-history', () => Promise.all([history.open(), home.load()]));
 // 精讀分頁只有宣告了 scriptReading 的站台才有這塊畫面。
 // 用 $() 先確認元素在，不在就整個不接線 ——
 // 對著不存在的元素綁事件會在啟動時丟錯，而那會讓整站白畫面。
-// 精讀掛在「詞庫」底下的子分頁（見 views/browse.js），
-// 所以這裡只做初始化 —— 什麼時候開由那邊決定。
-if (opt('b-pane-script')) script.initScript({ userId: () => user?.id || null });
+// 精讀掛在「詞庫」底下的子分頁（見 views/browse.js），所以這裡只做初始化。
+// 動態 import：靜態的會把它拉進每一站的模組圖，
+// 而沒宣告這個功能的站台不該為它付預載的代價。
+if (opt('b-pane-script')) {
+  import('./views/script.js')
+    .then((m) => m.initScript({ userId: () => user?.id || null }))
+    .catch(() => { /* 沒載到就是這一格不能用，不該擋住整站啟動 */ });
+}
 onEnter('view-me', () => home.syncModeUI());
 onEnter('view-import', () => importer.open());
 
