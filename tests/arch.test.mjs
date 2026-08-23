@@ -134,8 +134,18 @@ const htmlIds = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]));
 const DYNAMIC = new Set(['bulk-bar', 'peek-note', 'bulk-clear', 'bulk-del']);
 const missingIds = [];
 const badSelectors = [];
+// 功能模組：整支只服務一個站台宣告的功能，它取用的 id 自然只存在於那些站台。
+// 對著沒宣告的站台檢查等於要求「每一站都得有每一個功能的畫面」——
+// 那正好推翻了「站台自己宣告要什麼」這件事。
+//
+// 名字寫在這裡是刻意的：新增一個功能模組時必須來這裡登記一筆，
+// 而那一刻正是「這個功能歸哪一站」該被想清楚的時候。
+const FEATURE_MODULES = { 'views/script.js': 'scriptReading' };
+
 for (const f of files) {
   const src = read(f);
+  const flag = FEATURE_MODULES[rel(f)];
+  if (flag && !LANG[flag]) continue;
   for (const m of src.matchAll(/\$\('([^']+)'\)/g)) {
     const id = m[1];
     if (htmlIds.has(id) || DYNAMIC.has(id) || /^p\d$/.test(id)) continue;

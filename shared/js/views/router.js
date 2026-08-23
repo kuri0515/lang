@@ -12,7 +12,7 @@ import { $, qsa } from '../core/dom.js';
 import * as speech from '../core/speech.js';
 
 const VIEWS = ['view-auth', 'view-home', 'view-study', 'view-done',
-               'view-browse', 'view-history', 'view-me', 'view-import'];
+               'view-script', 'view-browse', 'view-history', 'view-me', 'view-import'];
 // 只有登入頁不顯示分頁列 —— 沒登入的話每個分頁都是空的，
 // 給了也只能點到空畫面。
 //
@@ -24,8 +24,8 @@ const VIEWS = ['view-auth', 'view-home', 'view-study', 'view-done',
 //   沒有那個入口就打開分頁列，等於讓人把自己鎖在外面。
 const NO_TAB = ['view-auth'];
 // 可透過網址還原的畫面
-const HASH = { home: 'view-home', browse: 'view-browse', history: 'view-history',
-               me: 'view-me', import: 'view-import' };
+const HASH = { home: 'view-home', script: 'view-script', browse: 'view-browse',
+               history: 'view-history', me: 'view-me', import: 'view-import' };
 const TO_HASH = Object.fromEntries(Object.entries(HASH).map(([k, v]) => [v, k]));
 
 const enterHooks = new Map();

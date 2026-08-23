@@ -1131,3 +1131,43 @@ button[aria-busy="true"]::after {
 @media (prefers-reduced-motion: reduce) {
   button[aria-busy="true"]::after { animation-duration: 2.4s; }
 }
+
+/* ═══════════ 精讀（照影片台詞一幕一幕讀）═══════════ */
+
+/* 集清單的一列：集號、規模、進度條、幾分之幾 */
+.ep-row { display: grid; grid-template-columns: auto 1fr 1fr auto; align-items: center;
+  gap: 10px; width: 100%; text-align: left; padding: 12px 14px; margin-top: 8px;
+  background: var(--card-2, var(--accent-soft)); border: 0; border-radius: 12px; cursor: pointer; }
+.ep-row > b { font-size: 16px; font-weight: 650; white-space: nowrap; }
+.ep-row > small,
+.ep-row > em { color: var(--muted); font-size: 13px; font-style: normal; white-space: nowrap; }
+.ep-prog { height: 6px; border-radius: 3px; background: rgba(128,128,150,.25); overflow: hidden; }
+.ep-prog > i { display: block; height: 100%; background: var(--accent); }
+
+/* 幕的方格。一集七十幕，用方格才看得出「讀到哪、還剩哪些」——
+   清單要捲很久，而「還剩哪些」正是這個畫面唯一要回答的問題 */
+.scene-grid { display: grid; gap: 7px; margin-top: 4px;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); }
+.scene-cell { aspect-ratio: 1; border: 1px solid var(--line, rgba(128,128,150,.3));
+  border-radius: 10px; background: transparent; color: var(--muted);
+  font-size: 14px; font-weight: 600; cursor: pointer; }
+.scene-cell.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* 一行台詞：左邊朗讀鈕，右邊上下兩層（目標語言／中文） */
+.sc-line { display: flex; gap: 10px; padding: 11px 0;
+  border-bottom: 1px solid var(--line, rgba(128,128,150,.18)); }
+.sc-line:last-child { border-bottom: 0; }
+.sc-say { flex: 0 0 auto; align-self: flex-start; opacity: .55; }
+.sc-say:hover { opacity: 1; }
+.sc-body { flex: 1 1 auto; min-width: 0; }
+/* 行高放寬 —— 注音是疊在漢字上方的 <rt>，行距太窄會撞到上一行 */
+.sc-ja { font-size: 19px; line-height: 2.1; word-break: break-word; }
+.sc-zh { font-size: 15px; color: var(--muted); margin-top: 2px; word-break: break-word; }
+
+/* 這一幕的詞 */
+.sc-word { display: grid; grid-template-columns: auto auto 1fr; align-items: baseline;
+  gap: 8px; padding: 7px 0;
+  border-bottom: 1px solid var(--line, rgba(128,128,150,.14)); }
+.sc-word:last-child { border-bottom: 0; }
+.sc-word > b { font-size: 17px; line-height: 1.9; }
+.sc-word > .muted { font-size: 12px; }

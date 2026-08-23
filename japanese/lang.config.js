@@ -19,6 +19,11 @@ export const LANG = {
   // 輪次池的來源。日文站目前只有這一副（五十音 · 入門）。
   roundDeck: 'kana-01',
 
+  // 精讀：照影片台詞一幕一幕讀。宣告在站台這一層 ——
+  // 共用碼不該知道「哪一站有精讀」，它只看這個旗標。
+  // 韓文站沒有宣告，分頁就整個不存在（不是灰掉，是不存在）。
+  scriptReading: true,
+
   langLabel: '日語',
   termLabel: '日文',
   termShort: '日',

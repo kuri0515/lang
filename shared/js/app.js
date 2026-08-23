@@ -7,7 +7,7 @@
 //   會話邏輯 → study/session.js   畫面 → views/*
 // =====================================================================
 import { BUILD } from './build.js';
-import { $, esc, msg, shuffle } from './core/dom.js';
+import { $, opt, esc, msg, shuffle } from './core/dom.js';
 import { on, emit, EVENTS } from './core/bus.js';
 import { difficultyScore } from './core/srs.js';
 import * as auth from './data/auth.js';
@@ -30,6 +30,7 @@ import { introFor, confusableOf } from './core/taxonomy.js';
 
 let currentLesson = '';   // 本輪練的是哪一課，結束畫面要用
 import * as browse from './views/browse.js';
+import * as script from './views/script.js';
 import * as history from './views/history.js';
 import * as importer from './views/importer.js';
 import { lang, lsKey } from './core/lang.js';
@@ -685,6 +686,13 @@ onEnter('view-history', () => Promise.all([history.open(), home.load()]));
 // 練習方式已經搬到「我的」，而它的摘要列（題型 · 方向 · 內容類型）
 // 由 home 的 syncModeUI() 產生 —— 沒有這一行，進「我的」時摘要是空的。
 // 搬移畫面時最容易漏的就是這種「內容還留在原本的模組裡」的接線。
+// 精讀分頁只有宣告了 scriptReading 的站台才有這塊畫面。
+// 用 $() 先確認元素在，不在就整個不接線 ——
+// 對著不存在的元素綁事件會在啟動時丟錯，而那會讓整站白畫面。
+if (opt('view-script')) {
+  script.initScript({ userId: () => user?.id || null });
+  onEnter('view-script', () => script.open().catch((e) => msg(e.message || e)));
+}
 onEnter('view-me', () => home.syncModeUI());
 onEnter('view-import', () => importer.open());
 

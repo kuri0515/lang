@@ -18,7 +18,7 @@
 
   <!-- ↓ 由 shared/scripts/build-sites.mjs 從真實的 import 圖產生，不要手改。
        沒有它的話瀏覽器要一層一層發現模組，實測 4 層 × 每次往返。 -->
-<meta name="build" content="a42213ff">
+<meta name="build" content="139e8010">
   <link rel="modulepreload" href="main.js">
   <link rel="modulepreload" href="../shared/js/core/lang.js">
   <link rel="modulepreload" href="lang.config.js">
@@ -59,6 +59,8 @@
   <link rel="modulepreload" href="../shared/js/core/dialogue.js">
   <link rel="modulepreload" href="../shared/js/views/browse.js">
   <link rel="modulepreload" href="../shared/js/views/dialogue.js">
+  <link rel="modulepreload" href="../shared/js/views/script.js">
+  <link rel="modulepreload" href="../shared/js/data/script.js">
   <link rel="modulepreload" href="../shared/js/views/history.js">
   <link rel="modulepreload" href="../shared/js/views/importer.js">
   <link rel="modulepreload" href="../shared/js/core/parse-table.js">
@@ -202,6 +204,76 @@
 
 
 
+  </section>
+
+  <!-- ══════════════ 精讀（照影片台詞一幕一幕讀）══════════════ -->
+  <section id="view-script" class="hidden">
+
+    <!-- 集清單 -->
+    <div id="sc-list-pane">
+      <div class="card">
+        <div class="card-head">
+          <h2 class="nomargin">精讀</h2>
+          <span id="sc-total" class="muted"></span>
+        </div>
+        <p class="hint nomargin">照台詞一幕一幕讀。先看日文，看不懂再翻中文。</p>
+      </div>
+      <div id="sc-eps"></div>
+    </div>
+
+    <!-- 一集的幕清單 -->
+    <div id="sc-ep-pane" class="hidden">
+      <div class="card">
+        <button id="sc-back-list" class="link">← 全部集數</button>
+        <div class="card-head">
+          <h2 id="sc-ep-title" class="nomargin"></h2>
+          <span id="sc-ep-prog" class="muted"></span>
+        </div>
+        <div class="prog"><i id="sc-ep-bar"></i></div>
+        <button id="sc-continue" class="primary block" style="margin-top:12px"></button>
+      </div>
+      <div class="card">
+        <h2>選一幕</h2>
+        <div id="sc-scenes" class="scene-grid"></div>
+      </div>
+    </div>
+
+    <!-- 一幕的內容 -->
+    <div id="sc-scene-pane" class="hidden">
+      <div class="card">
+        <button id="sc-back-ep" class="link">← 這一集的全部幕</button>
+        <div class="card-head">
+          <h2 id="sc-scene-title" class="nomargin"></h2>
+          <span id="sc-scene-time" class="muted"></span>
+        </div>
+        <div class="seg seg-3" id="sc-mode">
+          <label><input type="radio" name="scmode" value="both" checked><span>對照</span></label>
+          <label><input type="radio" name="scmode" value="ja"><span>只看日</span></label>
+          <label><input type="radio" name="scmode" value="zh"><span>只看中</span></label>
+        </div>
+        <div class="row2" style="margin-top:10px">
+          <button id="sc-play" class="small">▶ 整幕朗讀</button>
+          <button id="sc-ruby" class="small ghost">注音：開</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div id="sc-lines"></div>
+      </div>
+
+      <div class="card">
+        <h2>這一幕的詞 <span id="sc-words-n" class="muted"></span></h2>
+        <div id="sc-words"></div>
+      </div>
+
+      <div class="card">
+        <button id="sc-done" class="primary block"></button>
+        <div class="row2" style="margin-top:10px">
+          <button id="sc-prev" class="small ghost">← 上一幕</button>
+          <button id="sc-next" class="small ghost">下一幕 →</button>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- ══════════════ ② 詞庫瀏覽 ══════════════ -->
@@ -564,6 +636,7 @@
 <!-- ══════════════ 底部導覽 ══════════════ -->
 <nav class="tabbar hidden" id="tabbar">
   <button data-tab="view-home"><span>📚</span>學習</button>
+  <button data-tab="view-script"><span>🎬</span>精讀</button>
   <button data-tab="view-browse"><span>🔍</span>詞庫</button>
   <button data-tab="view-history"><span>📈</span>記錄</button>
   <button data-tab="view-me"><span>⚙️</span>我的</button>

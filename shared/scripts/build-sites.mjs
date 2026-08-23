@@ -149,9 +149,19 @@ function render(lang, site) {
   out = out.replace('{{modulepreload}}', links);
   out = out.replace('{{build}}', BUILD);
 
-  // ① 條件區塊：{{#grid}}…{{/grid}} —— 只有宣告了字母表的站台才留
-  out = out.replace(/\{\{#grid\}\}\n([\s\S]*?)\{\{\/grid\}\}\n/g,
-    (_, body) => (lang.taxonomy?.grid ? body : ''));
+  // ① 條件區塊：只有宣告了對應功能的站台才留下那一段。
+  //    留白的那一站不是「藏起來」而是**根本不存在** ——
+  //    藏起來的元素仍會被 $() 找到，於是某支程式會對著一個
+  //    永遠空白的畫面做事，而且不報錯。
+  const BLOCKS = {
+    grid: !!lang.taxonomy?.grid,        // 五十音表
+    script: !!lang.scriptReading,       // 精讀分頁
+  };
+  for (const [name, on] of Object.entries(BLOCKS)) {
+    out = out.replace(
+      new RegExp(`\\{\\{#${name}\\}\\}\\n([\\s\\S]*?)\\{\\{\\/${name}\\}\\}\\n`, 'g'),
+      (_, body) => (on ? body : ''));
+  }
 
   // ② 可為空的屬性：{{attr readingSample placeholder}}
   //    值是空字串時整個屬性都不輸出，而不是留一個 placeholder=""

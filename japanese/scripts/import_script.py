@@ -81,6 +81,9 @@ def main():
         "idx": l["i"], "scene": scene_of[l["i"]],
         "start_s": l["start"], "end_s": l["end"],
         "ja": l["ja"], "ruby": l["ruby"], "zh": l["zh"],
+        # 斷詞結果存下來 —— 前端要靠它列出「這一幕的詞」。
+        # 用字串比對算的話，「気」會在「元気」裡誤中（見 migration 0023）
+        "tokens": l.get("tokens", []),
     } for l in d["lines"]]
 
     print(f"  {slug}：{len(lines)} 行 · {len(d['scenes'])} 幕 · 詞彙 {len(d['words'])} 個（本次不匯入）")
@@ -89,7 +92,9 @@ def main():
         return
 
     url, key = env()
-    row = call(url, key, "POST", "script_episodes",
+    # on_conflict 一定要指定 —— 少了它 PostgREST 當成純 INSERT，
+    # 重跑必撞 unique，而這支腳本的前提就是可以重跑
+    row = call(url, key, "POST", "script_episodes?on_conflict=slug",
                {"slug": slug, "work": work, "work_title": args.work_title,
                 "season": season, "episode": episode, "title": args.title,
                 "line_count": len(lines), "scene_count": len(d["scenes"]),
@@ -107,10 +112,13 @@ def main():
         call(url, key, "POST", "script_lines", chunk, prefer="return=minimal")
 
     back = call(url, key, "GET",
-                f"script_lines?select=idx,scene&episode_id=eq.{eid}&order=idx&limit=2000")
+                f"script_lines?select=idx,scene,tokens&episode_id=eq.{eid}&order=idx&limit=2000")
     scenes_back = len({r["scene"] for r in back})
-    ok = len(back) == len(lines) and scenes_back == len(d["scenes"])
-    print(f"  回讀：{len(back)} 行 · {scenes_back} 幕 → {'✅ 對得上' if ok else '❌ 對不上'}")
+    toks = sum(len(r["tokens"]) for r in back)
+    want = sum(len(l["tokens"]) for l in lines)
+    ok = len(back) == len(lines) and scenes_back == len(d["scenes"]) and toks == want
+    print(f"  回讀：{len(back)} 行 · {scenes_back} 幕 · 詞 {toks}（預期 {want}）"
+          f" → {'✅ 對得上' if ok else '❌ 對不上'}")
     if not ok:
         sys.exit(1)
 

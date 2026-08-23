@@ -48,14 +48,30 @@ for (const site of SITES) {
 }
 
 // ── 欄位集合必須一致 ──
+//
+// ★ 功能旗標例外。它們的語意就是「這一站有沒有這個功能」——
+//   兩站都要有的話，關掉的那一站得寫 false，而那是一個
+//   「宣告了卻是假的」的欄位；共用碼只看真假，多一個 false
+//   不會讓任何事情更安全，只會讓人以為兩站都支援。
+//
+//   代價是打錯字不會被抓（scriptReadng 會被當成「這站沒有」），
+//   所以旗標一律列在這裡 —— 名字寫在測試裡，等於多一道對照。
+const FEATURE_FLAGS = ['scriptReading'];
 console.log('【兩站欄位一致】');
 const keys = Object.fromEntries(
   SITES.map((s) => [s, Object.keys(configs[s]).sort()]));
 const [a, b] = SITES;
-const onlyA = keys[a].filter((k) => !keys[b].includes(k));
-const onlyB = keys[b].filter((k) => !keys[a].includes(k));
+const diff = (x, y) => keys[x].filter((k) => !keys[y].includes(k) && !FEATURE_FLAGS.includes(k));
+const onlyA = diff(a, b);
+const onlyB = diff(b, a);
 chk(`${a} 有而 ${b} 沒有的欄位`, onlyA.length === 0, onlyA.join(', '));
 chk(`${b} 有而 ${a} 沒有的欄位`, onlyB.length === 0, onlyB.join(', '));
+// 旗標得是布林。寫成字串 'false' 的話，共用碼那句 !!flag 會判成真 ——
+// 功能會在沒宣告的站台打開，而且不報錯。
+const badFlag = SITES.flatMap((s2) => FEATURE_FLAGS
+  .filter((f) => f in configs[s2] && typeof configs[s2][f] !== 'boolean')
+  .map((f) => `${s2}.${f}=${JSON.stringify(configs[s2][f])}`));
+chk('功能旗標都是布林', badFlag.length === 0, badFlag.join(', '));
 
 // ── 每站各自的內容檢查 ──
 const STRINGS = ['code', 'langLabel', 'termLabel', 'termShort',
