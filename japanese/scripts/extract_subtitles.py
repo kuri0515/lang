@@ -93,7 +93,14 @@ def ruby_for(surface, reading):
     for i, (seg, is_k) in enumerate(parts):
         if not is_k:
             seg_h = kata2hira(seg)
-            at = reading.find(seg_h, pos)
+            # ★ 前面若有還沒分到讀音的漢字段，錨點必須從 pos+1 開始找 ——
+            #   漢字至少要吃掉一個字。
+            #   從 pos 找的話：「奪う」的讀音是「うばう」，
+            #   送り仮名「う」會命中**開頭**那個う，於是「奪」分不到讀音，
+            #   整詞退回 奪う[うばう] —— 送り仮名被算進讀音裡。
+            #   同類：最も[もっとも]、謡う[うたう]、命拾い[いのちびろい]。
+            pending = bool(out) and out[-1][1] is None and KANJI.search(out[-1][0])
+            at = reading.find(seg_h, pos + 1 if pending else pos)
             if at < 0:
                 return [(surface, reading)]      # 對不齊，保守處理
             if at > pos:                          # 中間那段是前一個漢字段的讀音
@@ -166,6 +173,17 @@ SKIP_POS = {"助詞", "助動詞", "補助記号", "記号", "空白", "接尾�
 PROPER = "固有名詞"
 
 
+_LEMMA_READING = {}
+
+
+def lemma_reading(lemma, tokenizer, split_mode):
+    """原形的讀音。快取起來 —— 同一個詞會被問很多次"""
+    if lemma not in _LEMMA_READING:
+        toks = tokenizer.tokenize(lemma, split_mode)
+        _LEMMA_READING[lemma] = kata2hira("".join(t.reading_form() for t in toks))
+    return _LEMMA_READING[lemma]
+
+
 def analyse(rows, tokenizer, split_mode):
     """逐行產生注音，並累積詞彙統計"""
     lines, vocab = [], defaultdict(lambda: {"count": 0, "first": None, "surfaces": Counter()})
@@ -184,7 +202,14 @@ def analyse(rows, tokenizer, split_mode):
             v = vocab[key]
             v["count"] += 1
             v["surfaces"][surface] += 1
-            v["reading"] = kata2hira(m.reading_form())
+            # ★ 要的是**原形**的讀音，不是當下活用形的。
+            #   m.reading_form() 給的是表層的讀音（「行か」→ イカ），
+            #   而卡片正面放的是原形（行く）。兩者對不齊時，
+            #   注音對齊器會退回「整詞一個注音」——
+            #   於是卡片變成 行く[いか]、企てる[くわだて]，
+            #   送り仮名被算進讀音裡，而那正是這套對齊要防的事。
+            #   把原形再斷一次詞取讀音，才是原形自己的讀音。
+            v["reading"] = lemma_reading(lemma, tokenizer, split_mode)
             v["pos"] = "/".join(p for p in pos[:2] if p != "*")
             v["proper"] = pos[1] == PROPER
             if v["first"] is None:
