@@ -365,6 +365,27 @@ console.log('\n【每日複習任務】');
   //   進度照算、照顯示，只是不再限制什麼時候可以學新的。
   //   斷言留著並且反過來寫：日後若有人「順手」把閘門加回去，
   //   這裡會紅，而不是靜靜地改變產品行為。
+  // ── 新課的範圍 ──
+  // 存的是座標不是那串 id：重新匯入一集之後 id 會全部換掉，
+  // 而存下來的舊 id 不會報錯，只會讓新課變成「沒有新的了」。
+  chk('預設沒有鎖定範圍', home.newScope() === null);
+  home.setScope({ epId: 'e1', scene: 3, label: '第 1 集 · 第 3 幕' });
+  chk('★ 設定後讀得回來', home.newScope()?.scene === 3);
+  chk('★ 範圍會跟著偏好一起存', home.readPrefs().scope?.epId === 'e1',
+      '不進偏好的話換一台裝置就沒了，而使用者以為它跟著自己走');
+  home.setScope(null);
+  chk('清得掉', home.newScope() === null);
+
+  // jsonb 不幫忙驗證，壞值要在這裡擋下來
+  home.applyPrefs({ scope: { scene: 3 } });                 // 缺 epId
+  chk('★ 缺 epId 的範圍不接受', home.newScope() === null,
+      '接受的話新課會查一個空集合，然後說「沒有新的了」—— 查不出是什麼擋住的');
+  home.applyPrefs({ scope: 'x' });
+  chk('壞型別的範圍不接受', home.newScope() === null);
+  home.applyPrefs({ scope: { epId: 'e2', scene: 5, label: 'ok' } });
+  chk('好的範圍收得下', home.newScope()?.scene === 5);
+  home.setScope(null);
+
   chk('沒達標也放行', home.newLessonBlocked(3) === null);
   set(20);
   chk('達標後當然也放行', home.newLessonBlocked(40) === null);

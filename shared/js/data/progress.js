@@ -61,7 +61,12 @@ export async function fetchDue(userId, dirs = DIRECTIONS, limit = 200) {
  * @param {string|string[]} tag 單一標籤，或一組標籤（任一符合即可）。
  *   生活場景由多個標籤組成（溫暖＋關心），所以要吃陣列。
  */
-export async function fetchNewItems(userId, deckId, dirs, limit = 20, tag = '') {
+/**
+ * @param ids 限定在這些條目裡挑（精讀「某一幕」用）。
+ *   給了 ids 就不看 deckId／tag —— 三者同時給會變成交集，
+ *   而交集是空的時候畫面只會說「沒有新的了」，沒有人查得出是哪個條件擋住的。
+ */
+export async function fetchNewItems(userId, deckId, dirs, limit = 20, tag = '', ids = null) {
   const seen = await fetchAll(() => sb.from('user_cards')
     .select('item_id, direction').eq('user_id', userId));
   const seenKey = new Set(seen.map((r) => `${r.item_id}|${r.direction}`));
@@ -70,6 +75,7 @@ export async function fetchNewItems(userId, deckId, dirs, limit = 20, tag = '') 
   const pool = await fetchAll(() => {
     let q = sb.from('items').select(ITEM_FIELDS).eq('is_active', true)
       .order('sort_order').order('slug');
+    if (ids?.length) return q.in('id', ids);          // 指定範圍時其餘條件不疊加
     if (deckId) q = q.eq('deck_id', deckId);
     // 陣列用 overlaps（任一符合），單一用 contains —— 場景是多標籤的聯集
     if (Array.isArray(tag) && tag.length) q = q.overlaps('tags', tag);

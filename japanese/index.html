@@ -18,7 +18,7 @@
 
   <!-- ↓ 由 shared/scripts/build-sites.mjs 從真實的 import 圖產生，不要手改。
        沒有它的話瀏覽器要一層一層發現模組，實測 4 層 × 每次往返。 -->
-<meta name="build" content="6c3bfea6">
+<meta name="build" content="583bf63b">
   <link rel="modulepreload" href="main.js">
   <link rel="modulepreload" href="../shared/js/core/lang.js">
   <link rel="modulepreload" href="lang.config.js">
@@ -156,6 +156,12 @@
         <button id="btn-new" class="entry"><b>新課</b><small id="e-new">–</small></button>
         <button id="btn-free" class="entry"><b>輪練</b><small id="e-free">–</small></button>
       </div>
+      <!-- 挑定範圍時才出現。清除的出口必須跟「看得到範圍」在同一個地方，
+           否則就是一個進得去、出不來的狀態（見 docs/LESSONS.md L-003）。
+           只有設得了範圍的站台才有這顆 —— 範圍目前只能在精讀裡挑。 -->
+      <p class="center nomargin" style="margin-top:8px">
+        <button id="scope-clear" class="link hidden">新課範圍已鎖定 · 改回照課本順序</button>
+      </p>
     </div>
 
       <!-- 練習方式就放在三個入口下面。
@@ -281,6 +287,7 @@
 
       <div class="card">
         <button id="sc-done" class="primary block"></button>
+        <button id="sc-scope" class="block ghost" style="margin-top:10px"></button>
         <div class="row2" style="margin-top:10px">
           <button id="sc-prev" class="small ghost">← 上一幕</button>
           <button id="sc-next" class="small ghost">下一幕 →</button>

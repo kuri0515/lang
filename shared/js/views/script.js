@@ -52,6 +52,17 @@ export function initScript(d) {
     if (!sceneWordIds.length) return msg('這一幕的詞還沒有建卡');
     return deps.onPractice?.(sceneWordIds.slice());
   });
+  // 把這一幕鎖成「新課」的範圍。之後回首頁按新課，學的就是這一幕的詞。
+  // 用切換而不是單向設定 —— 設得下去就要收得回來。
+  $('sc-scope').onclick = () => {
+    const cur = deps.getScope?.();
+    const mine = cur && cur.epId === ep?.id && cur.scene === scene;
+    deps.onSetScope?.(mine ? null : {
+      epId: ep.id, scene,
+      label: `${ep.work_title} 第 ${ep.episode} 集 · 第 ${scene} 幕`,
+    });
+    syncScopeBtn();
+  };
   qsa('input[name="scmode"]').forEach((r) => {
     r.onchange = () => { mode = r.value; renderLines(); };
   });
@@ -59,6 +70,14 @@ export function initScript(d) {
 }
 
 const syncRubyBtn = () => { $('sc-ruby').textContent = `注音：${showRuby ? '開' : '關'}`; };
+
+function syncScopeBtn() {
+  const cur = deps?.getScope?.();
+  const mine = cur && cur.epId === ep?.id && cur.scene === scene;
+  $('sc-scope').textContent = mine
+    ? '✓ 首頁「新課」正在學這一幕（點一下取消）'
+    : '把這一幕設為首頁「新課」的範圍';
+}
 
 /** 這一集第一個還沒讀的幕；全部讀完就回第一幕 */
 function nextUnread() {
@@ -167,6 +186,7 @@ async function openScene(n) {
   $('sc-prev').disabled = n <= 1;
   $('sc-next').disabled = n >= ep.scene_count;
   syncDoneBtn();
+  syncScopeBtn();
   renderLines();
   await renderWords(rows);
 }

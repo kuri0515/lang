@@ -159,6 +159,44 @@ chk('取消後寫到資料層', data.marked.some((m) => m.scene === 1 && m.done 
     JSON.stringify(data.marked));
 
 
+// ── 把一幕設為「新課」的範圍 ───────────────────────────────
+// 動線：精讀挑一幕 → 回首頁按新課 → 學的就是那一幕的詞。
+{
+  let cur = null;
+  view.initScript({
+    userId: () => 'u1',
+    getScope: () => cur,
+    onSetScope: (sc) => { cur = sc; },
+  });
+  document.querySelector('#sc-scenes [data-scene="1"]').click();
+  await new Promise((r) => setTimeout(r, 0));
+  chk('預設沒有鎖定範圍', /設為/.test($('sc-scope').textContent), $('sc-scope').textContent);
+
+  $('sc-scope').click();
+  chk('★ 設得下去', cur && cur.scene === 1 && !!cur.epId, JSON.stringify(cur));
+  chk('★ 範圍要說得出是哪一幕', /第 1 集 · 第 1 幕/.test(cur.label || ''), cur.label);
+  chk('按鈕改口說已鎖定', /取消/.test($('sc-scope').textContent), $('sc-scope').textContent);
+
+  // ★ 設得下去就要收得回來 —— 單向設定會做出一個出不來的狀態
+  $('sc-scope').click();
+  chk('★ 收得回來', cur === null);
+
+  // 換一幕時，按鈕要反映的是「這一幕是不是被鎖的那一幕」
+  $('sc-scope').click();
+  const locked = cur;
+  $('sc-next').click();
+  await new Promise((r) => setTimeout(r, 0));
+  chk('★ 別的幕不會顯示成已鎖定', /設為/.test($('sc-scope').textContent),
+      `鎖的是第 ${locked.scene} 幕，現在看的是第 2 幕（${$('sc-scope').textContent}）`);
+  $('sc-prev').click();
+  await new Promise((r) => setTimeout(r, 0));
+  chk('回到被鎖的那一幕又顯示成已鎖定', /取消/.test($('sc-scope').textContent));
+  $('sc-scope').click();
+  view.initScript({ userId: () => 'u1' });
+  document.querySelector('#sc-scenes [data-scene="1"]').click();
+  await new Promise((r) => setTimeout(r, 0));
+}
+
 // ── 整幕朗讀：換幕要停 ─────────────────────────────────────
 // 朗讀是逐句 await 的，而使用者隨時會換幕。
 // 沒有停下來的話，畫面是新的一幕、聲音還在唸上一幕 ——

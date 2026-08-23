@@ -84,8 +84,30 @@ export function syncModeUI() {
  */
 const prefsKey = (userId) => lsKey(`prefs.${userId || 'anon'}`);
 
+// ---------------------------------------------------------------------
+// 新課的範圍
+//
+// 預設是「照課本順序」（第一副詞庫）。使用者可以在精讀裡挑定某一幕，
+// 之後首頁的「新課」就只學那一幕出現的詞。
+//
+// 【存的是座標，不是那串 id】
+//   存 id 看似省事，但重新匯入一集之後 id 全部會變 ——
+//   而那時範圍不會報錯，它只會變成「沒有新的了」，
+//   使用者查不出為什麼。存 { epId, scene } 每次現場解析，
+//   內容改版也仍然指向同一幕。
+// ---------------------------------------------------------------------
+let scope = null;          // { epId, scene, label } 或 null＝照課本順序
+
+export const newScope = () => scope;
+
+export function setScope(next) {
+  scope = next && next.epId ? next : null;
+  deps?.onPrefsChange?.();
+  load();                  // 按鈕上的副標要立刻反映
+}
+
 export function readPrefs() {
-  return { mode: studyMode(), dir: selectedDir(), type: studyType() };
+  return { mode: studyMode(), dir: selectedDir(), type: studyType(), scope };
 }
 
 /** 套用偏好到畫面。容忍缺欄位與壞值 —— jsonb 不幫忙驗證 */
@@ -101,6 +123,9 @@ export function applyPrefs(p) {
   set('#mode-pick', p.mode);
   if (p.dir === 'ko2zh' || p.dir === 'zh2ko') userDir = p.dir;
   set('#type-pick', p.type);
+  // 範圍是一個物件，壞值要擋掉 —— jsonb 不幫忙驗證，
+  // 而一個缺 epId 的範圍會讓「新課」查一個空集合，然後說「沒有新的了」
+  scope = (p.scope && p.scope.epId && p.scope.scene) ? p.scope : null;
   syncModeUI();                                // 依題型決定畫面上要顯示哪一個
 }
 
@@ -160,6 +185,7 @@ export function initHome(d) {
   // 類型只影響「這輪抽什麼」，不影響到期張數的計算，所以不必 refreshDue()。
   // 但摘要要跟著變 —— 選項收合起來時，摘要是唯一看得到目前設定的地方。
   $('type-pick').addEventListener('change', () => { syncModeUI(); deps.onPrefsChange?.(); });
+  opt('scope-clear')?.addEventListener('click', () => setScope(null));
   $('btn-recall').onclick = (e) => busy(e.currentTarget, () => deps.onRecall?.());
   on(EVENTS.ITEMS_CHANGED, () => { deckCounts = null; load(); });
   on(EVENTS.PROGRESS_WRITTEN, () => load());
@@ -445,9 +471,16 @@ export function renderSuggestion(dueCount, today, decks, carried = 0) {
   // ── 三個入口的副標 ──────────────────────────────────────
   $('e-review').textContent = dueCount ? `到期 ${dueCount} 個` : '已清空';
   $('btn-review').disabled = dueCount === 0;
-  $('e-new').textContent = nextLessonTag
-    ? `第 ${nextLessonNo} 課：${nextLessonTag}`
-    : (firstDeckId ? '學幾個新詞' : '沒有詞庫');
+  // 挑定了範圍就照範圍走，並且說出是哪一幕 ——
+  // 不說的話，使用者只會覺得「新課怎麼變成別的東西了」
+  $('e-new').textContent = scope
+    ? scope.label
+    : (nextLessonTag ? `第 ${nextLessonNo} 課：${nextLessonTag}`
+                     : (firstDeckId ? '學幾個新詞' : '沒有詞庫'));
+  // 清除的出口要放在看得到範圍的地方 ——
+  // 設定在精讀裡、只能回精讀取消的話，就是一個找不到出口的狀態
+  // opt()：這顆只有設得了範圍的站台才有（見樣板的 {{#script}}）
+  opt('scope-clear')?.classList.toggle('hidden', !scope);
   $('btn-new').disabled = !nextLessonTag && !firstDeckId;
   refreshRoundLabel();
 

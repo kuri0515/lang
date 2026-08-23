@@ -321,6 +321,23 @@ async function nextRound() {
   await begin(batch, { kind: 'review' });
 }
 
+/**
+ * 一幕對應到哪些卡片。
+ *
+ * 動態 import 精讀的資料層 —— 靜態的話它會進入每一站的模組圖，
+ * 而沒宣告這個功能的站台不該為它付預載的代價（見 build-sites 的 FEATURE_ENTRIES）。
+ */
+async function scopeItemIds(scope) {
+  try {
+    const sd = await import('./data/script.js');
+    const lines = await sd.loadLines(scope.epId);
+    const toks = [...new Set(lines.filter((l) => l.scene === scope.scene)
+      .flatMap((l) => l.tokens || []))];
+    const items = await content.itemsByKo(toks);
+    return items.map((i) => i.id);
+  } catch { return []; }
+}
+
 async function startNew(deckId, tag = '') {
   try {
     // ★ 每日新卡上限已取消（使用者的決定，2026-08-18）——
@@ -333,7 +350,16 @@ async function startNew(deckId, tag = '') {
     //   的新詞全部灌進一輪。
     const room = NEW_BATCH;
 
-    const rows = await progress.fetchNewItems(user.id, deckId, [home.effectiveDir()], room, tag);
+    // 挑定了某一幕就只在那一幕的詞裡挑沒學過的。
+    // ids 現場解析而不是存起來 —— 重新匯入一集之後 id 會全部換掉，
+    // 而存下來的舊 id 不會報錯，只會讓新課變成「沒有新的了」。
+    const scope = (!deckId && !tag) ? home.newScope() : null;
+    const ids = scope ? await scopeItemIds(scope) : null;
+    if (scope && !ids.length) {
+      return msg(`「${scope.label}」這一幕沒有可學的詞。到首頁點「改回照課本順序」。`);
+    }
+    const rows = await progress.fetchNewItems(
+      user.id, deckId, [home.effectiveDir()], room, tag, ids);
     if (!rows.length) {
       // 一組的詞全都學過、但還沒掌握牢時，這裡原本只丟一句「已經學完了」就沒下文。
       // 發音課程的「下一課」定義是「還沒掌握牢」而非「沒碰過」，
@@ -696,6 +722,8 @@ if (opt('b-pane-script')) {
     .then((m) => m.initScript({
       userId: () => user?.id || null,
       onPractice: (ids) => startFree({ ids }),
+      getScope: () => home.newScope(),
+      onSetScope: (sc) => home.setScope(sc),
     }))
     .catch(() => { /* 沒載到就是這一格不能用，不該擋住整站啟動 */ });
 }

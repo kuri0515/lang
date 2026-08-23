@@ -112,6 +112,14 @@
         <button id="btn-new" class="entry"><b>新課</b><small id="e-new">–</small></button>
         <button id="btn-free" class="entry"><b>輪練</b><small id="e-free">–</small></button>
       </div>
+{{#script}}
+      <!-- 挑定範圍時才出現。清除的出口必須跟「看得到範圍」在同一個地方，
+           否則就是一個進得去、出不來的狀態（見 docs/LESSONS.md L-003）。
+           只有設得了範圍的站台才有這顆 —— 範圍目前只能在精讀裡挑。 -->
+      <p class="center nomargin" style="margin-top:8px">
+        <button id="scope-clear" class="link hidden">新課範圍已鎖定 · 改回照課本順序</button>
+      </p>
+{{/script}}
     </div>
 
       <!-- 練習方式就放在三個入口下面。
@@ -246,6 +254,7 @@
 
       <div class="card">
         <button id="sc-done" class="primary block"></button>
+        <button id="sc-scope" class="block ghost" style="margin-top:10px"></button>
         <div class="row2" style="margin-top:10px">
           <button id="sc-prev" class="small ghost">← 上一幕</button>
           <button id="sc-next" class="small ghost">下一幕 →</button>
