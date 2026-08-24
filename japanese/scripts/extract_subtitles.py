@@ -106,7 +106,18 @@ def ruby_for(surface, reading):
             #   整詞退回 奪う[うばう] —— 送り仮名被算進讀音裡。
             #   同類：最も[もっとも]、謡う[うたう]、命拾い[いのちびろい]。
             pending = bool(out) and out[-1][1] is None and ANNOT.search(out[-1][0])
-            at = reading.find(seg_h, pos + 1 if pending else pos)
+            start = pos + 1 if pending else pos
+            # ★ 詞尾的假名要從**右邊**找。
+            #   「見失う」讀 みうしなう，送り仮名「う」從左邊找會命中 index 1，
+            #   於是「見失」只分到「み」，剩下的「しなう」對不齊 → 整詞退回
+            #   見失う[みうしなう]，送り仮名被算進讀音裡。
+            #   從右邊找會命中最後那個 う，得到 見失[みうしな]う。
+            #   （更細的 見[み]失[うしな]う 需要逐字對照表，這裡不猜 ——
+            #     猜錯的注音比粗一點的注音更糟。）
+            is_last = (i == len(parts) - 1)
+            at = reading.rfind(seg_h) if is_last else reading.find(seg_h, start)
+            if is_last and at < start:
+                at = reading.find(seg_h, start)
             if at < 0:
                 return [(surface, reading)]      # 對不齊，保守處理
             if at > pos:                          # 中間那段是前一個漢字段的讀音

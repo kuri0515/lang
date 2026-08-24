@@ -138,19 +138,36 @@ def main():
     deck0 = call(url, key, "GET",
                  f"decks?select=id&slug=eq.{urllib.parse.quote(args.deck_slug)}")
     if deck0:
-        have = set()
+        have_rows = []
         off = 0
         while True:
             page = call(url, key, "GET",
-                        f"items?select=ko&deck_id=eq.{deck0[0]['id']}&limit=1000&offset={off}")
-            have |= {r["ko"] for r in page}
+                        f"items?select=id,ko,zh,hanja,romanization,pos"
+                        f"&deck_id=eq.{deck0[0]['id']}&limit=1000&offset={off}")
+            have_rows += page
             if len(page) < 1000:
                 break
             off += 1000
-        skipped = [r for r in rows if r["ko"] in have]
-        rows = [r for r in rows if r["ko"] not in have]
-        if skipped:
-            print(f"  已存在於這副詞庫、略過：{len(skipped)} 張（前面的集數已經建過）")
+        # ★ 已存在的不是「跳過就好」——要比對內容，有差就更新。
+        #   單純跳過的話，日後修了詞義或注音，前面集數的卡會靜靜留著舊值，
+        #   而重跑匯入不會有任何跡象說它沒被更新。
+        exist = {r["ko"]: r for r in have_rows}
+        fresh = [r for r in rows if r["ko"] not in exist]
+        same, patched = 0, 0
+        for r in rows:
+            cur = exist.get(r["ko"])
+            if not cur:
+                continue
+            diff = {k: r[k] for k in ("zh", "hanja", "romanization", "pos")
+                    if (cur.get(k) or "") != (r[k] or "")}
+            if not diff:
+                same += 1
+                continue
+            call(url, key, "PATCH", f"items?id=eq.{cur['id']}", diff, prefer="return=minimal")
+            patched += 1
+        if same or patched:
+            print(f"  已存在：{same} 張內容相同、{patched} 張已更新")
+        rows = fresh
         if not rows:
             print("  沒有新的詞要建卡。")
             return
