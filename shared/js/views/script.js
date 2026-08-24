@@ -36,6 +36,7 @@ let wordCache = new Map();
 let sceneWordIds = [];    // 這一幕的詞對應到哪些卡片（給「練這一幕」用）
 let workFilter = '';      // 只看某一季（''＝全部）
 let unreadOnly = false;   // 幕清單只看還沒讀的
+let lastRead = 0;         // 上次讀到第幾幕（開場標出來，不自動打開）
 
 export function initScript(d) {
   deps = d;
@@ -44,7 +45,6 @@ export function initScript(d) {
   $('sc-play').onclick = () => playScene();
   $('sc-ruby').onclick = () => { showRuby = !showRuby; syncRubyBtn(); renderLines(); };
   $('sc-done').onclick = () => toggleDone();
-  $('sc-continue').onclick = () => openScene(nextUnread());
   // 一集 70 幕，讀了一半之後「還沒讀的是哪些」比「全部」更常被問。
   // 做成切換而不是預設只看未讀 —— 回頭重讀是常態，不是例外。
   $('sc-filter').onclick = () => { unreadOnly = !unreadOnly; renderScenes(); };
@@ -100,7 +100,28 @@ function nextUnread() {
 export async function open() {
   if (!eps.length) eps = await script.listEpisodes();
   counts = await script.progressCounts(deps.userId());
-  if (!workFilter && eps.length) workFilter = workKeyOf(eps[0]);
+
+  // ★ 回到上次讀到的地方，但**只還原選擇，不自動打開內文**。
+  //   自動跳進去是先前踩過的坑（docs/LESSONS.md L-003）：
+  //   使用者按分頁是想看看有什麼，不是要立刻繼續讀。
+  //   還原到「季與集都選好、那一幕標出來」，要繼續就按一下 —— 那一下是他的決定。
+  // ★ 每次進這個分頁都從「還沒打開任何一幕」開始。
+  //   不清的話 scene 會留著上一次的值，於是內文是收起來的、
+  //   幕格卻仍標成「正在讀」—— 兩者互相矛盾，而且不報錯。
+  scene = 0;
+  $('sc-scene-pane').classList.add('hidden');
+
+  const pos = deps.getReadPos?.();
+  const back = pos && eps.find((e) => e.id === pos.epId);
+  if (back) {
+    workFilter = workKeyOf(back);
+    ep = back;
+    lines = await script.loadLines(back.id);
+    done = await script.loadProgress(deps.userId(), back.id);
+    lastRead = pos.scene || 0;
+  } else if (!workFilter && eps.length) {
+    workFilter = workKeyOf(eps[0]);
+  }
   await renderPick();
 }
 
@@ -155,6 +176,12 @@ async function openEp(id) {
   ep = next;
   lines = await script.loadLines(id);
   done = await script.loadProgress(deps.userId(), id);
+  // 換集時把「上次讀到第幾幕」歸零 —— 那是上一集的幕號，
+  // 套到新的一集只會指到一個不相干的地方
+  lastRead = 0;
+  scene = 0;
+  $('sc-scene-pane').classList.add('hidden');
+  deps.onReadPos?.({ epId: id, scene: 0 });
   await renderPick();
 }
 
@@ -168,15 +195,22 @@ function renderScenes() {
     .filter((n) => !unreadOnly || !done.has(n));
   $('sc-scenes').innerHTML = nums.map((num) => {
     const rows = lines.filter((l) => l.scene === num).length;
-    return `<button class="scene-cell${done.has(num) ? ' on' : ''}${num === scene ? ' now' : ''}"
+    // now＝正在讀的；last＝上次讀到的（還沒打開內文時就是它指路）
+    const mark = num === scene ? ' now' : (num === lastRead && !scene ? ' last' : '');
+    return `<button class="scene-cell${done.has(num) ? ' on' : ''}${mark}"
       data-scene="${num}" title="${rows} 句">${num}</button>`;
   }).join('') || '<p class="muted nomargin">這一集都讀完了。</p>';
   qsa('#sc-scenes [data-scene]').forEach((b2) => {
     b2.onclick = () => openScene(Number(b2.dataset.scene));
   });
-  const n = nextUnread();
+  // 有上次讀到的位置就接那裡，否則指向第一個沒讀的。
+  // 「接著上次」比「第一個沒讀的」更貼近實際：中途跳著讀是常態，
+  // 而回來時想接的是自己離開的地方，不是清單上最前面的空格。
+  const resume = lastRead && !done.has(lastRead) ? lastRead : nextUnread();
   $('sc-continue').textContent =
-    done.size >= total ? '整集讀完了 · 從第 1 幕重讀' : `從第 ${n} 幕開始`;
+    done.size >= total ? '整集讀完了 · 從第 1 幕重讀'
+      : (lastRead && lastRead === resume ? `接著第 ${resume} 幕` : `從第 ${resume} 幕開始`);
+  $('sc-continue').onclick = () => openScene(resume);
 }
 
 // ---------------------------------------------------------------------
@@ -187,6 +221,8 @@ async function openScene(n) {
   if (n < 1 || n > ep.scene_count) return;
   speech.cancel();
   scene = n;
+  lastRead = n;
+  deps.onReadPos?.({ epId: ep.id, scene: n });
   $('sc-scene-pane').classList.remove('hidden');
   renderScenes();                       // 讓幕格標出現在讀的是哪一格
   const rows = sceneLines();

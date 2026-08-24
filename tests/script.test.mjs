@@ -292,6 +292,46 @@ chk('★ 詞來自斷詞結果，不是字串比對', /4 個/.test($('sc-words-n
       JSON.stringify(data.marked));
 }
 
+// ── 回到上次讀到的地方 ────────────────────────────────────
+// 昨天讀到第 30 幕，今天打開又要重選季、選集、找那一幕 ——
+// 那是每天都要付一次的成本。
+{
+  let saved = null;
+  const mk = () => view.initScript({
+    userId: () => 'u1',
+    getReadPos: () => saved,
+    onReadPos: (p) => { saved = p; },
+  });
+  mk();
+  await view.open();
+  qs('#sc-eps [data-ep]').click();
+  await tick();
+  qs('#sc-scenes [data-scene="2"]').click();
+  await tick();
+  chk('★ 讀了哪一幕就記下來', saved && saved.scene === 2, JSON.stringify(saved));
+
+  // 重新進這個分頁：選擇要還原，但**不自動打開內文**
+  mk();
+  await view.open();
+  chk('★ 回到上次那一集', qs('#sc-eps [data-ep].on'), '集沒選好的話等於沒還原');
+  chk('★ 幕那一層直接展開', vis('sc-scene-row'));
+  chk('★ 標出上次讀到的那一幕',
+      qs('#sc-scenes [data-scene="2"]').classList.contains('last'));
+  chk('★ 不自動打開內文', !vis('sc-scene-pane'),
+      '按分頁是想看看有什麼，不是要立刻繼續讀（docs/LESSONS.md L-003）');
+  chk('★ 繼續鈕接的是上次那一幕', /接著第 2 幕/.test($('sc-continue').textContent),
+      `中途跳著讀是常態，回來想接的是自己離開的地方（${$('sc-continue').textContent}）`);
+
+  $('sc-continue').click();
+  await tick();
+  chk('按了才進去', vis('sc-scene-pane'));
+
+  view.initScript({ userId: () => 'u1' });
+  await view.open();
+  qs('#sc-eps [data-ep]').click();
+  await tick();
+}
+
 // ── 幕之間移動 ───────────────────────────────────────────
 {
   qs('#sc-scenes [data-scene="1"]').click();

@@ -97,8 +97,20 @@ const prefsKey = (userId) => lsKey(`prefs.${userId || 'anon'}`);
 //   內容改版也仍然指向同一幕。
 // ---------------------------------------------------------------------
 let scope = null;          // { epId, scene, label } 或 null＝照課本順序
+// 精讀「上次讀到哪」。與 scope 是兩件事：
+//   scope   ＝ 我指定要學這一幕（會影響新課與輪練）
+//   readPos ＝ 我上次讀到這裡（只是回到現場，不影響任何排程）
+// 合成一個的話，隨手翻一下別的幕就會把學習範圍改掉。
+let readPos = null;        // { epId, scene }
 
 export const newScope = () => scope;
+export const readPos_ = () => readPos;
+export function setReadPos(next) {
+  const same = (a, b) => a?.epId === b?.epId && a?.scene === b?.scene;
+  if (same(readPos, next)) return;          // 沒變就不要每次都往雲端寫
+  readPos = next && next.epId ? next : null;
+  deps?.onPrefsChange?.();
+}
 
 export function setScope(next) {
   scope = next && next.epId ? next : null;
@@ -107,7 +119,7 @@ export function setScope(next) {
 }
 
 export function readPrefs() {
-  return { mode: studyMode(), dir: selectedDir(), type: studyType(), scope };
+  return { mode: studyMode(), dir: selectedDir(), type: studyType(), scope, readPos };
 }
 
 /** 套用偏好到畫面。容忍缺欄位與壞值 —— jsonb 不幫忙驗證 */
@@ -126,6 +138,7 @@ export function applyPrefs(p) {
   // 範圍是一個物件，壞值要擋掉 —— jsonb 不幫忙驗證，
   // 而一個缺 epId 的範圍會讓「新課」查一個空集合，然後說「沒有新的了」
   scope = (p.scope && p.scope.epId && p.scope.scene) ? p.scope : null;
+  readPos = (p.readPos && p.readPos.epId) ? p.readPos : null;
   syncModeUI();                                // 依題型決定畫面上要顯示哪一個
 }
 

@@ -752,6 +752,8 @@ if (opt('b-pane-script')) {
       userId: () => user?.id || null,
       onPractice: (ids) => startFree({ ids }),
       getScope: () => home.newScope(),
+      getReadPos: () => home.readPos_(),
+      onReadPos: (pos) => home.setReadPos(pos),
       onSetScope: (sc) => home.setScope(sc),
     }))
     .catch(() => { /* 沒載到就是這一格不能用，不該擋住整站啟動 */ });

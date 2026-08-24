@@ -408,6 +408,17 @@ console.log('\n【每日複習任務】');
   home.setScope(null);
   chk('清得掉', home.newScope() === null);
 
+  // ── 精讀的「讀到哪」與「學哪一幕」是兩件事 ──
+  // 合成一個的話，隨手翻一下別的幕就會把學習範圍改掉。
+  home.setReadPos({ epId: 'e9', scene: 12 });
+  chk('★ 讀到哪也跟著偏好走', home.readPrefs().readPos?.scene === 12,
+      '不進偏好的話換一台裝置就得重新找位置');
+  chk('★ 讀到哪不會動到學習範圍', home.newScope() === null,
+      '兩者合一的話，隨手翻一下別的幕就把新課的範圍改掉了');
+  home.applyPrefs({ readPos: { scene: 3 } });          // 缺 epId
+  chk('缺 epId 的位置不接受', home.readPos_() === null);
+  home.setReadPos(null);
+
   // jsonb 不幫忙驗證，壞值要在這裡擋下來
   home.applyPrefs({ scope: { scene: 3 } });                 // 缺 epId
   chk('★ 缺 epId 的範圍不接受', home.newScope() === null,
