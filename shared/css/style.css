@@ -331,6 +331,11 @@ label { font-size: 12.5px; color: var(--muted); }
 .tag {
   font-size: 12px; padding: 4px 11px; border-radius: 999px;
   border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+  /* 用 inline-flex 置中，而不是靠 padding 湊。
+     靠 padding 的話，字型的上下留白（ascender/descender 不對稱）
+     會讓文字看起來偏上，而中日文混排時特別明顯。 */
+  display: inline-flex; align-items: center; justify-content: center;
+  line-height: 1.5;
 }
 .tag.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
 .browse-head {
@@ -1148,9 +1153,16 @@ button[aria-busy="true"]::after {
    清單要捲很久，而「還剩哪些」正是這個畫面唯一要回答的問題 */
 .scene-grid { display: grid; gap: 7px; margin-top: 4px;
   grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); }
+/* 方格裡的數字要正中。
+   button 預設只保證水平置中；垂直方向由 padding 與行高決定，
+   而 aspect-ratio 撐出來的高度與那兩者無關 —— 數字因此偏上。
+   改用 flex 置中，並把 padding 歸零，讓「格子的中心」就是數字的中心。 */
 .scene-cell { aspect-ratio: 1; border: 1px solid var(--line, rgba(128,128,150,.3));
   border-radius: 10px; background: transparent; color: var(--muted);
-  font-size: 14px; font-weight: 600; cursor: pointer; }
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0; line-height: 1;
+  font-variant-numeric: tabular-nums; }
 .scene-cell.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 
 /* 一行台詞：左邊朗讀鈕，右邊上下兩層（目標語言／中文） */
@@ -1173,11 +1185,18 @@ button[aria-busy="true"]::after {
 .sc-word > .muted { font-size: 12px; }
 
 /* 精讀的層層篩選：作品 → 集 → 幕。三層永遠看得到 */
+/* 「作品」「集」這兩列的內容只有一排 chip，所以整列垂直置中。
+   原本用 align-items:start 加 padding-top 去湊，那是靠眼睛對齊 ——
+   chip 的高度一改（字級、行高、邊框）就對不上了。 */
 .pick-row { display: grid; grid-template-columns: 42px 1fr; gap: 10px;
-  align-items: start; padding: 10px 0;
+  align-items: center; padding: 10px 0;
   border-top: 1px solid var(--line, rgba(128,128,150,.16)); }
 .pick-row:first-of-type { border-top: 0; }
-.pick-label { font-size: 13px; color: var(--muted); padding-top: 7px; }
+/* 「幕」那一列的內容是進度條＋方格陣列，高度遠大於標籤 ——
+   置中會讓標籤浮在中間，所以只有這一列靠上對齊。 */
+#sc-scene-row { align-items: start; }
+#sc-scene-row .pick-label { padding-top: 4px; }
+.pick-label { font-size: 13px; color: var(--muted); }
 .pick-body { min-width: 0; }
 .pick-head { display: flex; align-items: center; justify-content: space-between;
   gap: 10px; margin-bottom: 6px; }
