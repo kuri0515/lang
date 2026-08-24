@@ -60,3 +60,20 @@ export function consume(r, n) {
   if (!isUsable(r) || !n) return r;
   return { ...r, pos: Math.min(r.pos + n, r.queue.length) };
 }
+
+/**
+ * 這一次該掃哪一個池。
+ *
+ * 【為什麼是純函式，不是寫在 app.js 裡】
+ *   池鍵決定了「進度存到哪一列」。算錯的後果是兩個池共用一列 ——
+ *   而共用不會報錯，它只會讓另一個池的進度悄悄回到某個舊位置，
+ *   使用者的體感是「我明明掃到一半，怎麼又從頭來」。
+ *   這種規則放在碰得到 supabase 的地方就等於驗不到（見 docs/LESSONS.md L-004）。
+ *
+ * @param scope 精讀挑定的範圍 { epId, scene } 或 null
+ * @param deckSlug 預設池的詞庫代號
+ */
+export function poolKeyFor(scope, deckSlug) {
+  if (scope?.epId && scope?.scene) return `scene:${scope.epId}:${scope.scene}`;
+  return `deck:${deckSlug || ''}`;
+}

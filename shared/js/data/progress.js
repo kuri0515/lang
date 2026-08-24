@@ -561,22 +561,38 @@ export async function clearResume(userId, mode) {
 // ---------------------------------------------------------------------
 
 /** 讀輪次狀態。沒有就回 null（呼叫端會開第一輪） */
-export async function loadRound(userId) {
+/**
+ * 讀某一個輪次池的進度。
+ *
+ * ★ 0024 之前一個使用者只有一列，那一列現在標成 'default'。
+ *   讀預設池時要把它一併認回來 —— 不認的話，
+ *   使用者掃到一半的進度會變成「從第 1 輪開始」，而且不報錯。
+ */
+export async function loadRound(userId, pool) {
   if (!userId) return null;
+  const keys = [pool];
+  if (isDefaultPool(pool)) keys.push('default');
   try {
     const { data, error } = await sb.from('study_rounds')
-      .select('round_no, queue, pos').eq('user_id', userId).maybeSingle();
-    if (error || !data) return null;
-    return { roundNo: data.round_no, queue: data.queue || [], pos: data.pos || 0 };
+      .select('pool, round_no, queue, pos').eq('user_id', userId).in('pool', keys);
+    if (error || !data?.length) return null;
+    // 同時有新舊兩列時以新的為準（舊的是遷移前留下的）
+    const row = data.find((r) => r.pool === pool) || data[0];
+    return { roundNo: row.round_no, queue: row.queue || [], pos: row.pos || 0 };
   } catch { return null; }
 }
 
-export async function saveRound(userId, { roundNo, queue, pos }) {
-  if (!userId) return;
+// 預設池＝照詞庫掃。遷移前的那一列就是它。
+let defaultPool = null;
+export const setDefaultPool = (p) => { defaultPool = p; };
+const isDefaultPool = (p) => !!defaultPool && p === defaultPool;
+
+export async function saveRound(userId, pool, { roundNo, queue, pos }) {
+  if (!userId || !pool) return;
   try {
     await sb.from('study_rounds').upsert({
-      user_id: userId, round_no: roundNo, queue, pos,
+      user_id: userId, pool, round_no: roundNo, queue, pos,
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id' });
+    }, { onConflict: 'user_id,pool' });
   } catch { /* 存不上去頂多是下次從同一組重來，不該擋住學習 */ }
 }

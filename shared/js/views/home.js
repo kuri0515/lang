@@ -309,7 +309,13 @@ export function refreshRoundLabel() {
   const r = deps?.roundProgress?.();
   // 這個模式沒有到期日，「第幾輪、還剩多少」是它唯一的進度感。
   // 不寫的話按下去像在抽籤。
-  el.textContent = r && r.total ? `第 ${r.roundNo} 輪 · 剩 ${r.total - r.done}` : '全部輪一遍';
+  //
+  // ★ 挑定範圍時要說出掃的是哪一個池。兩個池各自記進度，
+  //   不說的話「第 2 輪 · 剩 8」會讓人以為整個詞庫只剩 8 個。
+  const where = scope ? `${scope.label}｜` : '';
+  el.textContent = r && r.total
+    ? `${where}第 ${r.roundNo} 輪 · 剩 ${r.total - r.done}`
+    : (scope ? `${scope.label}｜輪一遍` : '全部輪一遍');
 }
 
 export function renderWeek(daily) {

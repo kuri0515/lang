@@ -7,7 +7,7 @@
 //
 //     node tests/round.test.mjs
 // =====================================================================
-import { isUsable, isComplete, nextRound, deal, consume } from '../shared/js/study/round.js';
+import { isUsable, isComplete, nextRound, deal, consume, poolKeyFor } from '../shared/js/study/round.js';
 
 let fails = 0;
 const chk = (n, c, e = '') => {
@@ -70,6 +70,25 @@ chk('25 個全部發過，一個不漏', seen.length === 25 && new Set(seen).siz
     `發出 ${seen.length} 個、去重後 ${new Set(seen).size} 個`);
 chk('最後一組只發剩下的 5 個，不會超發', seen.length === 25);
 chk('消費超過總數也不會越界', consume(full, 999).pos === 25);
+
+console.log('\n【輪次池的鍵】');
+// 算錯的後果是兩個池共用一列 —— 而共用不報錯，
+// 只會讓另一個池的進度悄悄回到舊位置。
+const A = { epId: 'e1', scene: 3 };
+const B = { epId: 'e1', scene: 4 };
+const C = { epId: 'e2', scene: 3 };
+chk('沒挑範圍就照詞庫掃', poolKeyFor(null, 'kana-01') === 'deck:kana-01');
+chk('挑了範圍就掃那一幕', poolKeyFor(A, 'kana-01') === 'scene:e1:3');
+chk('★ 詞庫池與精讀池不是同一個', poolKeyFor(null, 'kana-01') !== poolKeyFor(A, 'kana-01'));
+chk('★ 同一集不同幕是不同的池', poolKeyFor(A, 'x') !== poolKeyFor(B, 'x'),
+    '同一列的話，換一幕會把上一幕掃到哪覆蓋掉');
+chk('★ 不同集的同一幕號也是不同的池', poolKeyFor(A, 'x') !== poolKeyFor(C, 'x'),
+    '只用幕號當鍵的話，第 1 集第 3 幕與第 2 集第 3 幕會共用進度');
+chk('同一個範圍算出同一個鍵', poolKeyFor({ ...A }, 'x') === poolKeyFor(A, 'x'));
+chk('壞掉的範圍退回詞庫池（缺 scene）',
+    poolKeyFor({ epId: 'e1' }, 'kana-01') === 'deck:kana-01');
+chk('壞掉的範圍退回詞庫池（缺 epId）',
+    poolKeyFor({ scene: 3 }, 'kana-01') === 'deck:kana-01');
 
 console.log('\n【壞樣本自檢】');
 // 上面的斷言若寫成恆真就什麼都抓不到，這裡證明它們會亮紅燈

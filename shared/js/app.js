@@ -16,7 +16,8 @@ import * as progress from './data/progress.js';
 import { createSession, orderForDiscrimination, ROUND_SIZE } from './study/session.js';
 // 別名：app.js 已經有一個 nextRound()，那是「複習的下一批」，與輪次池無關
 import { isUsable as roundUsable, nextRound as buildRound,
-         deal as dealRound, consume as consumeRound } from './study/round.js';
+         deal as dealRound, consume as consumeRound,
+         poolKeyFor } from './study/round.js';
 import { getMode, needsPool } from './study/modes/index.js';
 import { show, onEnter, initTabs, viewFromHash } from './views/router.js';
 import { initTheme } from './views/theme.js';
@@ -427,11 +428,39 @@ async function startScene(scene) {
 //   輪次池練到的詞照樣進複習循環 —— 否則它們永遠不會被複習帶回來。
 // ---------------------------------------------------------------------
 let round = null;          // { roundNo, queue, pos }
+let roundPool = null;      // round 這一份屬於哪一個池
 let roundPending = 0;      // 這一組發出去幾個、還沒答完
+
+/**
+ * 現在該掃哪一個池。
+ *
+ * 挑定了精讀的某一幕，輪練就掃那一幕；否則照詞庫掃。
+ * 兩者各自記各自的進度（見 migration 0024）——
+ * 共用一份的話，切換時會互相覆蓋，而覆蓋不報錯，
+ * 只會讓另一邊悄悄回到某個舊位置。
+ */
+const poolKey = () => poolKeyFor(home.newScope(), lang().roundDeck);
+
+/** 這一個池要掃哪些條目 */
+async function poolItemIds() {
+  const sc = home.newScope();
+  if (sc) return scopeItemIds(sc);
+  const deck = (await content.listDecks()).find((d) => d.slug === lang().roundDeck);
+  // ★ 不給 limit —— pickItems 沒有 limit 時會分頁撈完。
+  //   給 limit 會走單次查詢，而 PostgREST 單次最多回 1000 列：
+  //   詞庫超過一千條之後，一輪會靜靜地少掉一截，
+  //   而「還剩多少」看起來完全正常（它算的是那份殘缺清單）。
+  const items = await content.pickItems({ deckId: deck?.id ?? null });
+  return items.map((i) => i.id);
+}
 
 /** 讀（或開）輪次狀態。走完一輪才開下一輪，全部重新打散 */
 async function ensureRound() {
-  if (!round) round = await progress.loadRound(user.id);
+  const pool = poolKey();
+  // 換池了就把記憶體那一份丟掉 —— 留著會把 A 池的佇列
+  // 當成 B 池的，而兩邊的長度剛好都對得上時完全看不出來
+  if (roundPool !== pool) { round = null; roundPool = pool; roundPending = 0; }
+  if (!round) round = await progress.loadRound(user.id, pool);
 
   // ★ 「走完」只有一種定義：queue 有內容，而且 pos 走到底。
   //
@@ -441,23 +470,21 @@ async function ensureRound() {
   //   而之後每按一次輪練都會：重建一輪 → roundNo +1 → 發出一組空的牌 →
   //   停在「沒有符合的內容」。畫面像是沒反應，輪數卻一路往上跳。
   //   實際發生過：韓文站有使用者跑到第 17 輪，而 pos 只有 70／801。
-  if (roundUsable(round) && round.pos < round.queue.length) return round;
+  const usable = roundUsable(round) && round.pos < round.queue.length;
+  if (usable) return round;
 
-  const deck = (await content.listDecks()).find((d) => d.slug === lang().roundDeck);
-  // ★ 不給 limit —— pickItems 沒有 limit 時會分頁撈完。
-  //   給 limit 會走單次查詢，而 PostgREST 單次最多回 1000 列：
-  //   詞庫超過一千條之後，一輪會靜靜地少掉一截，
-  //   而「還剩多少」看起來完全正常（它算的是那份殘缺清單）。
-  //   實測韓文站的詞庫目前 801 條 —— 還沒撞到，但正在往那裡長。
-  const items = await content.pickItems({ deckId: deck?.id ?? null });
+  const ids = await poolItemIds();
   // 撈不到內容就讓呼叫端看見錯誤，絕不存下一個空的輪次 ——
   // 存下去的話它會被下一次讀成「該開新的一輪」（見上面那段）。
-  if (!items.length) {
-    throw new Error(`讀不到「${lang().roundDeck}」的內容，請確認連線後再試一次`);
+  if (!ids.length) {
+    const sc = home.newScope();
+    throw new Error(sc
+      ? `「${sc.label}」這一幕沒有可練的詞。到首頁點「改回照課本順序」。`
+      : `讀不到「${lang().roundDeck}」的內容，請確認連線後再試一次`);
   }
-  round = buildRound(round, items.map((i) => i.id), shuffle);
+  round = buildRound(round, ids, shuffle);
   roundPending = 0;
-  await progress.saveRound(user.id, round);
+  await progress.saveRound(user.id, pool, round);
   return round;
 }
 
@@ -475,7 +502,7 @@ async function commitRound() {
   if (!roundPending || !round) return;
   round = consumeRound(round, roundPending);
   roundPending = 0;
-  await progress.saveRound(user.id, round);
+  await progress.saveRound(user.id, roundPool, round);
 }
 
 /** 這一輪的進度，給首頁顯示用。發出去還沒答完的也算進去，數字才不會停著不動 */
