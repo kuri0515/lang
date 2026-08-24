@@ -25,6 +25,7 @@ import json
 import re
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -127,6 +128,33 @@ def main():
         return
 
     url, key = env()
+
+    # ★ 同一副詞庫裡，一個詞只能有一張卡。
+    #   卡片編號是按集編的（…-s1e02-w0001），所以同一個詞在第二集會拿到
+    #   不同的 slug —— upsert 認不出它，於是建出第二張一模一樣的卡。
+    #   後果不是報錯：複習池裡會有兩張同樣的詞，各自排程、各自算進度，
+    #   而使用者只會覺得「這個詞怎麼一直出現」。
+    #   實測第 2 集有 217 個詞與第 1 集重複。
+    deck0 = call(url, key, "GET",
+                 f"decks?select=id&slug=eq.{urllib.parse.quote(args.deck_slug)}")
+    if deck0:
+        have = set()
+        off = 0
+        while True:
+            page = call(url, key, "GET",
+                        f"items?select=ko&deck_id=eq.{deck0[0]['id']}&limit=1000&offset={off}")
+            have |= {r["ko"] for r in page}
+            if len(page) < 1000:
+                break
+            off += 1000
+        skipped = [r for r in rows if r["ko"] in have]
+        rows = [r for r in rows if r["ko"] not in have]
+        if skipped:
+            print(f"  已存在於這副詞庫、略過：{len(skipped)} 張（前面的集數已經建過）")
+        if not rows:
+            print("  沒有新的詞要建卡。")
+            return
+
     # on_conflict 一定要指定 —— PostgREST 沒有它就當成純 INSERT，
     # 重跑會撞 unique 而失敗（而這支腳本的前提就是可以重跑）
     deck = call(url, key, "POST", "decks?on_conflict=slug",
@@ -139,11 +167,22 @@ def main():
         call(url, key, "POST", "items?on_conflict=slug", rows[i:i + 200],
              prefer="resolution=merge-duplicates,return=minimal")
 
-    back = call(url, key, "GET",
-                f"items?select=id,hanja,pos&deck_id=eq.{did}&limit=2000")
-    print(f"  回讀：{len(back)} 張（預期 {len(rows)}）"
-          f" → {'✅ 對得上' if len(back) == len(rows) else '❌ 對不上'}")
-    if len(back) != len(rows):
+    back = []
+    off = 0
+    while True:
+        page = call(url, key, "GET",
+                    f"items?select=id,ko,hanja&deck_id=eq.{did}&limit=1000&offset={off}")
+        back += page
+        if len(page) < 1000:
+            break
+        off += 1000
+    kos = [r["ko"] for r in back]
+    # 這副詞庫裡不該有重複的詞形 —— 有的話就是上面那道去重沒擋住
+    dups = len(kos) - len(set(kos))
+    ok = dups == 0 and all(r["ko"] in set(kos) for r in rows)
+    print(f"  回讀：這副詞庫共 {len(back)} 張（本次新增 {len(rows)}）· "
+          f"重複詞形 {dups} → {'✅ 對得上' if ok else '❌ 對不上'}")
+    if not ok:
         sys.exit(1)
 
 

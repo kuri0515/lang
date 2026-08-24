@@ -33,6 +33,12 @@ from pathlib import Path
 
 TAG = re.compile(r"\{[^}]*\}")
 KANJI = re.compile(r"[㐀-䶿一-鿿\U00020000-\U0002ebef々〆ヶ]")
+# 注音要標在「漢字或數字」上。
+# ★ 數字也要算：「1人暮らし」讀 ひとりぐらし，而「1」讀作 ひと ——
+#   只把漢字當錨點的話，詞首那個數字分不到讀音，整詞退回
+#   1人暮らし[ひとりぐらし]，送り仮名被算進讀音裡。
+#   這是注音閘門實際攔下來的（第 2 集）。
+ANNOT = re.compile(r"[㐀-䶿一-鿿\U00020000-\U0002ebef々〆ヶ0-9０-９]")
 HIRA = re.compile(r"[ぁ-ゖー]")
 KATA = re.compile(r"[ァ-ヺ]")
 
@@ -75,13 +81,13 @@ def ruby_for(surface, reading):
     對不齊時回傳整詞一個注音（保守），而不是硬猜：
     猜錯的注音比沒有注音更糟，學習者沒有辦法察覺它是錯的。
     """
-    if not reading or not KANJI.search(surface):
+    if not reading or not ANNOT.search(surface):
         return [(surface, None)]
     reading = kata2hira(reading)
     # 切成交替的段：漢字段與假名段
     parts, buf, buf_is_kanji = [], "", None
     for ch in surface:
-        is_k = bool(KANJI.match(ch))
+        is_k = bool(ANNOT.match(ch))
         if buf and is_k != buf_is_kanji:
             parts.append((buf, buf_is_kanji))
             buf = ""
@@ -99,12 +105,12 @@ def ruby_for(surface, reading):
             #   送り仮名「う」會命中**開頭**那個う，於是「奪」分不到讀音，
             #   整詞退回 奪う[うばう] —— 送り仮名被算進讀音裡。
             #   同類：最も[もっとも]、謡う[うたう]、命拾い[いのちびろい]。
-            pending = bool(out) and out[-1][1] is None and KANJI.search(out[-1][0])
+            pending = bool(out) and out[-1][1] is None and ANNOT.search(out[-1][0])
             at = reading.find(seg_h, pos + 1 if pending else pos)
             if at < 0:
                 return [(surface, reading)]      # 對不齊，保守處理
             if at > pos:                          # 中間那段是前一個漢字段的讀音
-                if out and out[-1][1] is None and KANJI.search(out[-1][0]):
+                if out and out[-1][1] is None and ANNOT.search(out[-1][0]):
                     out[-1] = (out[-1][0], reading[pos:at])
                 else:
                     return [(surface, reading)]
@@ -117,7 +123,7 @@ def ruby_for(surface, reading):
                 pos = len(reading)
     if pos != len(reading):
         return [(surface, reading)]
-    if any(KANJI.search(s) and r is None for s, r in out):
+    if any(ANNOT.search(s) and r is None for s, r in out):
         return [(surface, reading)]
     return out
 
@@ -363,7 +369,11 @@ def main():
           f"{min(b['to']-b['from']+1 for b in bounds)}–{max(b['to']-b['from']+1 for b in bounds)} 行"
           f"（其中 {hard} 幕是撞到上限硬切的"
           + ("，比例偏高表示 SCENE_GAP 需要重調" if hard > len(bounds) * 0.25 else "") + "）")
-    print(f"  標了注音的行：{with_ruby} / {sum(1 for l in lines if KANJI.search(l['ja']))} 含漢字行")
+    # 分母要用「需要注音的行」＝含漢字或數字，與 ANNOT 一致。
+    # 只算漢字的話，只有數字的那幾行會被注音卻不計入分母 ——
+    # 印出 371 / 369 這種分子大於分母的數字，而那會讓人不再相信這些統計。
+    need_ruby = sum(1 for l in lines if ANNOT.search(l["ja"]))
+    print(f"  標了注音的行：{with_ruby} / {need_ruby} 需要注音的行")
     print(f"  詞彙 {len(words)} 個（其中專有名詞 {sum(1 for w in words if w['proper'])}）")
     gl = [l for l in lines if l["grammar"]]
     gset = {g for l in lines for g in l["grammar"]}
