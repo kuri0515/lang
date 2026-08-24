@@ -90,7 +90,22 @@ export async function pickItems({ ids = null, tag = '', search = '', deckId = nu
 }
 
 /** 所有標籤與各自條目數 */
+/**
+ * ★ 讓資料庫算（v_tag_counts，見 migration 0027）。
+ *
+ *   本來是把**每一條的 tags 欄位**都撈回來再自己數 ——
+ *   日文站 7049 條之後那是 8 趟連續往返、實測約 2.4 秒，
+ *   而算出來的結果只有三十來列。
+ *   資料量會一直長，答案卻不會，這種形狀就該讓資料庫算。
+ *
+ *   view 還沒建起來的環境（例如另一站還沒跑 migration）退回舊路 ——
+ *   直接壞掉的話，症狀是整排篩選消失，而那不像是「少跑了一個 migration」。
+ */
 export async function listTags() {
+  const { data, error } = await sb.from('v_tag_counts').select('tag, n');
+  if (!error && data) {
+    return data.map((r) => [r.tag, r.n]).sort((a, b) => b[1] - a[1]);
+  }
   const rows = await fetchAll(() => sb.from('items').select('tags').eq('is_active', true));
   const count = {};
   for (const r of rows) for (const t of r.tags || []) count[t] = (count[t] || 0) + 1;

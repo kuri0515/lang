@@ -224,6 +224,34 @@ chk('teardown 收起', $('scramble').classList.contains('hidden'));
 // 其他站台的 taxonomy 由 tests/lang.test.mjs 泛用地驗
 // （每課都有導言、發音組照教學序排、收尾話刻意留白…）。
 // ---------------------------------------------------------------------
+if (SITE === 'japanese') {
+  // ---------------------------------------------------------------------
+  // 精讀詞卡的標籤：集與出現頻率各自成一組
+  //
+  // 第一季入庫後那一副詞庫是 6223 張卡，光集數就 25 個標籤。
+  // 混在主題組裡按數量排，畫面上就是三十顆長得一樣的 chip，
+  // 而「第 13 集」與「食物」不是同一種東西：
+  // 一個是「我讀到哪了」，一個是「我想學什麼」。
+  // ---------------------------------------------------------------------
+  console.log('\n【精讀標籤分組（日文站）】');
+  const { groupTags: gt, tagLabel } = await import(SHARED + '/js/core/taxonomy.js');
+  const g = gt([['spy-s1', 6223], ['freq-low', 5275], ['S1E13', 215],
+                ['S1E02', 493], ['freq-high', 38], ['食物', 80]]);
+  chk('★ 集自成一組，不混進主題', g.episode?.length === 2 && !g.topic.some(([t]) => /^S\d+E/.test(t)),
+      JSON.stringify(g.topic));
+  chk('★ 集照播出順序，不按數量', g.episode.map(([t]) => t).join() === 'S1E02,S1E13',
+      '按數量排會讓集數看起來像亂序 —— 第 13 集有幾個生詞，跟它排第幾無關');
+  chk('出現頻率自成一組且高頻在前', g.freq.map(([t]) => t).join() === 'freq-high,freq-low');
+  chk('★ 詞庫代號不出現在篩選列',
+      !Object.values(g).flat().some(([t]) => t === 'spy-s1'),
+      '它與上面那排「詞庫」選單是同一件事，兩個入口做同一件事會讓人以為它們不一樣');
+  chk('主題組留下真正的主題', g.topic.map(([t]) => t).join() === '食物');
+  chk('★ 標籤在畫面上說人話', tagLabel('S1E13') === '第 13 集' && tagLabel('freq-low') === '低頻',
+      `${tagLabel('S1E13')}／${tagLabel('freq-low')} —— 代號只有寫資料的人看得懂`);
+  chk('沒有對應說法的標籤原樣顯示', tagLabel('食物') === '食物',
+      '逼每個站台維護完整對照表，只會讓新標籤消失');
+}
+
 if (SITE !== 'korean') {
   console.log('\n  ⏭  以下三段是韓語教學法的斷言，非韓文站跳過（由 lang.test.mjs 涵蓋）');
 } else {

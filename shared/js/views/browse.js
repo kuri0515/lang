@@ -5,7 +5,7 @@ import { lang } from '../core/lang.js';
 import { on, emit, EVENTS } from '../core/bus.js';
 import { STATE_LABEL, TYPE_LABEL, dirShort } from '../data/client.js';
 import * as content from '../data/content.js';
-import { groupTags, groups } from '../core/taxonomy.js';
+import { groupTags, groups, tagLabel } from '../core/taxonomy.js';
 import * as dialogue from './dialogue.js';
 import * as admin from '../data/admin.js';
 import * as progress from '../data/progress.js';
@@ -110,7 +110,7 @@ export async function open() {
       // 分組呈現：主題是篩選器，發音是課程。平鋪在一起，
       // 想找「食物」得先滑過「收音ㄼ」。分組與順序的判準在 core/taxonomy.js
       const g = groupTags(tags);
-      const btn = ([t, n]) => `<button class="tag" data-tag="${esc(t)}">${esc(t)} ${n}</button>`;
+      const btn = ([t, n]) => `<button class="tag" data-tag="${esc(t)}">${esc(tagLabel(t))} ${n}</button>`;
       $('b-tags').innerHTML = '<div class="tag-row"><button class="tag on" data-tag="">全部</button></div>'
         + groups().filter((x) => g[x.key].length).map((x) =>
             `<div class="tag-group"><div class="tag-group-h">${esc(x.label)}`
@@ -122,7 +122,7 @@ export async function open() {
           qsa('.tag', $('b-tags')).forEach((x) => x.classList.toggle('on', x === b));
           // 選完就收起 —— 篩選的目的是看結果，讓人自己再點一次收合是多一步
           $('b-filter').open = false;
-          $('b-filter-now').textContent = tag || '全部';
+          $('b-filter-now').textContent = tag ? tagLabel(tag) : '全部';
           render();
         };
       });
@@ -151,10 +151,10 @@ export async function render() {
     total = page.total;
 
     $('b-count').textContent = `${total} 條`
-      + (deckTitle ? ` · ${deckTitle}` : '') + (tag ? ` · ${tag}` : '');
+      + (deckTitle ? ` · ${deckTitle}` : '') + (tag ? ` · ${tagLabel(tag)}` : '');
     $('btn-study-deck').classList.toggle('hidden', !deckId);
     $('btn-study-tag').classList.toggle('hidden', !tag);
-    $('btn-study-tag').textContent = `學「${tag}」`;
+    $('btn-study-tag').textContent = `學「${tagLabel(tag)}」`;
     $('btn-practice-sel').classList.toggle('hidden', !picked.size);
 
     if (!rows.length) {

@@ -36,6 +36,15 @@ export const starterTopics = () => tx().starterTopics;
 export const grammarTags = () => tx().grammarTags;
 /** 篩選列的三個分組（label / hint 由站台寫，語氣要對得上該語言的學習者） */
 export const groups = () => tx().groups;
+/**
+ * 標籤在畫面上的說法。
+ *
+ * 標籤存的是代號（freq-low、S1E07），那是給寫資料的人看的；
+ * 畫面上要說人話。沒有對應說法時原樣回傳 —— 絕大多數標籤（食物、動詞）
+ * 本來就已經是人話，逼每個站台維護一份完整對照表只會讓新標籤消失。
+ */
+export const tagLabel = (t) => tx().tagLabel?.(t) ?? t;
+
 /** 規則課的導言（寫在站台設定裡的那些） */
 export const lessonIntro = () => tx().lessonIntro;
 
@@ -98,6 +107,11 @@ export function groupTags(pairs) {
   const t = tx();
   const pronSet = new Set(t.pronOrder);
   const gramSet = new Set(t.grammarTags);
+  // 站台可以再宣告自己的分組（例如日文站的「集」——精讀詞卡帶著 S1E07 這種標籤）。
+  // 不寫死在這裡的理由與整個檔一致：這是課程內容，不是演算法。
+  // 每一組自己說「什麼算我的」（test）與「怎麼排」（sort）。
+  const extra = t.extraGroups || [];
+  const hidden = new Set(t.hiddenTags || []);
   // 認出發音標籤的三條路：列在教學序列裡、符合前綴、或符合正則。
   // 韓語靠前綴（收音*），日語的行標籤（あ行・か行）只有共同後綴，
   // 前綴比對抓不到 —— 所以多留一個正則的出口，不是為了通用而通用。
@@ -107,11 +121,19 @@ export function groupTags(pairs) {
     (t.pronRe ? t.pronRe.test(tag) : false);
 
   const out = { topic: [], pron: [], grammar: [] };
+  for (const g of extra) out[g.key] = [];
   for (const [tag, n] of pairs) {
-    if (isPron(tag)) out.pron.push([tag, n]);
+    // ★ 隱藏的標籤是「已經有別的入口了」，不是「不重要」。
+    //   例如詞庫代號（spy-s1）與上面那排詞庫選單是同一件事，
+    //   兩個入口做同一件事，使用者會以為它們不一樣。
+    if (hidden.has(tag)) continue;
+    const g = extra.find((x) => x.test(tag));
+    if (g) out[g.key].push([tag, n]);
+    else if (isPron(tag)) out.pron.push([tag, n]);
     else if (gramSet.has(tag)) out.grammar.push([tag, n]);
     else out.topic.push([tag, n]);
   }
+  for (const g of extra) if (g.sort) out[g.key].sort((a, b) => g.sort(a[0], b[0]));
   // 主題：起步主題置頂，其餘按數量；語法按數量；發音按教學順序
   const starter = (x) => (t.starterTopics.indexOf(x) + 1 || 999);
   out.topic.sort((a, b) => starter(a[0]) - starter(b[0]) || b[1] - a[1]);

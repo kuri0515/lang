@@ -89,10 +89,40 @@ const GRAMMAR_TAGS = [
   '句型', '助詞', '動詞', '形容', '副詞', '量詞', '疑問詞', '時態', '敬語', '俗諺',
 ];
 
+/**
+ * 精讀詞卡帶著兩種標籤：出自哪一集（S1E07）、有多常出現（freq-high…）。
+ *
+ * 【為什麼要另立分組，而不是讓它們留在「主題」裡】
+ *   第一季入庫之後，那一副詞庫是 6223 張卡，光集數就是 25 個標籤。
+ *   混在主題組裡按數量排，畫面上就是三十顆長得一樣的 chip，
+ *   而「S1E13」與「食物」根本不是同一種東西 ——
+ *   一個是「我讀到哪了」，一個是「我想學什麼」。
+ *   混在一起的結果是兩邊都變難找，等於整排篩選都失效。
+ *
+ * 【集為什麼不按數量排】
+ *   與發音同一個道理：順序本身就是內容。第 3 集排在第 2 集後面，
+ *   跟它有幾個生詞無關。按數量排會讓集數看起來像亂序。
+ */
+const EP_RE = /^S(\d+)E(\d+)$/;
+const epNo = (t) => {
+  const m = EP_RE.exec(t);
+  return m ? Number(m[1]) * 1000 + Number(m[2]) : 9e9;
+};
+const FREQ_ORDER = ['freq-high', 'freq-mid', 'freq-low'];
+const FREQ_LABEL = { 'freq-high': '高頻', 'freq-mid': '中頻', 'freq-low': '低頻' };
+
 const GROUPS = [
+  { key: 'episode', label: '集', hint: '照播出順序，不按生詞多寡' },
+  { key: 'freq', label: '出現頻率', hint: '高頻的先學，回本最快' },
   { key: 'topic', label: '主題', hint: '前幾個是起步優先，其餘按興趣挑' },
   { key: 'pron', label: '發音', hint: '依教學順序排列，從上往下' },
   { key: 'grammar', label: '語法', hint: '詞性與句型' },
+];
+
+const EXTRA_GROUPS = [
+  { key: 'episode', test: (t) => EP_RE.test(t), sort: (a, b) => epNo(a) - epNo(b) },
+  { key: 'freq', test: (t) => t in FREQ_LABEL,
+    sort: (a, b) => FREQ_ORDER.indexOf(a) - FREQ_ORDER.indexOf(b) },
 ];
 
 /**
@@ -330,6 +360,14 @@ export const TAXONOMY = {
   starterTopics: STARTER_TOPICS,
   grammarTags: GRAMMAR_TAGS,
   groups: GROUPS,
+  extraGroups: EXTRA_GROUPS,
+  // 詞庫代號與上面那排「詞庫」選單是同一件事 —— 兩個入口做同一件事，
+  // 使用者會以為它們不一樣（而且它掛滿 6223 條，永遠排在最前面）
+  hiddenTags: ['spy-s1'],
+  // 標籤存的是代號，畫面上要說人話。代號直接印出來（freq-low）
+  // 只有寫資料的人看得懂。
+  tagLabel: (t) => FREQ_LABEL[t]
+    || (EP_RE.test(t) ? `第 ${Number(EP_RE.exec(t)[2])} 集` : t),
   lessonIntro: LESSON_INTRO,
   outroOk: OUTRO_OK,
   outroLow: OUTRO_LOW,
