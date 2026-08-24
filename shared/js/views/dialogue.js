@@ -11,7 +11,8 @@
 // 同一份內容兩種呈現，差別只在「現在要理解，還是要檢驗」。
 // =====================================================================
 import { $, qsa, esc } from '../core/dom.js';
-import { groupDialogues, shuffleLines, checkOrder, DIALOGUE_MARK } from '../core/dialogue.js';
+import { groupDialogues, shuffleLines, checkOrder, dialogueProblems,
+         DIALOGUE_MARK } from '../core/dialogue.js';
 import * as speech from '../core/speech.js';
 import * as content from '../data/content.js';
 import { lang } from '../core/lang.js';
@@ -25,6 +26,7 @@ let picked = [];       // 打亂練習中已排入的行
 let revealed = new Set();   // 練習模式中已翻開的行
 let rated = new Map();      // 行 → 自評結果（true＝想起來了）
 let loaded = false;
+let problems = [];
 
 let deps = null;
 
@@ -52,6 +54,7 @@ export async function open() {
     // 全撈的話，日文站要為了 188 句對話搬 7049 條詞（gzip 628 KB、8 趟往返）。
     const items = await content.pickItems({ noteHas: DIALOGUE_MARK });
     all = groupDialogues(items);
+    problems = dialogueProblems(items);
     loaded = true;
   }
   showList();
@@ -76,6 +79,7 @@ function showList() {
   $('dlg-detail').classList.add('hidden');
   $('dlg-list-card').classList.remove('hidden');
   $('dlg-count').textContent = `${all.length} 組情境對話`;
+  renderProblems();
   $('dlg-list').innerHTML = all.map((d, i) => `
     <div class="dlg-item" data-i="${i}">
       <b>${esc(d.scene)}</b>
@@ -84,6 +88,24 @@ function showList() {
   qsa('[data-i]', $('dlg-list')).forEach((el) => {
     el.onclick = () => openOne(all[Number(el.dataset.i)]);
   });
+}
+
+/**
+ * 「差一點就是對話」的那些，只給管理員看。
+ *
+ * ★ 不給一般學習者看：他們無從修，而看到一排警告只會覺得這個 App 壞了。
+ *   但也不能不顯示 —— 這種錯的症狀是「清單上少了一段」，
+ *   而少掉的東西不會自己出聲，沒有人專門去看就永遠不會被發現。
+ */
+function renderProblems() {
+  const box = $('dlg-problems');
+  const show = deps?.isAdmin?.() && problems.length;
+  box.classList.toggle('hidden', !show);
+  if (!show) { box.innerHTML = ''; return; }
+  box.innerHTML = `<div class="dlg-warn"><b>⚠ ${problems.length} 句沒有配對成功</b>`
+    + problems.map((p) => `<div>${esc(p.scene ? `「${p.scene}」` : '')}`
+      + `<code>${esc(p.ko || '')}</code> — ${esc(p.why)}</div>`).join('')
+    + '</div>';
 }
 
 function resetPractice() { revealed = new Set(); rated = new Map(); }

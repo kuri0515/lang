@@ -1165,6 +1165,13 @@ button[aria-busy="true"]::after {
   font-variant-numeric: tabular-nums; }
 .scene-cell.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 
+/* 對話配對失敗的提醒（只有管理員看得到） */
+.dlg-warn { border: 1px solid rgba(200, 120, 0, .45); border-radius: 10px;
+  padding: 10px 12px; margin: 10px 0; font-size: 13px; line-height: 1.7; }
+.dlg-warn > b { display: block; margin-bottom: 4px; }
+.dlg-warn code { font-size: 12px; padding: 1px 5px; border-radius: 5px;
+  background: rgba(128, 128, 150, .18); }
+
 /* 一行台詞：左邊朗讀鈕，右邊上下兩層（目標語言／中文） */
 .sc-line { display: flex; gap: 10px; padding: 11px 0;
   border-bottom: 1px solid var(--line, rgba(128,128,150,.18)); }

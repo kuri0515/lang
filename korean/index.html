@@ -18,7 +18,7 @@
 
   <!-- ↓ 由 shared/scripts/build-sites.mjs 從真實的 import 圖產生，不要手改。
        沒有它的話瀏覽器要一層一層發現模組，實測 4 層 × 每次往返。 -->
-<meta name="build" content="d578af03">
+<meta name="build" content="119bc0e9">
   <link rel="modulepreload" href="main.js">
   <link rel="modulepreload" href="../shared/js/core/lang.js">
   <link rel="modulepreload" href="lang.config.js">
@@ -217,6 +217,9 @@
           <span id="dlg-count" class="muted"></span>
           <button id="dlg-tr-all" class="small primary">全部對話 · 隨機翻譯練習</button>
         </div>
+        <!-- 只有管理員看得到：對話靠 note 的約定歸組，改壞了不報錯，
+             症狀只是「清單上少了一段」。少掉的東西不會自己出聲，所以要有人專門去看。 -->
+        <div id="dlg-problems" class="hidden"></div>
         <div id="dlg-list"></div>
       </div>
 

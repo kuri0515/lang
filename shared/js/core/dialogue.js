@@ -47,6 +47,54 @@ export function groupDialogues(items) {
 }
 
 /**
+ * 這批 item 裡，哪些「本來想當對話」卻沒成立。
+ *
+ * 【為什麼需要這支】
+ *   對話沒有自己的資料表，全靠 note 開頭那一串約定。約定的壞處是
+ *   **改壞了不會報錯**，而且症狀離原因很遠：
+ *
+ *     · 只改了其中一句的情境名 → 一段對話裂成兩段各一句
+ *       → groupDialogues 把兩段都丟掉 → 清單上少了整整兩段對話
+ *     · 把全形｜打成半形 | → 那一句退化成普通單字卡，對話短一句
+ *     · 說話者打成 C → 同上
+ *
+ *   三種都只是「東西變少了」，而少掉的東西不會自己出聲。
+ *   所以要有人專門去看「差一點就是對話」的那些。
+ *
+ *   回傳的是問題清單，不是丟例外 —— 內容有瑕疵不該讓整個畫面打不開，
+ *   況且看得到其餘 90 段對話的人，才有機會發現少了哪一段。
+ */
+export function dialogueProblems(items) {
+  const out = [];
+  const scenes = new Map();
+  for (const it of items) {
+    const note = (it.note || '').trim();
+    const p = parseLine(note);
+    if (!p) {
+      // 只挑「開頭就是對話兩個字」的 —— 內文順帶提到「對話」的一般註解
+      // （韓文站實測有 3 條）不是壞掉，只是被粗篩一起撈了回來
+      if (note.startsWith(DIALOGUE_MARK)) {
+        out.push({ kind: 'format', id: it.id, ko: it.ko, note,
+          why: '開頭是「對話」但格式不合 —— 常見原因是全形｜打成半形，或說話者不是 A／B' });
+      }
+      continue;
+    }
+    if (!scenes.has(p.scene)) scenes.set(p.scene, []);
+    scenes.get(p.scene).push({ ...p, item: it });
+  }
+  for (const [scene, lines] of scenes) {
+    if (lines.length < 2) {
+      out.push({ kind: 'orphan', scene, id: lines[0].item.id, ko: lines[0].item.ko,
+        why: '這個情境只有一句，整段不會出現在清單上 —— 通常是其中一句的情境名被改過' });
+    } else if (new Set(lines.map((l) => l.speaker)).size < 2) {
+      out.push({ kind: 'one-sided', scene, id: lines[0].item.id, ko: lines[0].item.ko,
+        why: '整段只有一個說話者 —— 對話練習會變成單口相聲' });
+    }
+  }
+  return out;
+}
+
+/**
  * 打亂一段對話的行序，供「排回原順序」練習用。
  *
  * ★ 一定要與原順序不同，否則會出現「打亂後跟原本一樣」的尷尬局面 ——

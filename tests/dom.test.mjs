@@ -466,6 +466,32 @@ console.log('\n【情境對話】');
   chk('保持傳入順序（呼叫端已依 sort_order 排好）',
       gs[0].lines.map((l) => l.item.ko).join('') === '12');
 
+  // ── 「差一點就是對話」的那些要說出來 ──────────────────────
+  // 對話沒有自己的資料表，全靠 note 的約定。約定的壞處是改壞了不報錯，
+  // 而症狀離原因很遠：只改了其中一句的情境名，整整兩段對話就從清單消失。
+  {
+    const { dialogueProblems } = await import(SHARED + '/js/core/dialogue.js');
+    const broken = [
+      mk('1', '對話 A｜甲｜'), mk('2', '對話 B｜甲｜'),      // 好的
+      mk('3', '對話 A|乙|半形直線'),                         // 格式壞了
+      mk('4', '對話 C｜丙｜說話者不是 A／B'),                // 格式壞了
+      mk('5', '對話 A｜丁｜只有一句'),                       // 落單
+      mk('6', '對話 A｜戊｜'), mk('7', '對話 A｜戊｜'),      // 只有一個說話者
+      mk('x', '團名。韓國人日常對話裡就直接說 뉴진스'),        // 只是提到「對話」，不是壞掉
+    ];
+    const ps = dialogueProblems(broken);
+    const kinds = ps.map((p) => p.kind).sort().join(',');
+    chk('★ 抓出格式壞掉的兩句', ps.filter((p) => p.kind === 'format').length === 2,
+        '全形｜打成半形、或說話者不是 A／B，那一句會靜靜退化成普通單字卡');
+    chk('★ 抓出落單的情境', ps.some((p) => p.kind === 'orphan' && p.scene === '丁'),
+        '只改了其中一句的情境名，整段就從清單消失 —— 而少掉的東西不會自己出聲');
+    chk('★ 抓出只有一個說話者的', ps.some((p) => p.kind === 'one-sided' && p.scene === '戊'),
+        '對話練習會變成單口相聲');
+    chk('★ 一般備註裡提到「對話」不算壞掉', !ps.some((p) => p.ko === 'x'),
+        '韓文站實測有 3 條這種註解 —— 把它們報成錯，警告就沒有人看了');
+    chk('好的那一段不出現在問題清單', !ps.some((p) => p.scene === '甲'), kinds);
+  }
+
   // ★ 打亂最容易出的錯：打亂後跟原本一樣，使用者以為壞了
   const four = ['a', 'b', 'c', 'd'];
   let same = 0;
