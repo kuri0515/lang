@@ -1,4 +1,5 @@
 // 精讀資料層的假替身。內容是造出來的日文短句，不是任何作品的台詞。
+import fs from 'node:fs';
 export const IS_STUB = true;
 const EP = { id: 'ep1', slug: 'demo-s1e01', work: 'demo', work_title: 'デモ',
              season: 1, episode: 1, title: null, line_count: 17, scene_count: 12,
@@ -28,7 +29,25 @@ const EP2 = { id: 'ep2', slug: 'demo-s2e01', work: 'demo', work_title: 'デモ',
 export async function listEpisodes() { return [EP, EP2]; }
 export let lineCalls = 0;
 export const resetCalls = () => { lineCalls = 0; };
-export async function loadLines(id) { lineCalls += 1; return id === 'ep2' ? LINES2 : LINES; }
+// ★ 替身只能遞出「真正的查詢有要的欄位」。
+//
+//   先前它把 tokens 與 grammar 直接遞出來，而 loadLines 的 select 裡
+//   根本沒有這兩欄 —— 於是線上永遠讀到 undefined，測試卻全綠，
+//   守著一個它抓不到的 bug。欄位清單從正式程式讀，不在這裡抄一份：
+//   抄一份就會各自漂移，而漂移的那一刻沒有人會知道。
+//   （用讀原始碼的方式取，不是 import —— 這支替身本身就是用來頂替
+//     那個模組的，import 它會被轉回自己。）
+const SRC = fs.readFileSync(new URL('../shared/js/data/script.js', import.meta.url), 'utf8');
+const M = SRC.match(/LINE_FIELDS\s*=\s*'([^']+)'/);
+if (!M) throw new Error('在 shared/js/data/script.js 找不到 LINE_FIELDS —— 替身無法確認要遞出哪些欄位');
+const FIELDS = new Set(M[1].split(',').map((s) => s.trim()));
+const onlySelected = (rows) => rows.map((r) =>
+  Object.fromEntries(Object.entries(r).filter(([k]) => FIELDS.has(k))));
+
+export async function loadLines(id) {
+  lineCalls += 1;
+  return onlySelected(id === 'ep2' ? LINES2 : LINES);
+}
 const LINES2 = [
   { idx: 0, scene: 1, start_s: 1, end_s: 3, ruby: '水[みず]', zh: '水', tokens: ['水'], grammar: [] },
   { idx: 1, scene: 1, start_s: 4, end_s: 6, ruby: '本[ほん]', zh: '書', tokens: ['本'], grammar: [] },

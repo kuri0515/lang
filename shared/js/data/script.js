@@ -25,9 +25,25 @@ export async function listEpisodes() {
  *   等哪天有更長的集數時會靜靜地少掉結尾那幾幕，
  *   而畫面看起來完全正常（幕數是從行算出來的）。
  */
+/**
+ * ★ 這串欄位就是精讀畫面看得到的全部。
+ *
+ *   上線之後有一整段時間，這裡少了 tokens 與 grammar ——
+ *   資料庫裡有（471/479 行有 tokens、171 行有 grammar），
+ *   匯入時也逐集核對過數量，但畫面永遠讀到 undefined，於是
+ *   「這一幕的詞」永遠說「沒有需要另外背的詞」、句型卡永遠收著、
+ *   「練這一幕」永遠不出現。**沒有任何一處報錯**，因為那三處的
+ *   寫法都是 `l.tokens || []` —— 空陣列是完全合法的答案。
+ *
+ *   測試也全綠：替身直接把 tokens/grammar 遞出來，
+ *   而真正的查詢從來沒有要過它們（見 tests/_script-data-stub.mjs，
+ *   替身現在改成只遞出這串欄位裡有的東西）。
+ */
+export const LINE_FIELDS = 'idx, scene, start_s, end_s, ja, ruby, zh, tokens, grammar';
+
 export async function loadLines(episodeId) {
   return fetchAll(() => sb.from('script_lines')
-    .select('idx, scene, start_s, end_s, ja, ruby, zh')
+    .select(LINE_FIELDS)
     .eq('episode_id', episodeId)
     .order('idx'));
 }
