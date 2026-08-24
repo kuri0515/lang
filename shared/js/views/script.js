@@ -72,6 +72,20 @@ export function initScript(d) {
     r.onchange = () => { mode = r.value; renderLines(); };
   });
   syncRubyBtn();
+
+  // 左右鍵換幕。判斷方式沿用 study.js：畫面隱藏時不接、
+  // 焦點在輸入框時不接（否則打字的左右鍵會換掉整幕）。
+  document.addEventListener('keydown', onKey);
+}
+
+function onKey(e) {
+  if (!$('sc-scene-pane') || $('sc-scene-pane').classList.contains('hidden')) return;
+  if ($('b-pane-script')?.classList.contains('hidden')) return;
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.code === 'ArrowLeft' && scene > 1) { e.preventDefault(); openScene(scene - 1); }
+  if (e.code === 'ArrowRight' && scene < (ep?.scene_count || 0)) {
+    e.preventDefault(); openScene(scene + 1);
+  }
 }
 
 const syncRubyBtn = () => { $('sc-ruby').textContent = `注音：${showRuby ? '開' : '關'}`; };
@@ -215,13 +229,28 @@ function renderScenes() {
   $('sc-filter').textContent = unreadOnly ? `只看沒讀的（${left}）` : `全部 ${total} 幕`;
   const nums = Array.from({ length: total }, (_, i) => i + 1)
     .filter((n) => !unreadOnly || !done.has(n));
-  $('sc-scenes').innerHTML = nums.map((num) => {
-    const rows = lines.filter((l) => l.scene === num).length;
-    // now＝正在讀的；last＝上次讀到的（還沒打開內文時就是它指路）
-    const mark = num === scene ? ' now' : (num === lastRead && !scene ? ' last' : '');
-    return `<button class="scene-cell${done.has(num) ? ' on' : ''}${mark}"
-      data-scene="${num}" title="${rows} 句">${num}</button>`;
-  }).join('') || '<p class="muted nomargin">這一集都讀完了。</p>';
+  // ★ 一集現在有 85–90 幕。九十個同樣的小方格連成一片，
+  //   要找「第 62 幕」只能從頭數。每十個一組並標出起點，
+  //   就變成先跳到 60 那一組、再看第 2 個 —— 這是掃描而不是數數。
+  const groups = [];
+  for (const n of nums) {
+    const head = Math.floor((n - 1) / 10) * 10 + 1;
+    if (!groups.length || groups[groups.length - 1].head !== head) {
+      groups.push({ head, items: [] });
+    }
+    groups[groups.length - 1].items.push(n);
+  }
+  $('sc-scenes').innerHTML = groups.map((gp) => `
+    <div class="scene-group">
+      <span class="scene-group-head">${gp.head}–${Math.min(gp.head + 9, total)}</span>
+      <div class="scene-cells">${gp.items.map((num) => {
+        const rows = lines.filter((l) => l.scene === num).length;
+        // now＝正在讀的；last＝上次讀到的（還沒打開內文時就是它指路）
+        const mark = num === scene ? ' now' : (num === lastRead && !scene ? ' last' : '');
+        return `<button class="scene-cell${done.has(num) ? ' on' : ''}${mark}"
+          data-scene="${num}" title="${rows} 句">${num}</button>`;
+      }).join('')}</div>
+    </div>`).join('') || '<p class="muted nomargin">這一集都讀完了。</p>';
   qsa('#sc-scenes [data-scene]').forEach((b2) => {
     b2.onclick = () => openScene(Number(b2.dataset.scene));
   });
@@ -247,6 +276,10 @@ async function openScene(n) {
   deps.onReadPos?.({ epId: ep.id, scene: n });
   $('sc-scene-pane').classList.remove('hidden');
   renderScenes();                       // 讓幕格標出現在讀的是哪一格
+  // ★ 手機上點了方格之後，內文在畫面下方 —— 不捲過去的話
+  //   看起來像「按了沒反應」，而使用者會再按一次別的方格。
+  //   捲到內文的頂端而不是頁面頂端：三層篩選要留在上面看得到。
+  $('sc-scene-pane').scrollIntoView?.({ block: 'start', behavior: 'smooth' });
   const rows = sceneLines();
   $('sc-scene-title').textContent =
     `${ep.work_title} 第 ${ep.episode} 集 · 第 ${n} 幕 / ${ep.scene_count}`;

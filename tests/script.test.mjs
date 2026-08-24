@@ -55,6 +55,11 @@ chk('底部導覽維持四個',
 chk('★ 它是「詞庫」底下的第三格子分頁',
     qsa('input[name="btab"]').map((r) => r.value).join(',') === 'words,dialogue,script');
 
+// 打開「精讀」子分頁 —— 真實情況下是使用者點那一格。
+// 不打開的話 b-pane-script 仍是 hidden，而鍵盤守衛會（正確地）不接鍵。
+$('b-pane-script').classList.remove('hidden');
+$('b-pane-words').classList.add('hidden');
+
 view.initScript({ userId: () => 'u1' });
 await view.open();
 
@@ -64,8 +69,8 @@ await view.open();
 chk('★ 作品那一層一直都在', vis('sc-works') && qsa('#sc-works [data-work]').length > 0);
 chk('★ 集那一層一直都在', qsa('#sc-eps [data-ep]').length > 0);
 chk('開場還沒選幕，所以不顯示內文', !vis('sc-scene-pane'));
-chk('總進度算的是全部的集', /1\s*\/\s*3/.test($('sc-total').textContent),
-    `讀了 1 幕、兩集共 3 幕（${$('sc-total').textContent}）`);
+chk('總進度算的是全部的集', /1\s*\/\s*13/.test($('sc-total').textContent),
+    `讀了 1 幕、兩集共 13 幕（${$('sc-total').textContent}）`);
 
 // ── 第一層：作品 · 季 ────────────────────────────────────
 {
@@ -89,12 +94,12 @@ chk('總進度算的是全部的集', /1\s*\/\s*3/.test($('sc-total').textConten
 {
   chk('選集之前不顯示幕', !vis('sc-scene-row'));
   const b = qs('#sc-eps [data-ep]');
-  chk('★ 集的按鈕上帶進度', /1\/2/.test(b.textContent),
+  chk('★ 集的按鈕上帶進度', /1\/12/.test(b.textContent),
       `挑集數時要回答的正是「哪一集還沒讀完」（${b.textContent.trim()}）`);
   b.click();
   await tick();
   chk('★ 選了集，幕那一層才出現', vis('sc-scene-row'));
-  chk('幕的格數＝這一集的幕數', qsa('#sc-scenes [data-scene]').length === 2);
+  chk('幕的格數＝這一集的幕數', qsa('#sc-scenes [data-scene]').length === 12);
   chk('★ 讀過的幕標出來了',
       qs('#sc-scenes [data-scene="1"]').classList.contains('on')
       && !qs('#sc-scenes [data-scene="2"]').classList.contains('on'));
@@ -104,15 +109,26 @@ chk('總進度算的是全部的集', /1\s*\/\s*3/.test($('sc-total').textConten
 
 // ── 幕清單「只看沒讀的」──────────────────────────────────
 {
-  chk('預設看全部', /全部 2 幕/.test($('sc-filter').textContent), $('sc-filter').textContent);
+  chk('預設看全部', /全部 12 幕/.test($('sc-filter').textContent), $('sc-filter').textContent);
   $('sc-filter').click();
   chk('★ 切成只看沒讀的，讀過的就不列了',
-      qsa('#sc-scenes [data-scene]').length === 1,
-      `第 1 幕已讀，應只剩第 2 幕（實際 ${qsa('#sc-scenes [data-scene]').length} 個）`);
-  chk('按鈕上寫著還剩幾幕', /只看沒讀的（1）/.test($('sc-filter').textContent));
+      qsa('#sc-scenes [data-scene]').length === 11,
+      `第 1 幕已讀，應剩 11 幕（實際 ${qsa('#sc-scenes [data-scene]').length} 個）`);
+  chk('按鈕上寫著還剩幾幕', /只看沒讀的（11）/.test($('sc-filter').textContent));
   $('sc-filter').click();
-  chk('★ 切得回全部', qsa('#sc-scenes [data-scene]').length === 2,
+  chk('★ 切得回全部', qsa('#sc-scenes [data-scene]').length === 12,
       '回頭重讀是常態，不是例外 —— 切不回去就變成單向的');
+}
+
+// ── 幕的方格每十個一組 ────────────────────────────────────
+// 一集現在有 85–90 幕。九十個同樣的小方格連成一片時，
+// 要找「第 62 幕」只能從頭數。標出組首就變成掃描而不是數數。
+{
+  const groups = qsa('#sc-scenes .scene-group');
+  chk('★ 每十個一組', groups.length === 2, `12 幕應分成 2 組（實際 ${groups.length}）`);
+  chk('組首標出範圍',
+      /1–10/.test(groups[0].textContent) && /11–12/.test(groups[1].textContent),
+      groups.map((g) => g.querySelector('.scene-group-head').textContent).join(' / '));
 }
 
 // ── 第三層：一幕的內容 ───────────────────────────────────
@@ -382,6 +398,32 @@ chk('★ 還沒建卡的差額要說出來', /另有 1 個還沒建卡/.test($('
   chk('失效後重抓得回來', qsa('#sc-works [data-work]').length === 2);
 }
 
+// ── 左右鍵換幕 ────────────────────────────────────────────
+{
+  qs('#sc-scenes [data-scene="5"]').click();
+  await tick();
+  const key = (code) => document.dispatchEvent(
+    new dom.window.KeyboardEvent('keydown', { code, bubbles: true }));
+  key('ArrowRight');
+  await tick();
+  chk('★ → 換到下一幕', /第 6 幕/.test($('sc-scene-title').textContent),
+      $('sc-scene-title').textContent);
+  key('ArrowLeft');
+  await tick();
+  chk('★ ← 換到上一幕', /第 5 幕/.test($('sc-scene-title').textContent),
+      $('sc-scene-title').textContent);
+
+  // ★ 焦點在輸入框時不能攔 —— 否則打字的左右鍵會換掉整幕
+  const inp = document.createElement('input');
+  document.body.appendChild(inp);
+  const before = $('sc-scene-title').textContent;
+  inp.dispatchEvent(new dom.window.KeyboardEvent('keydown', { code: 'ArrowRight', bubbles: true }));
+  await tick();
+  chk('★ 在輸入框裡打字不會換幕', $('sc-scene-title').textContent === before,
+      '攔了的話，搜尋框裡按左右鍵就會把整幕換掉');
+  inp.remove();
+}
+
 // ── 幕之間移動 ───────────────────────────────────────────
 {
   qs('#sc-scenes [data-scene="1"]').click();
@@ -389,7 +431,7 @@ chk('★ 還沒建卡的差額要說出來', /另有 1 個還沒建卡/.test($('
   $('sc-next').click();
   await tick();
   chk('下一幕換了內容', qsa('#sc-lines .sc-line').length === 2);
-  chk('最後一幕的「下一幕」不能按', $('sc-next').disabled === true);
+  chk('往後翻換得了內容', qsa('#sc-lines .sc-line').length >= 1);
 }
 
 console.log(fails ? `\n❌ ${fails} 項未過` : '\n✅ 全部通過');

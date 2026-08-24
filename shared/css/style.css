@@ -1205,3 +1205,18 @@ button[aria-busy="true"]::after {
 
 /* 上次讀到的那一幕。與「正在讀」分開：還沒打開內文時，就是它在指路 */
 .scene-cell.last { box-shadow: inset 0 0 0 2px var(--accent); }
+
+/* 幕的方格：每十個一組。一集 85–90 幕連成一片時，
+   找「第 62 幕」只能從頭數；標出組首就變成掃描 */
+.scene-grid { display: block; }
+.scene-group { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.scene-group-head { flex: 0 0 46px; font-size: 11px; color: var(--muted);
+  text-align: right; font-variant-numeric: tabular-nums; }
+.scene-cells { display: grid; gap: 6px; flex: 1 1 auto;
+  grid-template-columns: repeat(10, minmax(0, 1fr)); }
+/* 點擊區至少 40px —— 手指按得到才算按鈕 */
+.scene-cell { min-height: 40px; }
+@media (max-width: 420px) {
+  .scene-cells { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .scene-group { align-items: flex-start; }
+}
