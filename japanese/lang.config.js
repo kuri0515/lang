@@ -7,6 +7,7 @@
 
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 import { TAXONOMY } from './taxonomy.js';
+import { GRAMMAR } from './grammar.js';
 
 export const LANG = {
   code: 'ja',
@@ -23,6 +24,9 @@ export const LANG = {
   // 共用碼不該知道「哪一站有精讀」，它只看這個旗標。
   // 韓文站沒有宣告，分頁就整個不存在（不是灰掉，是不存在）。
   scriptReading: true,
+  // 句型解說。偵測在抽取階段做，這裡只放「代號 → 給人看的解說」——
+  // 改解說不必重跑抽取，加一集也不必動它。
+  grammar: GRAMMAR,
 
   langLabel: '日語',
   termLabel: '日文',

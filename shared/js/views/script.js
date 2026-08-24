@@ -21,6 +21,7 @@ import { rubyHTML, stripRuby, hasRuby } from '../core/ruby.js';
 import * as speech from '../core/speech.js';
 import * as script from '../data/script.js';
 import * as content from '../data/content.js';
+import { lang } from '../core/lang.js';
 
 let deps = null;
 let eps = [];
@@ -199,6 +200,7 @@ async function openScene(n) {
   syncDoneBtn();
   syncScopeBtn();
   renderLines();
+  renderGrammar(rows);
   await renderWords(rows);
 }
 
@@ -228,6 +230,30 @@ function renderLines() {
       if (l) speech.speak(stripRuby(l.ruby || l.ja));
     };
   });
+}
+
+/**
+ * 這一幕用到的句型。
+ *
+ * 代號由抽取階段判定（看詞形與詞性的序列），解說在站台設定裡。
+ * 沒命中就整張卡收起來 —— 留一張寫著「沒有」的卡片，
+ * 只會讓人以為是壞了。實測一集有 14/70 幕確實沒有可標的句型。
+ */
+function renderGrammar(rows) {
+  const dict = lang().grammar || {};
+  const ids = [...new Set(rows.flatMap((l) => l.grammar || []))].filter((k) => dict[k]);
+  const card = $('sc-gram-card');
+  card.classList.toggle('hidden', !ids.length);
+  $('sc-gram-n').textContent = ids.length ? `${ids.length} 個` : '';
+  if (!ids.length) return;
+  $('sc-gram').innerHTML = ids.map((k) => {
+    const g = dict[k];
+    return `<div class="sc-gram">
+      <b>${esc(g.form)}</b>
+      <span>${esc(g.sense)}</span>
+      ${g.watch ? `<em>⚠ ${esc(g.watch)}</em>` : ''}
+    </div>`;
+  }).join('');
 }
 
 /**

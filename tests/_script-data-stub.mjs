@@ -4,14 +4,15 @@ const EP = { id: 'ep1', slug: 'demo-s1e01', work: 'demo', work_title: 'デモ',
              season: 1, episode: 1, title: null, line_count: 5, scene_count: 2 };
 const LINES = [
   { idx: 0, scene: 1, start_s: 3, end_s: 5, ja: '駅は近いです', ruby: '駅[えき]は近[ちか]いです',
-    zh: '車站很近', tokens: ['駅', '近い'] },
+    zh: '車站很近', tokens: ['駅', '近い'], grammar: ['masu'] },
   { idx: 1, scene: 1, start_s: 6, end_s: 8, ja: '本を読みます', ruby: '本[ほん]を読[よ]みます',
-    zh: '看書', tokens: ['本', '読む'] },
-  { idx: 2, scene: 1, start_s: 9, end_s: 11, ja: 'はい', ruby: 'はい', zh: '好的', tokens: [] },
+    zh: '看書', tokens: ['本', '読む'], grammar: ['masu', 'te-iru'] },
+  { idx: 2, scene: 1, start_s: 9, end_s: 11, ja: 'はい', ruby: 'はい', zh: '好的',
+    tokens: [], grammar: [] },
   { idx: 3, scene: 2, start_s: 30, end_s: 32, ja: '水を飲みます', ruby: '水[みず]を飲[の]みます',
-    zh: '喝水', tokens: ['水', '飲む'] },
+    zh: '喝水', tokens: ['水', '飲む'], grammar: [] },
   { idx: 4, scene: 2, start_s: 33, end_s: 36, ja: '行きましょう', ruby: '行[い]きましょう',
-    zh: '走吧', tokens: ['行く'] },
+    zh: '走吧', tokens: ['行く'], grammar: ['zzz-不存在的代號'] },
 ];
 export const marked = [];
 const EP2 = { id: 'ep2', slug: 'demo-s2e01', work: 'demo', work_title: 'デモ',

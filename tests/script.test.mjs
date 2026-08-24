@@ -158,6 +158,29 @@ chk('回到對照兩者都在',
 chk('★ 詞來自斷詞結果，不是字串比對', /4 個/.test($('sc-words-n').textContent),
     `第 1 幕的 tokens 去重後是 4 個（${$('sc-words-n').textContent}）`);
 
+// ── 這一幕的語法 ─────────────────────────────────────────
+{
+  chk('★ 列出這一幕用到的句型', /2 個/.test($('sc-gram-n').textContent),
+      `第 1 幕命中 masu 與 te-iru（${$('sc-gram-n').textContent}）`);
+  chk('句型有形式也有意思',
+      /〜ます/.test($('sc-gram').textContent) && /〜ている/.test($('sc-gram').textContent));
+  chk('★ 易錯點另起一行顯示', $('sc-gram').querySelectorAll('em').length >= 1,
+      '「知っている」不是「正在知道」這種提醒，正是這張卡的價值');
+
+  // 沒命中就整張卡收起來 —— 一張寫著「沒有」的卡片只會讓人以為壞了。
+  // 實測一集有 14/70 幕確實沒有可標的句型。
+  qs('#sc-scenes [data-scene="2"]').click();
+  await tick();
+  chk('★ 沒有句型時整張卡收起來', $('sc-gram-card').classList.contains('hidden'),
+      '第 2 幕只有一個不存在的代號，等於沒有');
+  chk('★ 不認識的代號直接略過，不顯示空白條目',
+      $('sc-gram').querySelectorAll('.sc-gram').length === 0
+      || !/undefined/.test($('sc-gram').textContent),
+      '解說庫還沒補的代號會是 undefined —— 那會印出一整排空白');
+  qs('#sc-scenes [data-scene="1"]').click();
+  await tick();
+}
+
 // ── 練這一幕的詞 ─────────────────────────────────────────
 // 那些詞卡在這之前唯一的入口是「詞庫 → 篩選那一副 → 學這組」，
 // 沒有人會自己走到那裡。內容從哪來與拿它做什麼，該接在一起。

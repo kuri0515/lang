@@ -55,8 +55,14 @@ for (const site of SITES) {
 //   不會讓任何事情更安全，只會讓人以為兩站都支援。
 //
 //   代價是打錯字不會被抓（scriptReadng 會被當成「這站沒有」），
-//   所以旗標一律列在這裡 —— 名字寫在測試裡，等於多一道對照。
-const FEATURE_FLAGS = ['scriptReading'];
+//   所以一律列在這裡 —— 名字寫在測試裡，等於多一道對照。
+//
+//   值是期望的型別。旗標必須是布林：寫成字串 'false' 的話，
+//   共用碼那句 !!flag 會判成真，功能會在沒宣告的站台打開。
+//   功能內容（例如句型解說庫）必須是物件：給成陣列或字串時，
+//   查表會回 undefined，而畫面只會安靜地少一塊。
+const FEATURE_FIELDS = { scriptReading: 'boolean', grammar: 'object' };
+const FEATURE_FLAGS = Object.keys(FEATURE_FIELDS);
 console.log('【兩站欄位一致】');
 const keys = Object.fromEntries(
   SITES.map((s) => [s, Object.keys(configs[s]).sort()]));
@@ -68,10 +74,16 @@ chk(`${a} 有而 ${b} 沒有的欄位`, onlyA.length === 0, onlyA.join(', '));
 chk(`${b} 有而 ${a} 沒有的欄位`, onlyB.length === 0, onlyB.join(', '));
 // 旗標得是布林。寫成字串 'false' 的話，共用碼那句 !!flag 會判成真 ——
 // 功能會在沒宣告的站台打開，而且不報錯。
-const badFlag = SITES.flatMap((s2) => FEATURE_FLAGS
-  .filter((f) => f in configs[s2] && typeof configs[s2][f] !== 'boolean')
-  .map((f) => `${s2}.${f}=${JSON.stringify(configs[s2][f])}`));
-chk('功能旗標都是布林', badFlag.length === 0, badFlag.join(', '));
+const badFlag = SITES.flatMap((s2) => Object.entries(FEATURE_FIELDS)
+  .filter(([f, want]) => f in configs[s2]
+    && (typeof configs[s2][f] !== want || (want === 'object' && Array.isArray(configs[s2][f]))))
+  .map(([f]) => `${s2}.${f} 是 ${Array.isArray(configs[s2][f]) ? 'array' : typeof configs[s2][f]}`));
+chk('功能欄位的型別正確', badFlag.length === 0, badFlag.join(', '));
+
+// 宣告了精讀就必須有句型解說庫 —— 少了它，語法那張卡永遠是空的，
+// 而畫面不會說出原因（見 views/script.js 的 renderGrammar）
+const missGram = SITES.filter((s2) => configs[s2].scriptReading && !configs[s2].grammar);
+chk('★ 宣告了精讀的站台都有句型解說庫', missGram.length === 0, missGram.join(', '));
 
 // ── 每站各自的內容檢查 ──
 const STRINGS = ['code', 'langLabel', 'termLabel', 'termShort',

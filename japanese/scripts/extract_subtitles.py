@@ -189,6 +189,9 @@ def analyse(rows, tokenizer, split_mode):
     lines, vocab = [], defaultdict(lambda: {"count": 0, "first": None, "surfaces": Counter()})
     for idx, (st, en, ja, zh) in enumerate(rows):
         segs, toks = [], []
+        parsed = [(m.surface(), m.dictionary_form(),
+                   m.part_of_speech()[0], m.part_of_speech()[1])
+                  for m in tokenizer.tokenize(ja, split_mode)]
         for m in tokenizer.tokenize(ja, split_mode):
             surface, reading = m.surface(), m.reading_form()
             pos = m.part_of_speech()
@@ -218,8 +221,96 @@ def analyse(rows, tokenizer, split_mode):
         lines.append({
             "i": idx, "start": round(st, 2), "end": round(en, 2),
             "ja": ja, "ruby": ruby_text(segs), "zh": zh, "tokens": toks,
+            "grammar": grammar_of(parsed),
         })
     return lines, vocab
+
+
+# =====================================================================
+# 句型偵測
+#
+# 【為什麼用詞形序列，不用字串比對】
+#   「ている」直接對字串會咬到不該咬的切法；而「の」「が」這兩個
+#   高頻助詞若不看前後詞性，會把所有格與主格全部誤判成
+#   說明語氣（んだ）與逆接。實測誤中率：の 109 行、が 59 行 ——
+#   而那種錯看起來完全合理，學習者只會照單全收學到錯的東西。
+#   收緊之後：んだ 在這一集**一次都沒出現**（原本報 109），が 剩 10。
+#
+# 【寧可漏，不可錯】
+#   覆蓋率 36%（171/479 行）。分不出來的一律不標 ——
+#   標錯一個句型比沒標更糟，因為學習者沒有辦法察覺它是錯的。
+# =====================================================================
+def build_rules():
+    def seq(ws,*pat):
+        n=len(pat)
+        for i in range(len(ws)-n+1):
+            if all(ws[i+j][f] in (v if isinstance(v,tuple) else (v,)) for j,(f,v) in enumerate(pat)):
+                return True
+        return False
+    def has(ws,f,*v): return any(w[f] in v for w in ws)
+    def after_pred(ws, particle):
+        # 接在述語後面才算接續助詞；接在名詞後面的是格助詞
+        for i,x in enumerate(ws):
+            if i and x[0]==particle and x[2]=='助詞' and ws[i-1][1] in ('です','ます','だ','た','ない','ん'):
+                return True
+        return False
+    R={
+    "te-iru":    lambda w: seq(w,(0,('て','で')),(1,'いる')) or has(w,0,'てる','でる','てん'),
+    "te-shimau": lambda w: seq(w,(0,('て','で')),(1,('しまう','ちゃう','じゃう'))),
+    "te-kureru": lambda w: seq(w,(0,('て','で')),(1,('くれる','もらう','あげる','くださる','いただく'))),
+    "te-oku":    lambda w: seq(w,(0,('て','で')),(1,('おく','とく'))),
+    "te-miru":   lambda w: seq(w,(0,('て','で')),(1,'みる')),
+    "te-iku":    lambda w: seq(w,(0,('て','で')),(1,('いく','くる'))),
+    "te-kudasai":lambda w: seq(w,(0,('て','で')),(0,('ください','くれ','ちょうだい'))),
+    "te-mo":     lambda w: seq(w,(0,('て','で')),(0,'も')),
+    "te-kara":   lambda w: seq(w,(0,('て','で')),(0,'から')),
+    "tara": lambda w: has(w,0,'たら','だら'),
+    "ba":   lambda w: any(x[1]=='ば' and x[2]=='助詞' for x in w),
+    "nara": lambda w: has(w,0,'なら'),
+    "to-jouken": lambda w: any(w[i][0]=='と' and w[i][2]=='助詞' and w[i-1][2]=='動詞' for i in range(1,len(w))),
+    "kara-riyuu": lambda w: any(x[0]=='から' and x[2]=='助詞' for x in w),
+    "node":  lambda w: has(w,0,'ので','んで'),
+    "noni":  lambda w: has(w,0,'のに'),
+    "kedo":  lambda w: has(w,0,'けど','けれど','けれども','けども'),
+    "ga-gyaku": lambda w: after_pred(w,'が'),
+    "shi":   lambda w: any(x[0]=='し' and x[2]=='助詞' for x in w),
+    "tari":  lambda w: has(w,0,'たり','だり'),
+    "nakereba": lambda w: has(w,0,'なけれ','なきゃ','なくちゃ','ねば'),
+    "naide":    lambda w: has(w,0,'ないで','ずに'),
+    "nakute":   lambda w: has(w,0,'なくて'),
+    "shika":    lambda w: has(w,0,'しか'),
+    "passive":   lambda w: has(w,1,'れる','られる'),
+    "causative": lambda w: has(w,1,'せる','させる'),
+    "tai":     lambda w: has(w,1,'たい','たがる'),
+    "volition":lambda w: any(x[2]=='助動詞' and x[0] in ('う','よう') for x in w),
+    "darou":   lambda w: has(w,0,'だろう','でしょう','だろ'),
+    "kamo":    lambda w: has(w,0,'かも'),
+    "sou-da":  lambda w: has(w,1,'そう'),
+    "mitai":   lambda w: has(w,1,'みたい'),
+    "rashii":  lambda w: has(w,1,'らしい'),
+    "hazu":    lambda w: has(w,1,'はず'),
+    "tsumori": lambda w: has(w,1,'つもり'),
+    "koto-dekiru": lambda w: seq(w,(1,'こと'),(0,'が'),(1,'できる')),
+    "you-ni":  lambda w: seq(w,(1,'よう'),(0,'に')),
+    "tame":    lambda w: has(w,1,'ため'),
+    "nagara":  lambda w: has(w,0,'ながら'),
+    "mama":    lambda w: has(w,1,'まま'),
+    "bakari":  lambda w: has(w,0,'ばかり','ばっかり','ばっか'),
+    "dake":    lambda w: has(w,0,'だけ'),
+    "made":    lambda w: has(w,0,'まで','までに'),
+    "toki":    lambda w: has(w,1,'とき','時'),
+    "masu":    lambda w: has(w,1,'ます'),
+    "kenjou":  lambda w: has(w,1,'いたす','おる','申す','伺う','いただく','ござる'),
+    "sonkei":  lambda w: has(w,1,'いらっしゃる','くださる','なさる','おっしゃる'),
+    }
+    return R
+
+_RULES = build_rules()
+
+
+def grammar_of(tokens):
+    """回傳這一行命中的句型代號"""
+    return [k for k, f in _RULES.items() if f(tokens)]
 
 
 def main():
@@ -274,6 +365,12 @@ def main():
           + ("，比例偏高表示 SCENE_GAP 需要重調" if hard > len(bounds) * 0.25 else "") + "）")
     print(f"  標了注音的行：{with_ruby} / {sum(1 for l in lines if KANJI.search(l['ja']))} 含漢字行")
     print(f"  詞彙 {len(words)} 個（其中專有名詞 {sum(1 for w in words if w['proper'])}）")
+    gl = [l for l in lines if l["grammar"]]
+    gset = {g for l in lines for g in l["grammar"]}
+    empty = sum(1 for b in bounds
+                if not {g for i in range(b["from"], b["to"] + 1) for g in lines[i]["grammar"]})
+    print(f"  句型 {len(gset)} 種，出現在 {len(gl)} 行（{len(gl)/len(lines):.0%}）；"
+          f"沒有句型的幕 {empty}/{len(bounds)}")
     print(f"  → {out}")
 
 

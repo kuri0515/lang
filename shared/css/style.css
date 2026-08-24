@@ -1186,3 +1186,12 @@ button[aria-busy="true"]::after {
 /* 正在讀的那一幕要標出來，否則從閱讀區抬頭看不出自己在哪 */
 .scene-cell.now { outline: 2px solid var(--accent); outline-offset: 1px; }
 .card.bare { padding-bottom: 14px; }
+
+/* 精讀：這一幕的語法 */
+.sc-gram { padding: 9px 0; border-bottom: 1px solid var(--line, rgba(128,128,150,.14)); }
+.sc-gram:last-child { border-bottom: 0; }
+.sc-gram > b { font-size: 16px; margin-right: 8px; }
+.sc-gram > span { font-size: 15px; color: var(--text); }
+/* 易錯點另起一行、降一級 —— 它是提醒不是定義，不該跟解釋搶位置 */
+.sc-gram > em { display: block; margin-top: 3px; font-size: 13px;
+  font-style: normal; color: var(--muted); }
