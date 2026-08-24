@@ -33,7 +33,9 @@
     "test:overlay": "node tests/overlay.test.mjs",
     "test:overlay:ja": "SITE=japanese node tests/overlay.test.mjs",
     "test:script": "node --import ./tests/_script-stub.mjs tests/script.test.mjs",
-    "test:script:ja": "SITE=japanese node --import ./tests/_script-stub.mjs tests/script.test.mjs"
+    "test:script:ja": "SITE=japanese node --import ./tests/_script-stub.mjs tests/script.test.mjs",
+    "audit:spy": "python3 japanese/scripts/audit_script.py --deck-slug spy-s1",
+    "audit:spy:self": "python3 japanese/scripts/audit_script.py --self-test"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.112.3",
