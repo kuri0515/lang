@@ -21,6 +21,7 @@ import json
 import os
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -62,6 +63,8 @@ def main():
     ap.add_argument("data")
     ap.add_argument("--work-title", required=True)
     ap.add_argument("--title", default=None, help="該集標題")
+    ap.add_argument("--deck-slug", default=None,
+                    help="這一集的詞建在哪一副詞庫（查「這一幕的詞」時要用它限定範圍）")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
@@ -101,6 +104,7 @@ def main():
                {"slug": slug, "work": work, "work_title": args.work_title,
                 "season": season, "episode": episode, "title": args.title,
                 "line_count": len(lines), "scene_count": len(d["scenes"]),
+                "deck_slug": args.deck_slug,
                 "sort_order": season * 1000 + episode,
                 "updated_at": "now()"},
                prefer="resolution=merge-duplicates,return=representation")
@@ -123,7 +127,36 @@ def main():
     #   回讀照樣亮綠燈，因為它沒有被問到。
     got = {k: sum(len(r.get(k) or []) for r in back) for k in ("tokens", "grammar")}
     want = {k: sum(len(l.get(k) or []) for l in lines) for k in ("tokens", "grammar")}
-    ok = (len(back) == len(lines) and scenes_back == len(d["scenes"]) and got == want)
+    # 集本身的欄位也要回讀 —— 只驗行不驗集，deck_slug 寫錯不會有人發現
+    epi = call(url, key, "GET",
+               f"script_episodes?select=deck_slug,line_count,scene_count&id=eq.{eid}")[0]
+    ep_ok = (epi["deck_slug"] == args.deck_slug
+             and epi["line_count"] == len(lines)
+             and epi["scene_count"] == len(d["scenes"]))
+
+    # ★ 「送出什麼就存了什麼」是套套邏輯，抓不到「送錯了」。
+    #   真正驗得出來的是：這一集的詞，在宣告的那副詞庫裡查不查得到。
+    #   指錯詞庫時命中率會掉到接近零，而那正是使用者會看到的後果
+    #   （「這一幕的詞」空掉，或混進別副詞庫的卡）。
+    hit = None
+    if args.deck_slug:
+        toks = sorted({t for l in lines for t in l["tokens"]})
+        probe = toks[:200]
+        q = ",".join(urllib.parse.quote(t, safe="") for t in probe)
+        deck = call(url, key, "GET",
+                    f"decks?select=id&slug=eq.{urllib.parse.quote(args.deck_slug)}")
+        if not deck:
+            sys.exit(f"  ❌ 詞庫 {args.deck_slug} 不存在")
+        found = call(url, key, "GET",
+                     f"items?select=ko&deck_id=eq.{deck[0]['id']}&ko=in.({q})&limit=1000")
+        hit = len({r["ko"] for r in found}) / max(1, len(probe))
+        print(f"  詞庫對照：抽 {len(probe)} 個詞，在 {args.deck_slug} 裡找到 {hit:.0%}"
+              f" → {'✅' if hit >= 0.5 else '❌ 太低，詞庫可能指錯了'}")
+        ep_ok = ep_ok and hit >= 0.5
+    ok = (len(back) == len(lines) and scenes_back == len(d["scenes"])
+          and got == want and ep_ok)
+    print(f"  集：詞庫 {epi['deck_slug'] or '（未指定）'} → "
+          f"{'✅' if ep_ok else '❌ 與送出的不一致'}")
     print(f"  回讀：{len(back)} 行 · {scenes_back} 幕 · "
           f"詞 {got['tokens']}／{want['tokens']} · 句型 {got['grammar']}／{want['grammar']}"
           f" → {'✅ 對得上' if ok else '❌ 對不上'}")

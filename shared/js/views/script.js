@@ -32,6 +32,7 @@ let done = new Set();     // 這一集讀過的幕
 let scene = 0;            // 目前這一幕（1 起；0＝還沒選）
 let mode = 'both';        // both | ja | zh
 let showRuby = true;
+// 快取的鍵要帶詞庫 —— 換一集若換了詞庫，同一個詞形對到的是不同的卡
 let wordCache = new Map();
 let sceneWordIds = [];    // 這一幕的詞對應到哪些卡片（給「練這一幕」用）
 let workFilter = '';      // 只看某一季（''＝全部）
@@ -319,14 +320,15 @@ async function renderWords(rows) {
   $('sc-words-n').textContent = want.length ? `${want.length} 個` : '';
   if (!want.length) { box.innerHTML = '<p class="muted nomargin">這一幕沒有需要另外背的詞。</p>'; return; }
 
-  const miss = want.filter((w) => !wordCache.has(w));
+  const key = (w) => `${ep?.deck_slug || ''}|${w}`;
+  const miss = want.filter((w) => !wordCache.has(key(w)));
   if (miss.length) {
     // 一次查完這一幕缺的，不要逐詞查 —— 一幕十幾個詞就是十幾趟往返
-    const got = await content.itemsByKo(miss).catch(() => []);
-    for (const it of got) wordCache.set(it.ko, it);
-    for (const w of miss) if (!wordCache.has(w)) wordCache.set(w, null);
+    const got = await content.itemsByKo(miss, ep?.deck_slug).catch(() => []);
+    for (const it of got) wordCache.set(key(it.ko), it);
+    for (const w of miss) if (!wordCache.has(key(w))) wordCache.set(key(w), null);
   }
-  const items = want.map((w) => wordCache.get(w)).filter(Boolean);
+  const items = want.map((w) => wordCache.get(key(w))).filter(Boolean);
   sceneWordIds = items.map((it) => it.id);
   $('sc-practice').classList.toggle('hidden', !items.length);
   $('sc-practice').textContent = `練這一幕（${items.length}）`;

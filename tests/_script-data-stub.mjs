@@ -1,7 +1,8 @@
 // 精讀資料層的假替身。內容是造出來的日文短句，不是任何作品的台詞。
 export const IS_STUB = true;
 const EP = { id: 'ep1', slug: 'demo-s1e01', work: 'demo', work_title: 'デモ',
-             season: 1, episode: 1, title: null, line_count: 5, scene_count: 2 };
+             season: 1, episode: 1, title: null, line_count: 5, scene_count: 2,
+             deck_slug: 'demo-01' };
 const LINES = [
   { idx: 0, scene: 1, start_s: 3, end_s: 5, ja: '駅は近いです', ruby: '駅[えき]は近[ちか]いです',
     zh: '車站很近', tokens: ['駅', '近い'], grammar: ['masu'] },
@@ -16,7 +17,8 @@ const LINES = [
 ];
 export const marked = [];
 const EP2 = { id: 'ep2', slug: 'demo-s2e01', work: 'demo', work_title: 'デモ',
-              season: 2, episode: 1, title: null, line_count: 2, scene_count: 1 };
+              season: 2, episode: 1, title: null, line_count: 2, scene_count: 1,
+              deck_slug: 'demo-02' };
 export async function listEpisodes() { return [EP, EP2]; }
 export async function loadLines() { return LINES; }
 export async function loadProgress() { return new Set([1]); }

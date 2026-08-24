@@ -184,11 +184,19 @@ export async function distractorPool(deckId = null) {
  *
  *   直接查那幾個字：結果精確，傳輸量也從幾百條變成幾條。
  */
-export async function itemsByKo(koList) {
+export async function itemsByKo(koList, deckSlug = null) {
   const list = [...new Set((koList || []).filter(Boolean))];
   if (!list.length) return [];
-  const { data, error } = await sb.from('items')
-    .select(ITEM_FIELDS).eq('is_active', true).in('ko', list);
+  let q = sb.from('items').select(ITEM_FIELDS).eq('is_active', true).in('ko', list);
+  // ★ 限定詞庫。不限定的話，同一個詞形在別副詞庫裡的卡片也會被撈進來 ——
+  //   精讀的「這一幕的詞」因此混進五十音課本的卡片，
+  //   而畫面看起來完全正常（那些詞確實出現在這一幕，只是連錯了卡）。
+  //   實測影響 29/70 幕。
+  if (deckSlug) {
+    const deck = (await listDecks()).find((d) => d.slug === deckSlug);
+    if (deck) q = q.eq('deck_id', deck.id);
+  }
+  const { data, error } = await q;
   if (error) throw error;
   return data ?? [];
 }

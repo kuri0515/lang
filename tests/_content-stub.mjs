@@ -10,7 +10,9 @@ const DICT = {
   飲む: { id: 'w-nomu', ko: '飲む', hanja: '飲[の]む', zh: '喝', pos: '動詞' },
   行く: { id: 'w-iku', ko: '行く', hanja: '行[い]く', zh: '去', pos: '動詞' },
 };
-export async function itemsByKo(list) {
+export const askedWith = [];
+export async function itemsByKo(list, deckSlug = null) {
+  askedWith.push(deckSlug);
   return (list || []).map((k) => DICT[k]).filter(Boolean);
 }
 export async function pickItems() { return []; }

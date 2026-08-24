@@ -10,7 +10,7 @@ import { sb, fetchAll } from './client.js';
 /** 有哪些集。依 sort_order —— 劇集的順序是內容的一部分，不能靠 id */
 export async function listEpisodes() {
   const { data, error } = await sb.from('script_episodes')
-    .select('id, slug, work, work_title, season, episode, title, line_count, scene_count')
+    .select('id, slug, work, work_title, season, episode, title, line_count, scene_count, deck_slug')
     .eq('is_active', true)
     .order('sort_order');
   if (error) throw error;

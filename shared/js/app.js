@@ -334,7 +334,10 @@ async function scopeItemIds(scope) {
     const lines = await sd.loadLines(scope.epId);
     const toks = [...new Set(lines.filter((l) => l.scene === scope.scene)
       .flatMap((l) => l.tokens || []))];
-    const items = await content.itemsByKo(toks);
+    // 限定在這一集自己的詞庫，否則會撈到別副詞庫裡同詞形的卡
+    const eps = await sd.listEpisodes().catch(() => []);
+    const deckSlug = eps.find((e) => e.id === scope.epId)?.deck_slug || null;
+    const items = await content.itemsByKo(toks, deckSlug);
     return items.map((i) => i.id);
   } catch { return []; }
 }
