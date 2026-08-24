@@ -1,5 +1,5 @@
 // 詞庫瀏覽：搜尋、標籤、雙向學習狀態、批次下架（管理員）
-import { $, esc, msg, qsa, debounce, skeleton, emptyState, createPager, opt } from '../core/dom.js';
+import { $, esc, msg, qsa, debounce, skeleton, emptyState, opt } from '../core/dom.js';
 import { wordHTML } from '../core/ruby.js';
 import { lang } from '../core/lang.js';
 import { on, emit, EVENTS } from '../core/bus.js';
@@ -15,8 +15,13 @@ import * as speech from '../core/speech.js';
 let deps = null;              // { user, isAdmin, onPractice }
 let tag = '';
 const picked = new Set();
-let pager = null;
-let lastRows = [];
+// 伺服器端分頁：撈的量跟著「看得到的量」走，不跟著詞庫大小走
+const PAGE = 60;
+let lastRows = [];        // 已載入的（第一頁 ＋ 按過幾次「載入更多」）
+let total = 0;            // 符合目前篩選的總數，由資料庫算
+let renderId = 0;         // 換一次篩選就換一張號碼牌，擋住晚回來的舊結果
+let paintRows = () => '';
+let loadingMore = false;
 
 export function initBrowse(d) {
   deps = d;
@@ -131,11 +136,21 @@ export async function render() {
   if (!$('b-list').querySelector('.b-row')) $('b-list').innerHTML = skeleton(6);
   try {
     const user = deps.user();
-    const raw = await content.pickItems({ tag, deckId: deckId || null, search: $('b-search').value });
-    const byItem = await progress.cardsByItem(user?.id, raw.map((i) => i.id));
-    const rows = raw.map((i) => ({ ...i, cards: byItem[i.id] || {} }));
+    // ★ 每一次重畫都要換一張號碼牌。
+    //   搜尋是 debounce 過的，但兩趟仍可能重疊 —— 打「あ」再打「あい」時，
+    //   先送的那趟可能後回來，於是畫面顯示的是上一個關鍵字的結果，
+    //   而搜尋框裡寫著新的。不報錯，只是答非所問。
+    const mine = ++renderId;
+    const page = await content.pageItems({
+      tag, deckId: deckId || null, search: $('b-search').value, offset: 0, limit: PAGE,
+    });
+    if (mine !== renderId) return;
+    const byItem = await progress.cardsByItem(user?.id, page.rows.map((i) => i.id));
+    if (mine !== renderId) return;
+    const rows = page.rows.map((i) => ({ ...i, cards: byItem[i.id] || {} }));
+    total = page.total;
 
-    $('b-count').textContent = `${rows.length} 條`
+    $('b-count').textContent = `${total} 條`
       + (deckTitle ? ` · ${deckTitle}` : '') + (tag ? ` · ${tag}` : '');
     $('btn-study-deck').classList.toggle('hidden', !deckId);
     $('btn-study-tag').classList.toggle('hidden', !tag);
@@ -148,7 +163,6 @@ export async function render() {
       return;
     }
 
-    lastRows = rows;
     const admin_ = deps.isAdmin();
     const rowHtml = (r) => {
       const badge = (dir) => {
@@ -179,20 +193,62 @@ export async function render() {
       </div>`;
     };
 
-    if (!pager) {
-      pager = createPager({
-        list: $('b-list'), footer: $('b-more'), pageSize: 60,
-        render: (slice) => slice.map(rowHtml).join(''),
-        afterRender: bindRows,
-      });
-    }
-    pager.set(rows);
-
+    paintRows = rowHtml;
+    lastRows = rows;
+    paint();
     renderBulkBar();
   } catch (e) {
     $('b-list').innerHTML = '';
     msg('載入失敗：' + (e.message || e));
   }
+}
+
+/**
+ * 畫出已載入的那些列，並在footer 說還有幾條。
+ *
+ * ★ 「還有幾條」用的是資料庫算的 total 減掉已載入的筆數 ——
+ *   改用已載入的筆數去推，數字會在每次載入更多時一路往上跳，
+ *   而使用者會以為東西一直在變多。
+ */
+function paint() {
+  $('b-list').innerHTML = lastRows.map(paintRows).join('');
+  const rest = total - lastRows.length;
+  if (rest > 0) {
+    // 不給它 id：DOM 契約檢查要的是「$() 取用的 id 都寫在 index.html 裡」，
+    // 而動態長出來的按鈕不在那份契約裡（沿用 createPager 的做法，用查詢取）
+    $('b-more').innerHTML =
+      `<button class="block ghost">載入更多（還有 ${rest} 條）</button>`;
+    $('b-more').querySelector('button').onclick = loadMore;
+  } else {
+    $('b-more').innerHTML = total > PAGE
+      ? `<p class="hint center nomargin">已顯示全部 ${total} 條</p>` : '';
+  }
+  bindRows();
+}
+
+/** 接著往下取一頁。用 offset＝已載入的筆數，篩選條件與第一頁同一份 */
+async function loadMore() {
+  if (loadingMore) return;
+  loadingMore = true;
+  const mine = renderId;
+  const btn = $('b-more').querySelector('button');
+  if (btn) { btn.disabled = true; btn.textContent = '載入中…'; }
+  try {
+    const page = await content.pageItems({
+      tag, deckId: deckId || null, search: $('b-search').value,
+      offset: lastRows.length, limit: PAGE,
+    });
+    // 這一趟還在飛的時候使用者換了篩選 —— 那這批就不屬於現在的畫面
+    if (mine !== renderId) return;
+    const byItem = await progress.cardsByItem(deps.user()?.id, page.rows.map((i) => i.id));
+    if (mine !== renderId) return;
+    total = page.total;
+    lastRows = lastRows.concat(page.rows.map((i) => ({ ...i, cards: byItem[i.id] || {} })));
+    paint();
+  } catch (e) {
+    msg('載入更多失敗：' + (e.message || e));
+    paint();
+  } finally { loadingMore = false; }
 }
 
 /** 每次重畫清單後重掛事件（分頁載入更多會整份重畫） */

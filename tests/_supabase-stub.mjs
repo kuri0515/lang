@@ -9,20 +9,59 @@
 //   其餘資料表回空陣列 —— 那是「新使用者」的真實狀態，本來就該顯示得出來。
 import fs from 'fs';
 
+let callNo = 0;
 const pool = process.env.STUB_POOL && fs.existsSync(process.env.STUB_POOL)
   ? JSON.parse(fs.readFileSync(process.env.STUB_POOL, 'utf8'))
   : [];
 
-/** PostgREST 的 builder 是可鏈可 await 的，替身也要同時是這兩者 */
+/**
+ * PostgREST 的 builder 是可鏈可 await 的，替身也要同時是這兩者。
+ *
+ * ★ range()／limit()／count 一定要照做，不能一律回整份。
+ *   替身比正式程式寬鬆時，測試會綠著守一個它抓不到的 bug ——
+ *   伺服器端分頁若壞了（每頁都回同一批、或總數算錯），
+ *   在「永遠回整份」的替身底下看起來完全正常。（docs/LESSONS.md L-012）
+ */
 function query(table) {
-  const rows = () => (table === 'items' ? pool : []);
-  const result = () => ({ data: rows(), error: null });
+  const all = () => (table === 'items' ? pool : []);
+  const q = { range: null, limit: null, count: false, search: null };
+  const result = () => {
+    let rows = all();
+    // ★ 搜尋也要照做。不照做的話，「換了關鍵字卻拿到舊結果」這種錯
+    //   在替身底下看起來完全正常 —— 兩次查詢本來就回一樣的東西。
+    if (q.search) {
+      const k = q.search.toLowerCase();
+      rows = rows.filter((r) => ['ko', 'zh', 'romanization']
+        .some((f) => String(r[f] ?? '').toLowerCase().includes(k)));
+    }
+    const total = rows.length;
+    if (q.range) rows = rows.slice(q.range[0], q.range[1] + 1);
+    if (q.limit != null) rows = rows.slice(0, q.limit);
+    return { data: rows, error: null, count: q.count ? total : null };
+  };
+  // 測試可以指定「第 n 趟慢多少毫秒」，用來造出回應順序顛倒的現場
+  // （打字打到一半換關鍵字時，先送的那趟可能後回來）。
+  const delayed = async () => {
+    const ms = globalThis.__stubDelay?.(++callNo) || 0;
+    if (ms) await new Promise((r) => setTimeout(r, ms));
+    return result();
+  };
   const self = new Proxy(function () {}, {
     get(_, prop) {
-      if (prop === 'then') return (res) => res(result());
-      if (prop === 'data') return rows();
+      if (prop === 'then') {
+        return (res, rej) => (globalThis.__stubDelay ? delayed().then(res, rej) : res(result()));
+      }
+      if (prop === 'data') return result().data;
       if (prop === 'error') return null;
-      return () => self;                       // select/eq/order/limit… 一律回自己
+      if (prop === 'range') return (a, b) => { q.range = [a, b]; return self; };
+      if (prop === 'limit') return (n) => { q.limit = n; return self; };
+      if (prop === 'select') return (_f, o) => { if (o?.count) q.count = true; return self; };
+      // content.js 送的是 `ko.ilike.*關鍵字*,zh.ilike.*…`，取第一段的關鍵字就夠
+      if (prop === 'or') return (s) => {
+        q.search = String(s).match(/ilike\.\*([^*]*)\*/)?.[1] ?? null;
+        return self;
+      };
+      return () => self;                       // eq/or/like/order… 一律回自己
     },
     apply() { return self; },
   });

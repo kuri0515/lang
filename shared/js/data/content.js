@@ -35,6 +35,34 @@ function applyFilters(q, { tag, search, deckId, ids }) {
   return q;
 }
 
+/**
+ * 一頁一頁地取（瀏覽頁用）。
+ *
+ * 【為什麼瀏覽頁不能再「先全撈再前端分頁」】
+ *   畫面本來就是一次只畫 60 條，但網路那一段是把整份搬下來。
+ *   日文站 items 到 7049 條之後，那是 gzip 628 KB、8 趟連續往返、
+ *   本機實測 3.9 秒 —— 而使用者要看的只有最前面那 60 條。
+ *   撈的量必須跟著**看得到的量**走，不是跟著詞庫大小走。
+ *
+ * 【代價，以及為什麼接受】
+ *   搜尋從「在已下載的資料上瞬間過濾」變成每次打一趟。
+ *   但先前那個「瞬間」的前提是已經先等完 3.9 秒；
+ *   把 3.9 秒攤成每次搜尋約 300 ms，換到的是**開頁就看得到東西**。
+ *   輸入端本來就有 250 ms 的 debounce，連打字時的趟數也不會爆。
+ *
+ * 回傳 total 是為了「N 條」與「還有幾條」——
+ * 那兩個數字若改成算已載入的筆數，會在載入更多時一路往上跳。
+ */
+export async function pageItems({ tag = '', search = '', deckId = null,
+                                  offset = 0, limit = 60 } = {}) {
+  const q = applyFilters(
+    sb.from('items').select(ITEM_FIELDS, { count: 'exact' }).eq('is_active', true),
+    { tag, search, deckId, ids: null }).order('sort_order');
+  const { data, error, count } = await q.range(offset, offset + limit - 1);
+  if (error) throw error;
+  return { rows: data ?? [], total: count ?? (data?.length ?? 0) };
+}
+
 /** 任意取材：瀏覽、自由練習、弱項集中練都走這裡 */
 export async function pickItems({ ids = null, tag = '', search = '', deckId = null, limit = null,
                                   fields = ITEM_FIELDS, noteHas = '' } = {}) {
