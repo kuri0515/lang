@@ -159,9 +159,18 @@ def ruby_text(segs):
 
 
 def parse_ass(path):
-    """回傳依時間排序的 [(start, end, 日文, 中文)]"""
+    """回傳依時間排序的 [(start, end, 日文, 中文)]
+
+    【配對用開始時間，不是「開始＋結束」】
+      第 9 集有一對台詞的開始時間完全相同，結束時間差 0.11 秒
+      （字幕組手打的小差異）。用「開始＋結束」當鍵的話，
+      那一對就配不上 —— 而漏掉的是一整句台詞，
+      畫面上只會少一行，不會有任何錯誤訊息。
+
+      同一個開始時間有多個候選時，取結束時間最接近的那一個。
+    """
     text = Path(path).read_text(encoding="utf-8-sig", errors="replace")
-    jp, ch = {}, {}
+    jp, ch = {}, defaultdict(list)
     for line in text.splitlines():
         if not line.startswith("Dialogue:"):
             continue
@@ -172,16 +181,25 @@ def parse_ass(path):
         body = body.replace(r"\N", " ").replace(r"\n", " ").strip()
         if not body:
             continue
-        key = (start, end)
         if style.startswith("Dial-JP"):
-            jp[key] = (jp.get(key, ("", ))[0] + " " + body).strip() if key in jp else body
+            key = (start, end)
+            jp[key] = (jp[key] + " " + body).strip() if key in jp else body
         elif style.startswith("Dial-CH"):
-            ch[key] = (ch.get(key, ("", ))[0] + " " + body).strip() if key in ch else body
-    rows = []
-    for key in sorted(jp, key=lambda k: t2s(k[0])):
-        if key in ch:
-            rows.append((t2s(key[0]), t2s(key[1]), jp[key], ch[key]))
-    return rows, len(jp), len(ch)
+            ch[start].append((end, body))
+
+    rows, used = [], set()
+    for (start, end) in sorted(jp, key=lambda k: t2s(k[0])):
+        cands = ch.get(start)
+        if not cands:
+            continue
+        # 同一個開始時間有多個候選時，取結束時間最接近的
+        best = min(range(len(cands)),
+                   key=lambda i: (i in used, abs(t2s(cands[i][0]) - t2s(end))))
+        if (start, best) in used:
+            continue
+        used.add((start, best))
+        rows.append((t2s(start), t2s(end), jp[(start, end)], cands[best][1]))
+    return rows, len(jp), sum(len(v) for v in ch.values())
 
 
 def split_scenes(rows):
