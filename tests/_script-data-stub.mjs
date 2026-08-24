@@ -7,7 +7,7 @@ const LINES = [
   { idx: 0, scene: 1, start_s: 3, end_s: 5, ja: '駅は近いです', ruby: '駅[えき]は近[ちか]いです',
     zh: '車站很近', tokens: ['駅', '近い'], grammar: ['masu'] },
   { idx: 1, scene: 1, start_s: 6, end_s: 8, ja: '本を読みます', ruby: '本[ほん]を読[よ]みます',
-    zh: '看書', tokens: ['本', '読む'], grammar: ['masu', 'te-iru'] },
+    zh: '看書', tokens: ['本', '読む', 'ゑゑ未建卡'], grammar: ['masu', 'te-iru'] },
   { idx: 2, scene: 1, start_s: 9, end_s: 11, ja: 'はい', ruby: 'はい', zh: '好的',
     tokens: [], grammar: [] },
   { idx: 3, scene: 2, start_s: 30, end_s: 32, ja: '水を飲みます', ruby: '水[みず]を飲[の]みます',

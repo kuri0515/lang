@@ -317,7 +317,7 @@ async function renderWords(rows) {
   //   寫著這一幕。不報錯，只是練錯東西。
   sceneWordIds = [];
   $('sc-practice').classList.add('hidden');
-  $('sc-words-n').textContent = want.length ? `${want.length} 個` : '';
+  $('sc-words-n').textContent = '';
   if (!want.length) { box.innerHTML = '<p class="muted nomargin">這一幕沒有需要另外背的詞。</p>'; return; }
 
   const key = (w) => `${ep?.deck_slug || ''}|${w}`;
@@ -330,6 +330,15 @@ async function renderWords(rows) {
   }
   const items = want.map((w) => wordCache.get(key(w))).filter(Boolean);
   sceneWordIds = items.map((it) => it.id);
+  // ★ 標題印的必須是**實際列出來的數**。
+  //   本來印的是斷詞數，而斷詞結果裡有一些是碎片或誤判，沒有卡片 ——
+  //   於是標題說 30 個、清單只有 22 筆，35/70 幕都對不上。
+  //   數字與清單不一致時，使用者不會懷疑標題，只會以為清單漏掉了東西。
+  //   差額另外說出來：新的一集在詞義還沒寫好之前，差額會很大，
+  //   那正是「這一集還沒整理完」的訊號，不該藏起來。
+  const gap = want.length - items.length;
+  $('sc-words-n').textContent =
+    `${items.length} 個` + (gap > 0 ? `（另有 ${gap} 個還沒建卡）` : '');
   $('sc-practice').classList.toggle('hidden', !items.length);
   $('sc-practice').textContent = `練這一幕（${items.length}）`;
   box.innerHTML = items.map((it) => `

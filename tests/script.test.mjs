@@ -155,8 +155,15 @@ chk('回到對照兩者都在',
     && $('sc-lines').querySelectorAll('.sc-zh').length === 3);
 
 // ── 這一幕的詞 ───────────────────────────────────────────
-chk('★ 詞來自斷詞結果，不是字串比對', /4 個/.test($('sc-words-n').textContent),
-    `第 1 幕的 tokens 去重後是 4 個（${$('sc-words-n').textContent}）`);
+// ★ 標題印的必須是實際列出來的數。
+//   本來印斷詞數，而斷詞結果裡有碎片與誤判、沒有卡片 ——
+//   標題說 30 個、清單只有 22 筆，實測 35/70 幕都對不上。
+//   數字與清單不一致時，使用者不會懷疑標題，只會以為清單漏掉了東西。
+chk('★ 標題的數字＝實際列出的筆數',
+    qsa('#sc-words .sc-word').length === 4 && /^4 個/.test($('sc-words-n').textContent),
+    `列了 ${qsa('#sc-words .sc-word').length} 筆，標題寫「${$('sc-words-n').textContent}」`);
+chk('★ 還沒建卡的差額要說出來', /另有 1 個還沒建卡/.test($('sc-words-n').textContent),
+    `新的一集在詞義還沒寫好之前差額會很大，那是「還沒整理完」的訊號（${$('sc-words-n').textContent}）`);
 
 // ── 這一幕的語法 ─────────────────────────────────────────
 {
