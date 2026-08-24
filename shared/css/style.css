@@ -1169,6 +1169,15 @@ button[aria-busy="true"]::after {
 .sc-line { display: flex; gap: 10px; padding: 11px 0;
   border-bottom: 1px solid var(--line, rgba(128,128,150,.18)); }
 .sc-line:last-child { border-bottom: 0; }
+/* 整幕朗讀時，正在唸的那一行。
+   用左側色條＋淡底而不是改字色 —— 台詞本身有注音與中文兩層，
+   再動字色會跟注音搶對比，反而更難讀。 */
+.sc-line.now { background: color-mix(in srgb, var(--accent) 10%, transparent);
+  box-shadow: inset 3px 0 0 var(--accent);
+  border-radius: 0 8px 8px 0; }
+@supports not (background: color-mix(in srgb, red 10%, transparent)) {
+  .sc-line.now { background: rgba(128, 128, 150, .12); }
+}
 .sc-say { flex: 0 0 auto; align-self: flex-start; opacity: .55; }
 .sc-say:hover { opacity: 1; }
 .sc-body { flex: 1 1 auto; min-width: 0; }

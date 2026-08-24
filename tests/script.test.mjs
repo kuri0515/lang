@@ -353,6 +353,40 @@ chk('★ 還沒建卡的差額要說出來', /另有 1 個還沒建卡/.test($('
   await tick(); await tick();
   chk('★ 換幕後不再唸上一幕的下一句', sp.spoken.length === atSwitch,
       `換幕後又唸了 ${sp.spoken.length - atSwitch} 句 —— 畫面是新的一幕，聲音還在唸舊的`);
+  chk('換幕後按鈕回到「整幕朗讀」', /整幕朗讀/.test($('sc-play').textContent),
+      $('sc-play').textContent);
+  chk('換幕後不留著上一幕的行標記', qsa('#sc-lines .sc-line.now').length === 0);
+}
+
+// ── 整幕朗讀：標出正在唸的那一行，而且停得下來 ──────────────
+// 沒有行標記時，整幕朗讀就是一段沒有畫面的聲音；
+// 而「停止」若只呼叫 speech.cancel()，迴圈裡的 await 會 resolve，
+// 它就接著唸下一句 —— 看起來像「按了停止只跳過一句」。
+{
+  const sp = await import(`${SHARED}/js/core/speech.js`);
+  sp.reset();
+  qs('#sc-scenes [data-scene="1"]').click();
+  await tick();
+
+  $('sc-play').click();
+  await tick();
+  chk('★ 正在唸的那一行有標記', qsa('#sc-lines .sc-line.now').length === 1,
+      `標了 ${qsa('#sc-lines .sc-line.now').length} 行 —— 聽到的要對得上看到的`);
+  chk('播放中按鈕變成停止', /停止/.test($('sc-play').textContent), $('sc-play').textContent);
+
+  // 標記要撐得住重畫：切換注音會把整塊 sc-lines 重建
+  $('sc-ruby').click();
+  chk('★ 切換注音後行標記還在', qsa('#sc-lines .sc-line.now').length === 1,
+      'renderLines() 會整塊重畫，標記只加在 DOM 上會被沖掉');
+  $('sc-ruby').click();
+
+  const atStop = sp.spoken.length;
+  $('sc-play').click();          // 停止
+  await tick(); await tick();
+  chk('★ 按停止之後不再往下唸', sp.spoken.length === atStop,
+      `停止後又唸了 ${sp.spoken.length - atStop} 句 —— cancel() 會讓 await resolve，迴圈得靠 playId 擋`);
+  chk('停止後標記清掉', qsa('#sc-lines .sc-line.now').length === 0);
+  chk('停止後按鈕回到「整幕朗讀」', /整幕朗讀/.test($('sc-play').textContent));
 }
 
 // ── 讀完 / 取消 ──────────────────────────────────────────

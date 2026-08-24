@@ -1,2 +1,2 @@
 // 產生檔案，勿手改（node shared/scripts/build-sites.mjs）
-export const BUILD = 'e99b7743';
+export const BUILD = '8a9b67e7';

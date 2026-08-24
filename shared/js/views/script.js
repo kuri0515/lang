@@ -46,7 +46,7 @@ export function initScript(d) {
   deps = d;
   $('sc-prev').onclick = () => openScene(scene - 1);
   $('sc-next').onclick = () => openScene(scene + 1);
-  $('sc-play').onclick = () => playScene();
+  $('sc-play').onclick = () => (playIdx >= 0 ? stopPlay() : playScene());
   $('sc-ruby').onclick = () => { showRuby = !showRuby; syncRubyBtn(); renderLines(); };
   $('sc-done').onclick = () => toggleDone();
   // 一集 70 幕，讀了一半之後「還沒讀的是哪些」比「全部」更常被問。
@@ -282,7 +282,8 @@ function renderScenes() {
 async function openScene(n) {
   if (!ep) return;
   if (n < 1 || n > ep.scene_count) return;
-  speech.cancel();
+  // 換幕＝停掉上一幕的朗讀，連同按鈕字樣與行標記一起收乾淨
+  stopPlay();
   scene = n;
   lastRead = n;
   deps.onReadPos?.({ epId: ep.id, scene: n });
@@ -326,7 +327,7 @@ function renderLines() {
     //   只印形式不印解說：解說在下面那張卡，重複一次會把行擠爆。
     const tags = (l.grammar || []).filter((k) => dict[k])
       .map((k) => `<i class="sc-tag">${esc(dict[k].form)}</i>`).join('');
-    return `<div class="sc-line" data-idx="${l.idx}">
+    return `<div class="sc-line${l.idx === playIdx ? ' now' : ''}" data-idx="${l.idx}">
       <button class="sc-say icon-btn" data-say="${l.idx}" title="朗讀">🔊</button>
       <div class="sc-body">
         ${mode === 'zh' ? '' : `<div class="sc-ja">${ja}</div>`}
@@ -463,7 +464,47 @@ async function playScene() {
   const mine = ++playId;
   for (const l of rows) {
     if (scene !== at || playId !== mine) return;
+    markPlaying(l.idx);
     await speech.speakAwait(stripRuby(l.ruby || l.ja)).catch(() => {});
+  }
+  if (playId === mine) stopPlay();
+}
+
+/**
+ * 停止朗讀。
+ *
+ * ★ 一定要動 playId —— 只呼叫 speech.cancel() 的話，
+ *   迴圈裡那個 await 會 resolve，然後它接著唸下一句，
+ *   看起來像「按了停止只跳過一句」。
+ */
+function stopPlay() {
+  playId++;
+  speech.cancel();
+  markPlaying(-1);
+}
+
+/**
+ * 標出正在唸的那一行。
+ *
+ * 沒有這個標記時，整幕朗讀就只是一段沒有畫面的聲音 ——
+ * 十句唸下來，聽的人早就不知道對到哪一句了，而精讀要的正是
+ * 「聽到的」與「看到的」對得起來。
+ *
+ * 記在變數裡而不只是加 class：renderLines() 會整塊重畫
+ * （切換注音、切換對照模式都會），class 會被沖掉。
+ */
+let playIdx = -1;
+function markPlaying(idx) {
+  playIdx = idx;
+  $('sc-play').textContent = idx >= 0 ? '■ 停止' : '▶ 整幕朗讀';
+  for (const el of qsa('#sc-lines .sc-line')) {
+    el.classList.toggle('now', Number(el.dataset.idx) === idx);
+  }
+  if (idx >= 0) {
+    // 捲動只求「看得到」，不強制置中 —— 每一句都把畫面拉到正中間，
+    // 讀起來像整頁在跳
+    $('sc-lines').querySelector('.sc-line.now')
+      ?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
   }
 }
 
