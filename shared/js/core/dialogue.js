@@ -13,6 +13,18 @@
 
 const HEAD = /^對話\s*([AB])｜([^｜]+)｜?(.*)$/;
 
+/**
+ * 資料庫端的粗篩關鍵字。
+ *
+ * 只有這個檔知道對話是怎麼認出來的，所以關鍵字也由這裡出 ——
+ * 呼叫端各自寫一份字串，改了 HEAD 之後就會有人被留在舊的認法上。
+ * 粗篩故意寬鬆（只要含這兩個字），真正的判定仍然是 parseLine。
+ */
+export const DIALOGUE_MARK = '對話';
+if (!HEAD.test(`${DIALOGUE_MARK} A｜測試｜`)) {
+  throw new Error('DIALOGUE_MARK 與 HEAD 對不上 —— 粗篩會把所有對話濾掉');
+}
+
 /** 從 note 解析出說話者、情境、語法說明；不是對話就回 null */
 export function parseLine(note) {
   const m = HEAD.exec((note || '').trim());

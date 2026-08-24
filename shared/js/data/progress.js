@@ -220,15 +220,44 @@ export async function dailyStats(userId, days = 30) {
  * 分批查詢：PostgREST 的 in.() 會把 id 全塞進 URL，
  * 300 個 UUID 約 11KB，超過常見代理的 8KB 上限就會被截斷或拒絕。
  */
+/**
+ * ★ 問的條目一多，就別再用 id 去問 —— 改成把「這個人的卡」整份拿回來。
+ *
+ *   分批的成本是**趟數**，而趟數會跟著詞庫長大：
+ *   詞庫 7049 條時，瀏覽頁開一次要 7049÷80 ＝ 89 趟連續往返。
+ *   手機上一趟抓 150 ms，光是標「我學到哪了」就要十幾秒。
+ *
+ *   但一個人的卡是**跟著他學過多少**走的，跟詞庫多大無關 ——
+ *   實測線上使用者目前 58 列、一趟 241 ms、1.5 KB。
+ *   所以問的條目超過 CARDS_BY_USER 個時，直接照 user_id 撈完再自己過濾：
+ *   詞庫再長大，這條路的趟數也不會變。
+ *
+ *   條目少的時候仍走 in.()：只要一兩趟，而且不必把整個人的卡都搬下來。
+ */
+const CARDS_BY_USER = 200;
+const CARD_FIELDS = 'item_id, direction, state, total_reviews, correct_reviews';
+
 export async function cardsByItem(userId, itemIds, batch = 80) {
   if (!userId || !itemIds?.length) return {};
   const out = {};
+  const take = (rows, want) => {
+    for (const c of rows ?? []) {
+      if (want && !want.has(c.item_id)) continue;
+      (out[c.item_id] ||= {})[c.direction] = c;
+    }
+  };
+  if (itemIds.length > CARDS_BY_USER) {
+    const rows = await fetchAll(() => sb.from('user_cards')
+      .select(CARD_FIELDS).eq('user_id', userId));
+    take(rows, new Set(itemIds));
+    return out;
+  }
   for (let i = 0; i < itemIds.length; i += batch) {
     const { data, error } = await sb.from('user_cards')
-      .select('item_id, direction, state, total_reviews, correct_reviews')
+      .select(CARD_FIELDS)
       .eq('user_id', userId).in('item_id', itemIds.slice(i, i + batch));
     if (error) throw error;
-    for (const c of data ?? []) (out[c.item_id] ||= {})[c.direction] = c;
+    take(data);
   }
   return out;
 }

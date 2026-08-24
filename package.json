@@ -4,7 +4,7 @@
   "type": "module",
   "description": "韓語／日語單字卡 —— 前端為純靜態，npm 僅用於跑測試",
   "scripts": {
-    "test": "npm run test:sites && npm run test:build && npm run test:lang && npm run test:boot && npm run test:arch && npm run test:arch:ja && npm run test:round && npm run test:session && npm run test:modes && npm run test:modes:ja && npm run test:card && npm run test:card:ja && npm run test:matrix && npm run test:matrix:ja && npm run test:flow && npm run test:flow:ja && npm run test:overlay && npm run test:overlay:ja && npm run test:script && npm run test:script:ja && npm run test:dom && npm run test:dom:ja",
+    "test": "npm run test:sites && npm run test:build && npm run test:lang && npm run test:boot && npm run test:arch && npm run test:arch:ja && npm run test:round && npm run test:cards && npm run test:session && npm run test:modes && npm run test:modes:ja && npm run test:card && npm run test:card:ja && npm run test:matrix && npm run test:matrix:ja && npm run test:flow && npm run test:flow:ja && npm run test:overlay && npm run test:overlay:ja && npm run test:script && npm run test:script:ja && npm run test:dom && npm run test:dom:ja",
     "test:lang": "node tests/lang.test.mjs",
     "test:arch": "node tests/arch.test.mjs",
     "test:arch:ja": "SITE=japanese node tests/arch.test.mjs",
@@ -35,7 +35,8 @@
     "test:script": "node --import ./tests/_script-stub.mjs tests/script.test.mjs",
     "test:script:ja": "SITE=japanese node --import ./tests/_script-stub.mjs tests/script.test.mjs",
     "audit:spy": "python3 japanese/scripts/audit_script.py --deck-slug spy-s1",
-    "audit:spy:self": "python3 japanese/scripts/audit_script.py --self-test"
+    "audit:spy:self": "python3 japanese/scripts/audit_script.py --self-test",
+    "test:cards": "node --import ./tests/_cards-stub.mjs tests/cards.test.mjs"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.112.3",

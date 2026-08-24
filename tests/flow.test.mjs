@@ -304,9 +304,15 @@ console.log('\n【輪次池】');
   //   詞庫超過一千條之後，一輪會靜靜地少掉一截，
   //   而「還剩多少」看起來完全正常（它算的是那份殘缺清單）。
   const appSrc = fs.readFileSync(`${SITE_DIR}/../shared/js/app.js`, 'utf8');
+  // 比對「那一次呼叫裡有沒有 limit」，而不是整串參數一字不差 ——
+  // 綁死參數順序的話，任何無關的調整（例如只取 id 欄位）都會讓它變紅，
+  // 而它要守的其實只有一件事：不准給 limit。
+  const call = appSrc.match(/pickItems\(\{[^}]*deckId: deck\?\.id[^}]*\}\)/);
   chk('★ 建一輪時撈完整份（不給 limit）',
-      /pickItems\(\{ deckId: deck\?\.id \?\? null \}\)/.test(appSrc),
-      '給 limit 會被 PostgREST 的 1000 列上限截斷，而畫面看不出來');
+      !!call && !/\blimit\b/.test(call[0]),
+      call ? call[0] : '找不到建輪次那一次 pickItems 呼叫');
+  chk('建一輪只取 id 欄位', !!call && /fields: 'id'/.test(call[0]),
+      '一副詞庫 6223 條，帶整包欄位下來是 gzip 628 KB，而只會用到 id');
 }
 // =====================================================================
 // 【自由練習會把詞送進複習循環】

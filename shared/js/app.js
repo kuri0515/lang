@@ -453,7 +453,9 @@ async function poolItemIds() {
   //   給 limit 會走單次查詢，而 PostgREST 單次最多回 1000 列：
   //   詞庫超過一千條之後，一輪會靜靜地少掉一截，
   //   而「還剩多少」看起來完全正常（它算的是那份殘缺清單）。
-  const items = await content.pickItems({ deckId: deck?.id ?? null });
+  // 這裡要的只是 id。帶整包欄位下來的話，日文站一副詞庫 6223 條
+  // ＝ gzip 628 KB，而其中會用到的只有 id 那一欄。
+  const items = await content.pickItems({ deckId: deck?.id ?? null, fields: 'id' });
   return items.map((i) => i.id);
 }
 

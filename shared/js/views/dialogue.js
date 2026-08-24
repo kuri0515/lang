@@ -11,7 +11,7 @@
 // 同一份內容兩種呈現，差別只在「現在要理解，還是要檢驗」。
 // =====================================================================
 import { $, qsa, esc } from '../core/dom.js';
-import { groupDialogues, shuffleLines, checkOrder } from '../core/dialogue.js';
+import { groupDialogues, shuffleLines, checkOrder, DIALOGUE_MARK } from '../core/dialogue.js';
 import * as speech from '../core/speech.js';
 import * as content from '../data/content.js';
 import { lang } from '../core/lang.js';
@@ -48,7 +48,9 @@ export function initDialogue(d) {
 export async function open() {
   if (!loaded) {
     // 依 sort_order 取回 —— 對話的行序全靠它，用 id 排等於亂序
-    const items = await content.pickItems({});
+    // 只要對話句：靠 note 開頭篩，讓資料庫做掉。
+    // 全撈的話，日文站要為了 188 句對話搬 7049 條詞（gzip 628 KB、8 趟往返）。
+    const items = await content.pickItems({ noteHas: DIALOGUE_MARK });
     all = groupDialogues(items);
     loaded = true;
   }

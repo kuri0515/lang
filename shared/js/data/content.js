@@ -36,10 +36,22 @@ function applyFilters(q, { tag, search, deckId, ids }) {
 }
 
 /** 任意取材：瀏覽、自由練習、弱項集中練都走這裡 */
-export async function pickItems({ ids = null, tag = '', search = '', deckId = null, limit = null } = {}) {
-  const build = () => applyFilters(
-    sb.from('items').select(ITEM_FIELDS).eq('is_active', true),
-    { tag, search, deckId, ids }).order('sort_order');
+export async function pickItems({ ids = null, tag = '', search = '', deckId = null, limit = null,
+                                  fields = ITEM_FIELDS, noteHas = '' } = {}) {
+  const build = () => {
+    let q = applyFilters(
+      sb.from('items').select(fields).eq('is_active', true),
+      { tag, search, deckId, ids });
+    // 對話沒有自己的表，是靠 note 開頭歸組的（見 core/dialogue.js）。
+    // 讓資料庫先篩，前端就不必為了 188 句對話把 7049 條詞全搬下來。
+    //
+    // ★ 用「包含」而不是「開頭」：parseLine 會先 trim()，也就是
+    //   「 對話 A｜…」（前面有空白）今天是合法的。改成開頭比對會把它們
+    //   靜靜地濾掉 —— 少一句對話，畫面上看起來只是那段對話短了一點。
+    //   實測兩種寫法在日文站都是 188 句，那就挑不會漏的那一種。
+    if (noteHas) q = q.like('note', `*${noteHas}*`);
+    return q.order('sort_order');
+  };
   // limit 有值時是刻意取樣（例如自由練習抽 60 題）；沒給就撈完整
   if (limit) {
     const { data, error } = await build().limit(limit);
