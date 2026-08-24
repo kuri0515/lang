@@ -1171,3 +1171,18 @@ button[aria-busy="true"]::after {
 .sc-word:last-child { border-bottom: 0; }
 .sc-word > b { font-size: 17px; line-height: 1.9; }
 .sc-word > .muted { font-size: 12px; }
+
+/* 精讀的層層篩選：作品 → 集 → 幕。三層永遠看得到 */
+.pick-row { display: grid; grid-template-columns: 42px 1fr; gap: 10px;
+  align-items: start; padding: 10px 0;
+  border-top: 1px solid var(--line, rgba(128,128,150,.16)); }
+.pick-row:first-of-type { border-top: 0; }
+.pick-label { font-size: 13px; color: var(--muted); padding-top: 7px; }
+.pick-body { min-width: 0; }
+.pick-head { display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-bottom: 6px; }
+/* 集的按鈕裡帶進度：挑集數時要回答的正是「哪一集還沒讀完」 */
+#sc-eps .tag > small { display: block; font-size: 11px; opacity: .7; margin-top: 1px; }
+/* 正在讀的那一幕要標出來，否則從閱讀區抬頭看不出自己在哪 */
+.scene-cell.now { outline: 2px solid var(--accent); outline-offset: 1px; }
+.card.bare { padding-bottom: 14px; }

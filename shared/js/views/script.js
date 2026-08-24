@@ -38,8 +38,6 @@ let unreadOnly = false;   // 幕清單只看還沒讀的
 
 export function initScript(d) {
   deps = d;
-  $('sc-back-list').onclick = () => showList();
-  $('sc-back-ep').onclick = () => showEp();
   $('sc-prev').onclick = () => openScene(scene - 1);
   $('sc-next').onclick = () => openScene(scene + 1);
   $('sc-play').onclick = () => playScene();
@@ -48,7 +46,7 @@ export function initScript(d) {
   $('sc-continue').onclick = () => openScene(nextUnread());
   // 一集 70 幕，讀了一半之後「還沒讀的是哪些」比「全部」更常被問。
   // 做成切換而不是預設只看未讀 —— 回頭重讀是常態，不是例外。
-  $('sc-filter').onclick = () => { unreadOnly = !unreadOnly; showEp(); };
+  $('sc-filter').onclick = () => { unreadOnly = !unreadOnly; renderScenes(); };
   // ★ 讀完一幕，最想做的事就是把剛遇到的詞練熟 ——
   //   而在這之前，那 768 張卡唯一的入口是
   //   「詞庫 → 篩選那一副 → 學這組」，沒有人會自己走到那裡。
@@ -92,106 +90,92 @@ function nextUnread() {
 }
 
 // ---------------------------------------------------------------------
-// 集清單
+// 層層篩選：作品 → 集 → 幕
+//
+// 三層永遠看得到。清單式的「一層層點進去」做不到一件事：
+// 隨時跳回上一層換一個 —— 那要先退出再重選，
+// 而使用者在挑內容時本來就是來回比較的。
 // ---------------------------------------------------------------------
 export async function open() {
   if (!eps.length) eps = await script.listEpisodes();
   counts = await script.progressCounts(deps.userId());
-  showList();
+  if (!workFilter && eps.length) workFilter = workKeyOf(eps[0]);
+  await renderPick();
 }
 
-function showList() {
-  scene = 0;
-  pane('sc-list-pane');
-  const box = $('sc-eps');
-  if (!eps.length) {
-    box.innerHTML = '<div class="card"><p class="muted nomargin">還沒有精讀內容。</p></div>';
+const workKeyOf = (e) => `${e.work_title}｜第 ${e.season} 季`;
+
+async function renderPick() {
+  $('sc-scene-pane').classList.add('hidden');
+  const has = eps.length > 0;
+  $('sc-empty').classList.toggle('hidden', has);
+  $('sc-pick').classList.toggle('bare', !has);
+  if (!has) {
     $('sc-total').textContent = '';
+    for (const id of ['sc-works', 'sc-eps']) $(id).innerHTML = '';
+    $('sc-scene-row').classList.add('hidden');
     return;
   }
-  const readAll = eps.reduce((s, e) => s + (counts[e.id] || 0), 0);
-  const sceneAll = eps.reduce((s, e) => s + e.scene_count, 0);
+
+  const readAll = eps.reduce((n, e) => n + (counts[e.id] || 0), 0);
+  const sceneAll = eps.reduce((n, e) => n + e.scene_count, 0);
   $('sc-total').textContent = `${readAll} / ${sceneAll} 幕`;
 
-  // 季的篩選。只有一季時不顯示 —— 給一列只有一顆的按鈕，
-  // 等於要人先選一個沒有選擇的東西。
-  const seasons = [...new Set(eps.map((e) => `${e.work_title}｜第 ${e.season} 季`))];
-  const wbox = $('sc-works');
-  wbox.classList.toggle('hidden', seasons.length < 2);
-  if (seasons.length >= 2) {
-    wbox.innerHTML = [['', '全部'], ...seasons.map((k) => [k, k])]
-      .map(([v, label]) =>
-        `<button class="tag${workFilter === v ? ' on' : ''}" data-work="${esc(v)}">${esc(label)}</button>`)
-      .join('');
-    qsa('#sc-works [data-work]').forEach((b) => {
-      b.onclick = () => { workFilter = b.dataset.work; showList(); };
-    });
-  }
-
-  // 依作品分組 —— 之後會有第二季、第三季，甚至第二部作品
-  const by = new Map();
-  for (const e of eps) {
-    const k = `${e.work_title}｜第 ${e.season} 季`;
-    if (workFilter && k !== workFilter) continue;
-    if (!by.has(k)) by.set(k, []);
-    by.get(k).push(e);
-  }
-  box.innerHTML = [...by.entries()].map(([title, list]) => `
-    <div class="card">
-      <h2>${esc(title)}</h2>
-      ${list.map((e) => {
-        const d = counts[e.id] || 0;
-        const pc = e.scene_count ? Math.round((d / e.scene_count) * 100) : 0;
-        return `<button class="ep-row" data-ep="${e.id}">
-          <b>第 ${e.episode} 集</b>
-          <small>${e.line_count} 句 · ${e.scene_count} 幕</small>
-          <span class="ep-prog"><i style="width:${pc}%"></i></span>
-          <em>${d}/${e.scene_count}</em>
-        </button>`;
-      }).join('')}
-    </div>`).join('');
-  qsa('#sc-eps [data-ep]').forEach((b) => {
-    b.onclick = () => openEp(b.dataset.ep);
+  // ── 第一層：作品 · 季 ──
+  const works = [...new Set(eps.map(workKeyOf))];
+  if (!works.includes(workFilter)) workFilter = works[0];
+  $('sc-works').innerHTML = works.map((w) =>
+    `<button class="tag${w === workFilter ? ' on' : ''}" data-work="${esc(w)}">${esc(w)}</button>`).join('');
+  qsa('#sc-works [data-work]').forEach((b2) => {
+    b2.onclick = () => { workFilter = b2.dataset.work; ep = null; renderPick(); };
   });
+
+  // ── 第二層：集 ──
+  const list = eps.filter((e) => workKeyOf(e) === workFilter);
+  if (!ep || !list.some((e) => e.id === ep.id)) ep = null;
+  $('sc-eps').innerHTML = list.map((e) => {
+    const d = counts[e.id] || 0;
+    // 進度直接寫在每一集上 —— 挑集數時要回答的正是「哪一集還沒讀完」
+    return `<button class="tag${ep && e.id === ep.id ? ' on' : ''}" data-ep="${e.id}">`
+      + `第 ${e.episode} 集<small>${d}/${e.scene_count}</small></button>`;
+  }).join('');
+  qsa('#sc-eps [data-ep]').forEach((b2) => {
+    b2.onclick = () => openEp(b2.dataset.ep);
+  });
+
+  // ── 第三層：幕 ──
+  $('sc-scene-row').classList.toggle('hidden', !ep);
+  if (ep) renderScenes();
 }
 
-// ---------------------------------------------------------------------
-// 一集的幕清單
-// ---------------------------------------------------------------------
 async function openEp(id) {
-  ep = eps.find((e) => e.id === id);
-  if (!ep) return;
+  const next = eps.find((e) => e.id === id);
+  if (!next) return;
+  ep = next;
   lines = await script.loadLines(id);
   done = await script.loadProgress(deps.userId(), id);
-  showEp();
+  await renderPick();
 }
 
-function showEp() {
-  scene = 0;
-  speech.cancel();
-  pane('sc-ep-pane');
-  $('sc-ep-title').textContent = `${ep.work_title} 第 ${ep.season} 季 第 ${ep.episode} 集`;
-  $('sc-ep-prog').textContent = `${done.size} / ${ep.scene_count} 幕`;
-  $('sc-ep-bar').style.width =
-    `${ep.scene_count ? Math.round((done.size / ep.scene_count) * 100) : 0}%`;
-  const n = nextUnread();
-  $('sc-continue').textContent =
-    done.size >= ep.scene_count ? '整集讀完了 · 從第 1 幕重讀' : `從第 ${n} 幕開始`;
-
+function renderScenes() {
   const total = ep.scene_count;
+  $('sc-ep-prog').textContent = `${done.size} / ${total} 幕`;
+  $('sc-ep-bar').style.width = `${total ? Math.round((done.size / total) * 100) : 0}%`;
   const left = total - done.size;
   $('sc-filter').textContent = unreadOnly ? `只看沒讀的（${left}）` : `全部 ${total} 幕`;
   const nums = Array.from({ length: total }, (_, i) => i + 1)
     .filter((n) => !unreadOnly || !done.has(n));
   $('sc-scenes').innerHTML = nums.map((num) => {
     const rows = lines.filter((l) => l.scene === num).length;
-    return `<button class="scene-cell${done.has(num) ? ' on' : ''}" data-scene="${num}"
-      title="${rows} 句">${num}</button>`;
-  }).join('')
-    || '<p class="muted nomargin">這一集都讀完了。</p>';
-  qsa('#sc-scenes [data-scene]').forEach((b) => {
-    b.onclick = () => openScene(Number(b.dataset.scene));
+    return `<button class="scene-cell${done.has(num) ? ' on' : ''}${num === scene ? ' now' : ''}"
+      data-scene="${num}" title="${rows} 句">${num}</button>`;
+  }).join('') || '<p class="muted nomargin">這一集都讀完了。</p>';
+  qsa('#sc-scenes [data-scene]').forEach((b2) => {
+    b2.onclick = () => openScene(Number(b2.dataset.scene));
   });
+  const n = nextUnread();
+  $('sc-continue').textContent =
+    done.size >= total ? '整集讀完了 · 從第 1 幕重讀' : `從第 ${n} 幕開始`;
 }
 
 // ---------------------------------------------------------------------
@@ -202,9 +186,11 @@ async function openScene(n) {
   if (n < 1 || n > ep.scene_count) return;
   speech.cancel();
   scene = n;
-  pane('sc-scene-pane');
+  $('sc-scene-pane').classList.remove('hidden');
+  renderScenes();                       // 讓幕格標出現在讀的是哪一格
   const rows = sceneLines();
-  $('sc-scene-title').textContent = `第 ${n} 幕 / ${ep.scene_count}`;
+  $('sc-scene-title').textContent =
+    `${ep.work_title} 第 ${ep.episode} 集 · 第 ${n} 幕 / ${ep.scene_count}`;
   $('sc-scene-time').textContent = rows.length
     ? `${clock(rows[0].start_s)} – ${clock(rows[rows.length - 1].end_s)} · ${rows.length} 句`
     : '';
@@ -298,6 +284,7 @@ async function toggleDone() {
   try {
     await script.markScene(deps.userId(), ep.id, scene, want);
     counts[ep.id] = done.size;
+    renderScenes();
     if (want && scene < ep.scene_count) openScene(scene + 1);
   } catch (e) {
     if (want) done.delete(scene); else done.add(scene);
@@ -329,8 +316,4 @@ async function playScene() {
   }
 }
 
-function pane(id) {
-  for (const p of ['sc-list-pane', 'sc-ep-pane', 'sc-scene-pane']) {
-    $(p)?.classList.toggle('hidden', p !== id);
-  }
-}
+

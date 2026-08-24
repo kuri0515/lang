@@ -192,45 +192,42 @@
          多一個底部入口就多一次猶豫，而三者的分工用子分頁講得更清楚。 -->
     <div id="b-pane-script" class="hidden">
 
-    <!-- 集清單 -->
-    <div id="sc-list-pane">
-      <div class="card">
-        <div class="card-head">
-          <h2 class="nomargin">精讀</h2>
-          <span id="sc-total" class="muted"></span>
-        </div>
-        <p class="hint nomargin">照台詞一幕一幕讀。先看{{termLabel}}，看不懂再翻中文。</p>
-        <!-- 兩季以上才出現。一季的時候給一列只有一顆的按鈕，
-             等於要人先選一個沒有選擇的東西。 -->
-        <div id="sc-works" class="tag-row hidden" style="margin-top:10px"></div>
+    <!-- ★ 層層篩選，不是層層點進去。
+         使用者要的是「SPY×FAMILY 第一季 → 第 1 集 → 第 3 幕」這樣一路縮小，
+         而且三層永遠看得到 —— 隨時能跳回上一層換一個，
+         不必先退出再重選。清單式的一層層點進去做不到這件事。 -->
+    <div id="sc-pick" class="card">
+      <div class="card-head">
+        <h2 class="nomargin">精讀</h2>
+        <span id="sc-total" class="muted"></span>
       </div>
-      <div id="sc-eps"></div>
-    </div>
 
-    <!-- 一集的幕清單 -->
-    <div id="sc-ep-pane" class="hidden">
-      <div class="card">
-        <button id="sc-back-list" class="link">← 全部集數</button>
-        <div class="card-head">
-          <h2 id="sc-ep-title" class="nomargin"></h2>
-          <span id="sc-ep-prog" class="muted"></span>
-        </div>
-        <div class="prog"><i id="sc-ep-bar"></i></div>
-        <button id="sc-continue" class="primary block" style="margin-top:12px"></button>
+      <div class="pick-row">
+        <span class="pick-label">作品</span>
+        <div id="sc-works" class="tag-row"></div>
       </div>
-      <div class="card">
-        <div class="card-head">
-          <h2 class="nomargin">選一幕</h2>
-          <button id="sc-filter" class="small ghost"></button>
-        </div>
-        <div id="sc-scenes" class="scene-grid"></div>
+      <div class="pick-row">
+        <span class="pick-label">集</span>
+        <div id="sc-eps" class="tag-row"></div>
       </div>
+      <div class="pick-row" id="sc-scene-row">
+        <span class="pick-label">幕</span>
+        <div class="pick-body">
+          <div class="pick-head">
+            <span id="sc-ep-prog" class="muted"></span>
+            <button id="sc-filter" class="small ghost"></button>
+          </div>
+          <div class="prog"><i id="sc-ep-bar"></i></div>
+          <div id="sc-scenes" class="scene-grid"></div>
+          <button id="sc-continue" class="primary block" style="margin-top:10px"></button>
+        </div>
+      </div>
+      <p id="sc-empty" class="muted nomargin hidden">還沒有精讀內容。</p>
     </div>
 
     <!-- 一幕的內容 -->
     <div id="sc-scene-pane" class="hidden">
       <div class="card">
-        <button id="sc-back-ep" class="link">← 這一集的全部幕</button>
         <div class="card-head">
           <h2 id="sc-scene-title" class="nomargin"></h2>
           <span id="sc-scene-time" class="muted"></span>
