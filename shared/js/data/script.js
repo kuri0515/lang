@@ -45,7 +45,7 @@ export async function loadLines(episodeId) {
   return fetchAll(() => sb.from('script_lines')
     .select(LINE_FIELDS)
     .eq('episode_id', episodeId)
-    .order('idx'));
+    .order('idx'), { tiebreak: 'idx' });
 }
 
 /** 這個人在這一集讀過哪幾幕 */
@@ -61,7 +61,8 @@ export async function loadProgress(userId, episodeId) {
 export async function progressCounts(userId) {
   if (!userId) return {};
   const rows = await fetchAll(() => sb.from('script_progress')
-    .select('episode_id, scene').eq('user_id', userId));
+    .select('episode_id, scene').eq('user_id', userId),
+  { tiebreak: ['episode_id', 'scene'] });
   const out = {};
   for (const r of rows) out[r.episode_id] = (out[r.episode_id] || 0) + 1;
   return out;

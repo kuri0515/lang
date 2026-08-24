@@ -68,7 +68,8 @@ export async function fetchDue(userId, dirs = DIRECTIONS, limit = 200) {
  */
 export async function fetchNewItems(userId, deckId, dirs, limit = 20, tag = '', ids = null) {
   const seen = await fetchAll(() => sb.from('user_cards')
-    .select('item_id, direction').eq('user_id', userId));
+    .select('item_id, direction').eq('user_id', userId),
+  { tiebreak: ['item_id', 'direction'] });
   const seenKey = new Set(seen.map((r) => `${r.item_id}|${r.direction}`));
 
   // 撈完整而非取前 N 筆 —— 已學過的都要跳過，截斷會讓後面的新詞永遠排不到
@@ -81,7 +82,7 @@ export async function fetchNewItems(userId, deckId, dirs, limit = 20, tag = '', 
     if (Array.isArray(tag) && tag.length) q = q.overlaps('tags', tag);
     else if (typeof tag === 'string' && tag) q = q.contains('tags', [tag]);
     return q;
-  });
+  }, { tiebreak: 'id' });
 
   const out = [];
   for (const item of pool) {
@@ -248,7 +249,8 @@ export async function cardsByItem(userId, itemIds, batch = 80) {
   };
   if (itemIds.length > CARDS_BY_USER) {
     const rows = await fetchAll(() => sb.from('user_cards')
-      .select(CARD_FIELDS).eq('user_id', userId));
+      .select(CARD_FIELDS).eq('user_id', userId),
+    { tiebreak: ['item_id', 'direction'] });
     take(rows, new Set(itemIds));
     return out;
   }
@@ -332,7 +334,7 @@ export async function legacyDayDetail(userId, day) {
 export async function wordProgress(userId) {
   const data = await fetchAll(() => sb.from('v_learning_timeline')
     .select('item_id, direction, ko, zh, hanja, item_type, state, first_learned_at, last_reviewed_at, mastered_at, due_at, interval_days, total_reviews, correct_reviews, accuracy, mastered')
-    .eq('user_id', userId));
+    .eq('user_id', userId), { tiebreak: ['item_id', 'direction'] });
 
   const byItem = new Map();
   for (const r of data) {
@@ -370,7 +372,7 @@ export async function wordProgress(userId) {
 export async function practicedOnly(userId) {
   const data = await fetchAll(() => sb.from('v_practiced_only')
     .select('item_id, direction, ko, zh, hanja, item_type, attempts, correct, accuracy, first_at, last_at')
-    .eq('user_id', userId));
+    .eq('user_id', userId), { tiebreak: ['item_id', 'direction'] });
 
   const byItem = new Map();
   for (const r of data) {
@@ -398,9 +400,11 @@ export async function practicedOnly(userId) {
 /** 完全沒碰過的條目 —— 既沒有卡片，也沒有任何作答記錄 */
 export async function notStartedItems(userId) {
   const [cards, revs, items] = await Promise.all([
-    fetchAll(() => sb.from('user_cards').select('item_id').eq('user_id', userId)),
-    fetchAll(() => sb.from('reviews').select('item_id').eq('user_id', userId)),
-    fetchAll(() => sb.from('items').select('id, ko, zh, hanja, item_type, tags').eq('is_active', true)),
+    fetchAll(() => sb.from('user_cards').select('item_id').eq('user_id', userId),
+      { tiebreak: ['item_id', 'direction'] }),
+    fetchAll(() => sb.from('reviews').select('item_id').eq('user_id', userId), { tiebreak: 'id' }),
+    fetchAll(() => sb.from('items').select('id, ko, zh, hanja, item_type, tags').eq('is_active', true),
+      { tiebreak: 'id' }),
   ]);
   const touched = new Set([...cards, ...revs].map((c) => c.item_id));
   return items.filter((i) => !touched.has(i.id));
@@ -438,14 +442,15 @@ export async function fetchReviewList(userId) {
   const rows = await fetchAll(() => sb.from('review_list')
     .select(`item_id, note, added_at, items!inner(${ITEM_FIELDS})`)
     .eq('user_id', userId).is('removed_at', null)
-    .order('added_at', { ascending: false }));
+    .order('added_at', { ascending: false }), { tiebreak: 'item_id' });
   return rows.map((r) => ({ ...r, item: r.items }));
 }
 
 /** 只取 id，用來在詞庫與卡片上標出「已在清單」*/
 export async function fetchReviewListIds(userId) {
   const rows = await fetchAll(() => sb.from('review_list')
-    .select('item_id').eq('user_id', userId).is('removed_at', null));
+    .select('item_id').eq('user_id', userId).is('removed_at', null),
+  { tiebreak: 'item_id' });
   return new Set(rows.map((r) => r.item_id));
 }
 

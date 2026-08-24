@@ -1,2 +1,2 @@
 // 產生檔案，勿手改（node shared/scripts/build-sites.mjs）
-export const BUILD = 'deb3c230';
+export const BUILD = 'cf202656';

@@ -126,6 +126,50 @@ console.log('\n【匯入完備】');
       '依賴檢查看不到「根本沒寫的那一行 import」');
 }
 
+// ---------------------------------------------------------------------
+// 分頁一定要有唯一排序
+//
+// fetchAll 靠 range(0–999)、range(1000–1999)… 一頁一頁撈，
+// 而 **SQL 沒有 ORDER BY 就沒有列的順序**：兩頁之間資料庫可以用不同順序
+// 回你，於是有些列出現兩次、有些一次都沒出現。
+//
+// 它的可怕之處是**筆數看起來是對的**，錯的是內容 ——
+// 實際踩過：稽核腳本漏了 order，6223 張卡只認出五千多個詞形，
+// 然後對著一份假的「1030 個詞沒有卡片」清單找原因。
+//
+// 呼叫端寫的 order（sort_order、idx）通常有大量同分列，同分之間仍無序，
+// 所以每一次呼叫都必須自己說出「拿哪個唯一欄位決勝負」。
+// ---------------------------------------------------------------------
+console.log('\n【分頁的唯一排序】');
+{
+  const files = fs.readdirSync(`${SHARED}/js/data`).filter((f) => f.endsWith('.js'));
+  const bad = [];
+  for (const f of files) {
+    const src = fs.readFileSync(`${SHARED}/js/data/${f}`, 'utf8');
+    for (const m of src.matchAll(/fetchAll\(/g)) {
+      // 抓出這一次呼叫的完整括號範圍
+      let i = m.index + m[0].length;
+      let depth = 1;
+      while (depth && i < src.length) {
+        if (src[i] === '(') depth++;
+        else if (src[i] === ')') depth--;
+        i++;
+      }
+      const call = src.slice(m.index, i);
+      if (call.includes('export async function fetchAll')) continue;
+      if (!call.includes('tiebreak')) {
+        bad.push(`${f}:${src.slice(0, m.index).split('\n').length}`);
+      }
+    }
+  }
+  chk('★ 每一次 fetchAll 都指定了 tiebreak', bad,
+      '沒有唯一排序的分頁會重複或漏掉列，而筆數看起來是對的');
+  const client = fs.readFileSync(`${SHARED}/js/data/client.js`, 'utf8');
+  chk('★ 沒給 tiebreak 時 fetchAll 直接拒絕',
+      /throw new Error\('fetchAll 需要 tiebreak/.test(client) ? [] : ['client.js 沒有那道閘門'],
+      '只靠人記得的規矩，遲早會有人忘記 —— 而忘記的那次不會報錯');
+}
+
 console.log('\n【DOM 契約】');
 // JS 取用了 HTML 裡不存在的元素 —— 這類 bug 不會在語法檢查時暴露，
 // 只會在使用者點到那個功能時才炸。已經咬過兩次（listen-box、h-filter）。

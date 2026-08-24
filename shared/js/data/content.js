@@ -86,7 +86,7 @@ export async function pickItems({ ids = null, tag = '', search = '', deckId = nu
     if (error) throw error;
     return data ?? [];
   }
-  return fetchAll(build);
+  return fetchAll(build, { tiebreak: 'id' });
 }
 
 /** 所有標籤與各自條目數 */
@@ -106,7 +106,8 @@ export async function listTags() {
   if (!error && data) {
     return data.map((r) => [r.tag, r.n]).sort((a, b) => b[1] - a[1]);
   }
-  const rows = await fetchAll(() => sb.from('items').select('tags').eq('is_active', true));
+  const rows = await fetchAll(() => sb.from('items').select('tags').eq('is_active', true),
+    { tiebreak: 'id' });
   const count = {};
   for (const r of rows) for (const t of r.tags || []) count[t] = (count[t] || 0) + 1;
   return Object.entries(count).sort((a, b) => b[1] - a[1]);
@@ -201,9 +202,10 @@ export async function tagProgress(userId, groups, deckId = null) {
     let q = sb.from('items').select('id, tags').eq('is_active', true).overlaps('tags', all);
     if (deckId) q = q.eq('deck_id', deckId);
     return q;
-  });
+  }, { tiebreak: 'id' });
   const cards = await fetchAll(() => sb.from('user_cards')
-    .select('item_id, mastered_at').eq('user_id', userId));
+    .select('item_id, mastered_at').eq('user_id', userId),
+  { tiebreak: ['item_id', 'direction'] });
 
   const started = new Set(cards.map((c) => c.item_id));
   const mastered = new Set(cards.filter((c) => c.mastered_at).map((c) => c.item_id));
@@ -234,7 +236,7 @@ export async function distractorPool(deckId = null) {
       .eq('is_active', true);
     if (deckId) q = q.eq('deck_id', deckId);
     return q;
-  });
+  }, { tiebreak: 'id' });
 }
 
 /**

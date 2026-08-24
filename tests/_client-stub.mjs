@@ -39,14 +39,24 @@ async function run(q) {
 
 export const sb = { from: (t) => builder(t) };
 
-// 與正式的 fetchAll 同樣的分頁語意：一頁 1000 列，撈到不足一頁為止
-export async function fetchAll(build, page = 1000) {
+// 與正式的 fetchAll 同樣的分頁語意，**連簽名與那道閘門都要一樣**。
+//
+// ★ 這裡踩過一次：正式版加了 { tiebreak } 選項物件之後，替身還是舊的
+//   `(build, page = 1000)`，於是選項物件被當成 pageSize ——
+//   `from + {} - 1` 是 NaN、`0 < {}` 永遠是 false，迴圈就再也不結束，
+//   測試以 OOM 崩掉（而不是報一個看得懂的錯）。
+//   替身與正式程式的介面必須一起改，見 docs/LESSONS.md L-012。
+export async function fetchAll(build, { pageSize = 1000, tiebreak } = {}) {
+  const cols = [].concat(tiebreak || []);
+  if (!cols.length) throw new Error('fetchAll 需要 tiebreak');
   const all = [];
-  for (let from = 0; ; from += page) {
-    const { data, error } = await build().range(from, from + page - 1);
+  for (let from = 0; ; from += pageSize) {
+    let q = build();
+    for (const c of cols) q = q.order(c);
+    const { data, error } = await q.range(from, from + pageSize - 1);
     if (error) throw error;
     all.push(...(data ?? []));
-    if (!data || data.length < page) break;
+    if (!data || data.length < pageSize) break;
   }
   return all;
 }
