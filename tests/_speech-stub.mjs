@@ -11,6 +11,12 @@ export function speakAwait(text) {
   spoken.push(text);
   return new Promise((r) => pending.push(r));
 }
-export function speak(text) { spoken.push(text); }
+/**
+ * ★ 真的 speak() 會先清掉卡住的引擎（`if (ss.speaking||ss.pending) ss.cancel()`），
+ *   而 cancel() 會把還在等的 promise 放行 —— 這正是「點單句會讓整幕迴圈往下跳」
+ *   的成因。替身若只是 push 一筆，這條測試就永遠是綠的，
+ *   守著一個它其實抓不到的 bug（比沒有測試更危險）。
+ */
+export function speak(text) { cancel(); spoken.push(text); }
 export function cancel() { pending.forEach((r) => r()); pending = []; }
 export function speakLines() {}

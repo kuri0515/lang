@@ -46,7 +46,7 @@ export function initScript(d) {
   deps = d;
   $('sc-prev').onclick = () => openScene(scene - 1);
   $('sc-next').onclick = () => openScene(scene + 1);
-  $('sc-play').onclick = () => (playIdx >= 0 ? stopPlay() : playScene());
+  $('sc-play').onclick = () => (playing ? stopPlay() : playScene());
   $('sc-ruby').onclick = () => { showRuby = !showRuby; syncRubyBtn(); renderLines(); };
   $('sc-done').onclick = () => toggleDone();
   // 一集 70 幕，讀了一半之後「還沒讀的是哪些」比「全部」更常被問。
@@ -339,7 +339,14 @@ function renderLines() {
   qsa('#sc-lines [data-say]').forEach((b) => {
     b.onclick = () => {
       const l = rows.find((x) => x.idx === Number(b.dataset.say));
-      if (l) speech.speak(stripRuby(l.ruby || l.ja));
+      if (!l) return;
+      // ★ 先停整幕朗讀，再唸這一句。
+      //   speech.speak() 為了清掉卡住的引擎會 cancel()，而 cancel() 會把
+      //   整幕迴圈正在等的那一句放行 —— 於是迴圈往下跳，兩邊搶著唸。
+      //   （與 L-011 同一個根因：取消 = resolve。）
+      stopPlay();
+      markPlaying(l.idx);
+      speech.speak(stripRuby(l.ruby || l.ja));
     };
   });
 }
@@ -462,6 +469,8 @@ async function playScene() {
   const rows = sceneLines();
   const at = scene;
   const mine = ++playId;
+  playing = true;
+  syncPlayBtn();
   for (const l of rows) {
     if (scene !== at || playId !== mine) return;
     markPlaying(l.idx);
@@ -479,7 +488,9 @@ async function playScene() {
  */
 function stopPlay() {
   playId++;
+  playing = false;
   speech.cancel();
+  syncPlayBtn();
   markPlaying(-1);
 }
 
@@ -493,10 +504,16 @@ function stopPlay() {
  * 記在變數裡而不只是加 class：renderLines() 會整塊重畫
  * （切換注音、切換對照模式都會），class 會被沖掉。
  */
+// ★ 兩件事要分開記：
+//   playing＝整幕朗讀正在跑（決定按鈕是「朗讀」還是「停止」）
+//   playIdx＝畫面上標哪一行（單句朗讀也會標，但它不該把按鈕變成「停止」——
+//            按下去會變成停一個早就結束的東西）
 let playIdx = -1;
+let playing = false;
+const syncPlayBtn = () => { $('sc-play').textContent = playing ? '■ 停止' : '▶ 整幕朗讀'; };
+
 function markPlaying(idx) {
   playIdx = idx;
-  $('sc-play').textContent = idx >= 0 ? '■ 停止' : '▶ 整幕朗讀';
   for (const el of qsa('#sc-lines .sc-line')) {
     el.classList.toggle('now', Number(el.dataset.idx) === idx);
   }

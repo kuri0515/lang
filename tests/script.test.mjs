@@ -389,6 +389,31 @@ chk('★ 還沒建卡的差額要說出來', /另有 1 個還沒建卡/.test($('
   chk('停止後按鈕回到「整幕朗讀」', /整幕朗讀/.test($('sc-play').textContent));
 }
 
+// ── 單句朗讀與整幕朗讀不能互相打架 ────────────────────────
+// speech.speak() 為了清掉卡住的引擎會 cancel()，而 cancel() 會把整幕迴圈
+// 正在等的那一句放行 —— 於是迴圈往下跳，兩邊搶著唸。（L-011 同一個根因）
+{
+  const sp = await import(`${SHARED}/js/core/speech.js`);
+  sp.reset();
+  $('sc-play').click();
+  await tick();
+  const before = sp.spoken.length;
+
+  qsa('#sc-lines [data-say]')[2].click();
+  await tick(); await tick();
+  chk('★ 點單句會停掉整幕朗讀', sp.spoken.length === before + 1,
+      `多唸了 ${sp.spoken.length - before} 句 —— 整幕迴圈被 cancel() 放行後往下跳了`);
+  chk('單句也標出是哪一行', qsa('#sc-lines .sc-line.now').length === 1);
+  chk('★ 單句朗讀不該把按鈕變成「停止」', /整幕朗讀/.test($('sc-play').textContent),
+      '按下去會變成停一個早就結束的東西');
+  sp.reset();
+  $('sc-play').click();          // 還按得動整幕朗讀
+  await tick();
+  chk('單句之後整幕朗讀仍啟動得了', sp.spoken.length === 1, `唸了 ${sp.spoken.length} 句`);
+  stopAll(sp);
+}
+function stopAll(sp) { $('sc-play').click(); sp.reset(); }
+
 // ── 讀完 / 取消 ──────────────────────────────────────────
 {
   qs('#sc-scenes [data-scene="1"]').click();
