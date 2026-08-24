@@ -463,6 +463,11 @@ export function newLessonBlocked(dueCount) {   // eslint-disable-line no-unused-
  * 而漂移的症狀是「兩顆按鈕點下去結果不一樣」，使用者只會覺得壞了。
  */
 export function startNext() {
+  // ★ 範圍優先。這一行漏掉的話，整個「挑一幕來學」的功能是死的 ——
+  //   下面兩條都會帶著課程標籤或詞庫 id 進去，
+  //   而那正好讓 startNew 判定「這次不是範圍模式」。
+  //   功能上線了，按下去卻是舊行為，而且不報錯。
+  if (scope) return deps.onNewScoped?.();
   if (nextLessonTag) return deps.onStudyTag(nextLessonTag);
   if (firstDeckId) return deps.onNewDeck(firstDeckId);
   msg('還沒有詞庫。到「我的 → 批次匯入」貼上你的詞表。');

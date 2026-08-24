@@ -619,6 +619,8 @@ home.initHome({
   onFree: () => startFree({}),
   roundProgress,
   onNewDeck: (deckId) => startNew(deckId),
+  // 不帶詞庫也不帶標籤 —— 那正是 startNew 判定「照範圍走」的條件
+  onNewScoped: () => startNew(null, ''),
   onDrillWeak: (ids) => startFree({ ids, kind: 'drill' }),
   // 發音課程的「開始」走與詞庫瀏覽的「學這組」同一條路 ——
   // 同一件事只能有一個入口實作，兩份必然漂移

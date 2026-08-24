@@ -365,6 +365,38 @@ console.log('\n【每日複習任務】');
   //   進度照算、照顯示，只是不再限制什麼時候可以學新的。
   //   斷言留著並且反過來寫：日後若有人「順手」把閘門加回去，
   //   這裡會紅，而不是靜靜地改變產品行為。
+  // ── 新課的範圍：從按鈕按下去真的會走到那條路嗎 ──
+  //
+  // ★ 這一條是補上來的。先前只驗了「設得下、存得住」與精讀那顆切換鈕，
+  //   卻從來沒有驗「按首頁的新課會拿到什麼」——
+  //   而實際上 startNext() 永遠帶著課程標籤或詞庫 id 進去，
+  //   於是範圍那條路一次都沒被走到。功能上線了，按下去卻是舊行為。
+  {
+    const calls = [];
+    // user 回 null：doLoad 會提早結束，所以 setScope 觸發的首頁重載
+    // 不會去打任何查詢。這裡要驗的是「按下去走哪一條路」，不是首頁的渲染。
+    home.initHome({
+      user: () => null,
+      onStudyTag: (t) => calls.push(['tag', t]),
+      onNewDeck: (d) => calls.push(['deck', d]),
+      onNewScoped: () => calls.push(['scoped']),
+      onReview: () => {}, onFree: () => {}, onDrillWeak: () => {},
+      onRecall: () => {}, onStudyScene: () => {}, onPrefsChange: () => {},
+      onResumeRound: () => {}, roundLeft: () => 0, roundProgress: () => null,
+    });
+    home.setScope({ epId: 'e1', scene: 3, label: '第 1 集 · 第 3 幕' });
+    home.startNext();
+    chk('★ 鎖定範圍時，新課走的是範圍那條路',
+        calls.length === 1 && calls[0][0] === 'scoped',
+        `實際走的是 ${JSON.stringify(calls)} —— 帶著標籤或詞庫進去的話，範圍會被忽略`);
+    // 沒鎖範圍時要走回原本那條路
+    home.setScope(null);
+    calls.length = 0;
+    home.startNext();
+    chk('沒鎖範圍時不走範圍那條路',
+        !calls.some((c) => c[0] === 'scoped'), JSON.stringify(calls));
+  }
+
   // ── 新課的範圍 ──
   // 存的是座標不是那串 id：重新匯入一集之後 id 會全部換掉，
   // 而存下來的舊 id 不會報錯，只會讓新課變成「沒有新的了」。
