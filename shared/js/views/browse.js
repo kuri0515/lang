@@ -31,7 +31,13 @@ export function initBrowse(d) {
   };
   on(EVENTS.ITEM_UPDATED, () => { if (!$('view-browse').classList.contains('hidden')) render(); });
   // 內容變動時兩邊都要作廢，否則對話畫面會停在舊句子
-  on(EVENTS.ITEMS_CHANGED, () => { tagsLoaded = false; dialogue.invalidate(); });
+  // 內容變動時三邊都要作廢，否則各自停在舊資料。
+  // 精讀是動態載入的，所以用 import() 取 —— 沒載過就代表還沒開過，本來就沒有快取。
+  on(EVENTS.ITEMS_CHANGED, () => {
+    tagsLoaded = false;
+    dialogue.invalidate();
+    if (opt('b-pane-script')) import('./script.js').then((m) => m.invalidate()).catch(() => {});
+  });
   initTabs();
   dialogue.initDialogue(d);
 }

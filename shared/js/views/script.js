@@ -171,6 +171,27 @@ async function renderPick() {
   if (ep) renderScenes();
 }
 
+/**
+ * 只更新「集按鈕上的進度」與總計。
+ *
+ * ★ 不能改呼叫 renderPick() —— 它開頭會把內文收起來，
+ *   於是標記讀完的下一刻，使用者就被踢出閱讀畫面。
+ *   要更新的只有兩個數字，重畫整塊是拿一個副作用去換方便。
+ */
+function refreshPickCounts() {
+  const readAll = eps.reduce((n, e) => n + (counts[e.id] || 0), 0);
+  const sceneAll = eps.reduce((n, e) => n + e.scene_count, 0);
+  $('sc-total').textContent = `${readAll} / ${sceneAll} 幕`;
+  for (const b of qsa('#sc-eps [data-ep]')) {
+    const e = eps.find((x) => x.id === b.dataset.ep);
+    const small = b.querySelector('small');
+    if (e && small) small.textContent = `${counts[e.id] || 0}/${e.scene_count}`;
+  }
+}
+
+/** 內容變動（例如匯入了新的一集）就讓集清單失效，下次進來重抓 */
+export function invalidate() { eps = []; }
+
 async function openEp(id) {
   const next = eps.find((e) => e.id === id);
   if (!next) return;
@@ -366,6 +387,7 @@ async function toggleDone() {
     await script.markScene(deps.userId(), ep.id, scene, want);
     counts[ep.id] = done.size;
     renderScenes();
+    refreshPickCounts();      // 集按鈕上的進度與總計也要跟著動
     if (want && scene < ep.scene_count) openScene(scene + 1);
   } catch (e) {
     if (want) done.delete(scene); else done.add(scene);

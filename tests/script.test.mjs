@@ -350,6 +350,38 @@ chk('★ 還沒建卡的差額要說出來', /另有 1 個還沒建卡/.test($('
   await tick();
 }
 
+// ── 標記讀完之後，集按鈕上的進度也要動 ────────────────────
+// 進度畫在兩個地方（幕格、集按鈕），而標記時只重畫了幕格 ——
+// 於是集按鈕停在舊數字，看起來像沒存進去。
+{
+  view.initScript({ userId: () => 'u1' });
+  await view.open();
+  qs('#sc-eps [data-ep]').click();
+  await tick();
+  const before = qs('#sc-eps [data-ep] small').textContent;
+  const total0 = $('sc-total').textContent;
+  qs('#sc-scenes [data-scene="2"]').click();   // 第 2 幕還沒讀
+  await tick();
+  $('sc-done').click();                        // 標記讀完
+  await tick(); await tick();
+  chk('★ 集按鈕上的進度跟著動',
+      qs('#sc-eps [data-ep] small').textContent !== before,
+      `標記前 ${before}，標記後 ${qs('#sc-eps [data-ep] small').textContent}`);
+  chk('★ 總計也跟著動', $('sc-total').textContent !== total0,
+      `${total0} → ${$('sc-total').textContent}`);
+  chk('★ 標記完不會被踢出閱讀畫面', vis('sc-scene-pane'),
+      '重畫整塊的話，renderPick 開頭會把內文收起來');
+}
+
+// ── 內容變動要讓集清單失效 ────────────────────────────────
+// 匯入了新的一集，不重新整理整頁就看不到 —— 而使用者不會知道要重整。
+{
+  chk('★ 有對外的失效入口', typeof view.invalidate === 'function');
+  view.invalidate();
+  await view.open();
+  chk('失效後重抓得回來', qsa('#sc-works [data-work]').length === 2);
+}
+
 // ── 幕之間移動 ───────────────────────────────────────────
 {
   qs('#sc-scenes [data-scene="1"]').click();
