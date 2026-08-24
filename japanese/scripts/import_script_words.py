@@ -76,6 +76,23 @@ def main():
     cards = json.loads(Path(args.cards).read_text(encoding="utf-8"))
     lines = json.loads((Path(args.cards).parent / f"{args.ep}.json").read_text())["lines"]
 
+    # ★ 同一批裡也可能有同詞形的兩張卡。
+    #   抽取時的鍵是 (原形, 詞性)，所以「様」會同時以形状詞與名詞出現 ——
+    #   兩者原形一樣，畫面上看起來是同一個詞。
+    #   下面對資料庫的去重擋得住「跨集重複」，卻擋不住「同一批內重複」，
+    #   而那正是第 6 集實際發生的事（建出兩張「様」）。
+    #   保留先出現的那一個：它的詞性來自更早、更常見的用法。
+    seen_ko = set()
+    kept = []
+    for c in cards:
+        if c["lemma"] in seen_ko:
+            continue
+        seen_ko.add(c["lemma"])
+        kept.append(c)
+    if len(kept) != len(cards):
+        print(f"  同一批裡的同詞形：合併 {len(cards) - len(kept)} 張")
+    cards = kept
+
     rows = []
     for i, c in enumerate(cards, start=1):
         # 注音：漢字才需要。純假名/片假名的詞不加，免得畫面上多一層沒有資訊的括號
