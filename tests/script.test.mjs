@@ -66,6 +66,24 @@ chk('列出了集', !!document.querySelector('#sc-eps [data-ep]'));
 chk('★ 集上顯示進度', /1\s*\/\s*2/.test($('sc-eps').textContent),
     `讀了 1 幕共 2 幕 —— 看不到進度就不知道該從哪繼續（${$('sc-total').textContent}）`);
 
+// ── 集清單的季篩選 ───────────────────────────────────────
+{
+  chk('★ 兩季以上才出現季的篩選', !$('sc-works').classList.contains('hidden'),
+      '只有一季時給一列只有一顆的按鈕，等於要人先選一個沒有選擇的東西');
+  const before = document.querySelectorAll('#sc-eps [data-ep]').length;
+  chk('沒篩選時兩季都列出來', before === 2, `列了 ${before} 集`);
+  const s2 = [...document.querySelectorAll('#sc-works [data-work]')]
+    .find((b) => /第 2 季/.test(b.dataset.work));
+  s2.click();
+  await new Promise((r) => setTimeout(r, 0));
+  chk('★ 選了某一季就只剩那一季',
+      document.querySelectorAll('#sc-eps [data-ep]').length === 1,
+      `剩 ${document.querySelectorAll('#sc-eps [data-ep]').length} 集`);
+  document.querySelector('#sc-works [data-work=""]').click();
+  await new Promise((r) => setTimeout(r, 0));
+  chk('選回全部就都回來', document.querySelectorAll('#sc-eps [data-ep]').length === 2);
+}
+
 // ── 進到一集 ─────────────────────────────────────────────
 document.querySelector('#sc-eps [data-ep]').click();
 await new Promise((r) => setTimeout(r, 0));
@@ -77,6 +95,21 @@ chk('★ 讀過的幕標出來了',
     && !document.querySelector('#sc-scenes [data-scene="2"]').classList.contains('on'));
 chk('★「從第幾幕開始」指向第一個沒讀的', /第 2 幕/.test($('sc-continue').textContent),
     $('sc-continue').textContent);
+
+// ── 幕清單「只看沒讀的」──────────────────────────────────
+// 一集 70 幕，讀了一半之後「還沒讀的是哪些」比「全部」更常被問。
+{
+  chk('預設看全部', /全部 2 幕/.test($('sc-filter').textContent), $('sc-filter').textContent);
+  $('sc-filter').click();
+  chk('★ 切成只看沒讀的，讀過的就不列了',
+      document.querySelectorAll('#sc-scenes [data-scene]').length === 1,
+      `第 1 幕已讀，應只剩第 2 幕（實際 ${document.querySelectorAll('#sc-scenes [data-scene]').length} 個）`);
+  chk('按鈕上寫著還剩幾幕', /只看沒讀的（1）/.test($('sc-filter').textContent),
+      $('sc-filter').textContent);
+  $('sc-filter').click();
+  chk('★ 切得回全部', document.querySelectorAll('#sc-scenes [data-scene]').length === 2,
+      '回頭重讀是常態，不是例外 —— 切不回去就變成單向的');
+}
 
 // ── 進到一幕 ─────────────────────────────────────────────
 document.querySelector('#sc-scenes [data-scene="1"]').click();

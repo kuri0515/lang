@@ -33,6 +33,8 @@ let mode = 'both';        // both | ja | zh
 let showRuby = true;
 let wordCache = new Map();
 let sceneWordIds = [];    // 這一幕的詞對應到哪些卡片（給「練這一幕」用）
+let workFilter = '';      // 只看某一季（''＝全部）
+let unreadOnly = false;   // 幕清單只看還沒讀的
 
 export function initScript(d) {
   deps = d;
@@ -44,6 +46,9 @@ export function initScript(d) {
   $('sc-ruby').onclick = () => { showRuby = !showRuby; syncRubyBtn(); renderLines(); };
   $('sc-done').onclick = () => toggleDone();
   $('sc-continue').onclick = () => openScene(nextUnread());
+  // 一集 70 幕，讀了一半之後「還沒讀的是哪些」比「全部」更常被問。
+  // 做成切換而不是預設只看未讀 —— 回頭重讀是常態，不是例外。
+  $('sc-filter').onclick = () => { unreadOnly = !unreadOnly; showEp(); };
   // ★ 讀完一幕，最想做的事就是把剛遇到的詞練熟 ——
   //   而在這之前，那 768 張卡唯一的入口是
   //   「詞庫 → 篩選那一副 → 學這組」，沒有人會自己走到那裡。
@@ -108,10 +113,26 @@ function showList() {
   const sceneAll = eps.reduce((s, e) => s + e.scene_count, 0);
   $('sc-total').textContent = `${readAll} / ${sceneAll} 幕`;
 
+  // 季的篩選。只有一季時不顯示 —— 給一列只有一顆的按鈕，
+  // 等於要人先選一個沒有選擇的東西。
+  const seasons = [...new Set(eps.map((e) => `${e.work_title}｜第 ${e.season} 季`))];
+  const wbox = $('sc-works');
+  wbox.classList.toggle('hidden', seasons.length < 2);
+  if (seasons.length >= 2) {
+    wbox.innerHTML = [['', '全部'], ...seasons.map((k) => [k, k])]
+      .map(([v, label]) =>
+        `<button class="tag${workFilter === v ? ' on' : ''}" data-work="${esc(v)}">${esc(label)}</button>`)
+      .join('');
+    qsa('#sc-works [data-work]').forEach((b) => {
+      b.onclick = () => { workFilter = b.dataset.work; showList(); };
+    });
+  }
+
   // 依作品分組 —— 之後會有第二季、第三季，甚至第二部作品
   const by = new Map();
   for (const e of eps) {
     const k = `${e.work_title}｜第 ${e.season} 季`;
+    if (workFilter && k !== workFilter) continue;
     if (!by.has(k)) by.set(k, []);
     by.get(k).push(e);
   }
@@ -158,12 +179,16 @@ function showEp() {
     done.size >= ep.scene_count ? '整集讀完了 · 從第 1 幕重讀' : `從第 ${n} 幕開始`;
 
   const total = ep.scene_count;
-  $('sc-scenes').innerHTML = Array.from({ length: total }, (_, i) => {
-    const num = i + 1;
+  const left = total - done.size;
+  $('sc-filter').textContent = unreadOnly ? `只看沒讀的（${left}）` : `全部 ${total} 幕`;
+  const nums = Array.from({ length: total }, (_, i) => i + 1)
+    .filter((n) => !unreadOnly || !done.has(n));
+  $('sc-scenes').innerHTML = nums.map((num) => {
     const rows = lines.filter((l) => l.scene === num).length;
     return `<button class="scene-cell${done.has(num) ? ' on' : ''}" data-scene="${num}"
       title="${rows} 句">${num}</button>`;
-  }).join('');
+  }).join('')
+    || '<p class="muted nomargin">這一集都讀完了。</p>';
   qsa('#sc-scenes [data-scene]').forEach((b) => {
     b.onclick = () => openScene(Number(b.dataset.scene));
   });

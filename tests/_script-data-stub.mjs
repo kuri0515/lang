@@ -14,7 +14,9 @@ const LINES = [
     zh: '走吧', tokens: ['行く'] },
 ];
 export const marked = [];
-export async function listEpisodes() { return [EP]; }
+const EP2 = { id: 'ep2', slug: 'demo-s2e01', work: 'demo', work_title: 'デモ',
+              season: 2, episode: 1, title: null, line_count: 2, scene_count: 1 };
+export async function listEpisodes() { return [EP, EP2]; }
 export async function loadLines() { return LINES; }
 export async function loadProgress() { return new Set([1]); }
 export async function progressCounts() { return { ep1: 1 }; }
