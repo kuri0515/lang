@@ -15,11 +15,14 @@ const LINES = [
     zh: '喝水', tokens: ['水', '飲む'], grammar: [] },
   { idx: 4, scene: 2, start_s: 33, end_s: 36, ruby: '行[い]きましょう',
     zh: '走吧', tokens: ['行く'], grammar: ['zzz-不存在的代號'] },
-  // 第 3–12 幕各一行，用來驗「每十個一組」的分組與跨組換幕
+  // 第 3–12 幕各一行，用來驗「每十個一組」的分組與跨組換幕。
+  // 最後一幕（第 12 幕）刻意塞 20 個詞：實測 43% 的幕超過 12 個詞、最多 50 個，
+  // 那不是邊角情況，而是「這一區會不會把讀完了那顆按鈕推出螢幕」的分水嶺。
   ...Array.from({ length: 10 }, (_, i) => ({
     idx: 5 + i, scene: 3 + i, start_s: 40 + i * 5, end_s: 43 + i * 5,
     ruby: '水[みず]を飲[の]みます', zh: '喝水',
-    tokens: ['水'], grammar: [],
+    tokens: i === 9 ? Array.from({ length: 20 }, (_, j) => `多${j}`) : ['水'],
+    grammar: [],
   })),
 ];
 export const marked = [];

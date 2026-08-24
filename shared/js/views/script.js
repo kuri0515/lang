@@ -418,13 +418,46 @@ async function renderWords(rows) {
     `${items.length} 個` + (gap > 0 ? `（另有 ${gap} 個還沒建卡）` : '');
   $('sc-practice').classList.toggle('hidden', !items.length);
   $('sc-practice').textContent = `練這一幕（${items.length}）`;
-  box.innerHTML = items.map((it) => `
+  wordsOpen = false;
+  paintWords(items);
+}
+
+/**
+ * 詞的清單：先給前 WORD_PREVIEW 個，其餘收起來。
+ *
+ * 【為什麼要收】
+ *   實測 262 幕：一幕的詞中位數 10 個，但 43% 的幕超過 12 個，最多 50 個。
+ *   全部攤開時，「這一幕讀完了」那顆按鈕會被推到螢幕外好幾個捲動距離 ——
+ *   而那是讀完一幕之後唯一要按的東西。
+ *
+ * 【為什麼是「先給一部分」而不是整塊折疊】
+ *   整塊收起來的話，畫面上只剩一個數字，看起來像「還沒載到」——
+ *   而這一區才剛剛從「永遠是空的」修好（見 data/script.js 的 LINE_FIELDS）。
+ *   露出前十二個，既看得到東西，長度又是有界的。
+ */
+const WORD_PREVIEW = 12;
+let wordsOpen = false;
+
+function paintWords(items) {
+  const box = $('sc-words');
+  if (!items.length) {
+    box.innerHTML = '<p class="muted nomargin">這一幕的詞還沒有建卡。</p>';
+    return;
+  }
+  const shown = wordsOpen ? items : items.slice(0, WORD_PREVIEW);
+  const rest = items.length - shown.length;
+  box.innerHTML = shown.map((it) => `
     <div class="sc-word">
       <b>${hasRuby(it.hanja) ? rubyHTML(it.hanja) : esc(it.ko)}</b>
       <span class="muted">${esc(it.pos || '')}</span>
       <span>${esc(it.zh)}</span>
     </div>`).join('')
-    || '<p class="muted nomargin">這一幕的詞還沒有建卡。</p>';
+    + (rest > 0 ? `<button class="block ghost sc-more">還有 ${rest} 個 ▾</button>` : '')
+    + (wordsOpen && items.length > WORD_PREVIEW
+        ? '<button class="block ghost sc-more">收起來 ▴</button>' : '');
+  box.querySelectorAll('.sc-more').forEach((b) => {
+    b.onclick = () => { wordsOpen = !wordsOpen; paintWords(items); };
+  });
 }
 
 function syncDoneBtn() {

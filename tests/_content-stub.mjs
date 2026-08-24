@@ -10,6 +10,11 @@ const DICT = {
   飲む: { id: 'w-nomu', ko: '飲む', hanja: '飲[の]む', zh: '喝', pos: '動詞' },
   行く: { id: 'w-iku', ko: '行く', hanja: '行[い]く', zh: '去', pos: '動詞' },
 };
+// 一幕 20 個詞，用來驗「詞多的時候先給一部分」——
+// 實測 43% 的幕超過 12 個詞，最多 50 個，那不是邊角情況
+for (let i = 0; i < 20; i++) {
+  DICT[`多${i}`] = { id: `w-many-${i}`, ko: `多${i}`, hanja: '', zh: `意${i}`, pos: '名詞' };
+}
 export const askedWith = [];
 export const askedFields = [];
 export async function itemsByKo(list, deckSlug = null, fields = 'ALL') {

@@ -1251,7 +1251,14 @@ button[aria-busy="true"]::after {
   grid-template-columns: repeat(10, minmax(0, 1fr)); }
 /* 點擊區至少 40px —— 手指按得到才算按鈕 */
 .scene-cell { min-height: 40px; }
-@media (max-width: 420px) {
+/* ★ 斷點是 560 不是 420。
+   十欄在 430px 的手機上，每格寬只有約 29px —— 高度雖然有 40px，
+   寬度卻不到手指的一半，而那是今天最常見的手機寬度（390–440）。
+   算式：(560 − 內距 32 − 組首 46 − gap 8 − 格間 54) ÷ 10 ≈ 42px，
+   所以 560 以下一律五欄。 */
+@media (max-width: 560px) {
   .scene-cells { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .scene-group { align-items: flex-start; }
 }
+/* 「還有 N 個」：與清單同寬的次要按鈕，不搶主要動作的視線 */
+.sc-more { margin-top: 8px; font-size: 13px; }

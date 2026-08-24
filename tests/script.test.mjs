@@ -181,6 +181,51 @@ chk('★ 標題的數字＝實際列出的筆數',
 chk('★ 還沒建卡的差額要說出來', /另有 1 個還沒建卡/.test($('sc-words-n').textContent),
     `新的一集在詞義還沒寫好之前差額會很大，那是「還沒整理完」的訊號（${$('sc-words-n').textContent}）`);
 
+// ── 詞多的時候先給一部分 ─────────────────────────────────
+// 實測 262 幕：中位數 10 個，但 43% 的幕超過 12 個、最多 50 個。
+// 全部攤開時「這一幕讀完了」會被推到螢幕外好幾個捲動距離 ——
+// 而那是讀完一幕之後唯一要按的東西。
+{
+  // 全程走真實的 DOM：點第 13 幕（替身裡那一幕有 20 個詞）
+  qs('#sc-scenes [data-scene="12"]').click();
+  await tick(); await tick();
+  chk('★ 詞多時只先列出前 12 個', qsa('#sc-words .sc-word').length === 12,
+      `列了 ${qsa('#sc-words .sc-word').length} 筆`);
+  const more = qsa('#sc-words .sc-more');
+  chk('有「還有 N 個」的出口', more.length === 1 && /還有 8 個/.test(more[0].textContent),
+      more.map((b) => b.textContent).join('／'));
+  more[0].click();
+  chk('展開後全部列出', qsa('#sc-words .sc-word').length === 20);
+  chk('展開後收得回去', qsa('#sc-words .sc-more').some((b) => /收起來/.test(b.textContent)),
+      '只能展開不能收，等於這個選擇只有單向');
+  qsa('#sc-words .sc-more').find((b) => /收起來/.test(b.textContent)).click();
+  chk('收起來之後回到 12 筆', qsa('#sc-words .sc-word').length === 12);
+
+  // 回到詞少的那一幕：不該憑空多出一個按鈕
+  qs('#sc-scenes [data-scene="1"]').click();
+  await tick(); await tick();
+  chk('★ 詞不多時不出現多餘的按鈕',
+      qsa('#sc-words .sc-word').length === 4 && qsa('#sc-words .sc-more').length === 0,
+      '四個詞還要按一下才看得完，是憑空多出來的一步');
+  // 展開之後離開再回來：狀態要歸零，否則下一幕會直接攤開五十個詞。
+  // （驗這件事一定要回到「詞多的那一幕」—— 回到只有四個詞的幕，
+  //   有沒有歸零看起來都一樣，那條斷言等於沒驗。）
+  qs('#sc-scenes [data-scene="12"]').click();
+  await tick(); await tick();
+  qsa('#sc-words .sc-more')[0].click();
+  chk('展開了', qsa('#sc-words .sc-word').length === 20);
+  qs('#sc-scenes [data-scene="1"]').click();
+  await tick(); await tick();
+  qs('#sc-scenes [data-scene="12"]').click();
+  await tick(); await tick();
+  chk('★ 換幕時展開狀態要歸零',
+      qsa('#sc-words .sc-word').length === 12,
+      `回來時列了 ${qsa('#sc-words .sc-word').length} 筆 —— 留著上一幕的展開狀態，`
+      + '下一幕就會直接攤開五十個詞');
+  qs('#sc-scenes [data-scene="1"]').click();
+  await tick(); await tick();
+}
+
 // ── 這一幕的語法 ─────────────────────────────────────────
 {
   chk('★ 列出這一幕用到的句型', /2 個/.test($('sc-gram-n').textContent),
