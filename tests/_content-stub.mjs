@@ -11,10 +11,14 @@ const DICT = {
   行く: { id: 'w-iku', ko: '行く', hanja: '行[い]く', zh: '去', pos: '動詞' },
 };
 export const askedWith = [];
-export async function itemsByKo(list, deckSlug = null) {
+export const askedFields = [];
+export async function itemsByKo(list, deckSlug = null, fields = 'ALL') {
   askedWith.push(deckSlug);
+  askedFields.push(fields);
   return (list || []).map((k) => DICT[k]).filter(Boolean);
 }
+export let deckCalls = 0;
 export async function pickItems() { return []; }
-export async function listDecks() { return []; }
+export async function listDecks() { deckCalls += 1; return []; }
+export const invalidateDecks = () => {};
 export async function distractorPool() { return []; }

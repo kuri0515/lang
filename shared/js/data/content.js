@@ -3,12 +3,20 @@
 // =====================================================================
 import { sb, ITEM_FIELDS, fetchAll } from './client.js';
 
+// ★ 詞庫清單快取。
+//   itemsByKo 需要用 slug 換 id，而精讀「每開一幕」都會呼叫它一次 ——
+//   不快取的話，每開一幕就多一次往返，只為了拿兩列不會變的資料。
+let _decks = null;
+export const invalidateDecks = () => { _decks = null; };
+
 export async function listDecks() {
+  if (_decks) return _decks;
   const { data, error } = await sb.from('decks')
     .select('id, slug, title, title_ko, description, level, sort_order')
     .order('sort_order').order('slug');
   if (error) throw error;
-  return data ?? [];
+  _decks = data ?? [];
+  return _decks;
 }
 
 
@@ -184,10 +192,17 @@ export async function distractorPool(deckId = null) {
  *
  *   直接查那幾個字：結果精確，傳輸量也從幾百條變成幾條。
  */
-export async function itemsByKo(koList, deckSlug = null) {
+/**
+ * @param fields 只取畫面真的會讀的欄位。
+ *   預設整包（ITEM_FIELDS）是為了相容既有呼叫端（形近組要完整卡片），
+ *   但精讀的「這一幕的詞」只顯示詞形／注音／詞性／中文 ——
+ *   整包會多帶 example_ko / example_zh（那是整句台詞）與 note，
+ *   實測一幕 8 個詞就多 46% 的傳輸量，而那些欄位一個都沒被讀到。
+ */
+export async function itemsByKo(koList, deckSlug = null, fields = ITEM_FIELDS) {
   const list = [...new Set((koList || []).filter(Boolean))];
   if (!list.length) return [];
-  let q = sb.from('items').select(ITEM_FIELDS).eq('is_active', true).in('ko', list);
+  let q = sb.from('items').select(fields).eq('is_active', true).in('ko', list);
   // ★ 限定詞庫。不限定的話，同一個詞形在別副詞庫裡的卡片也會被撈進來 ——
   //   精讀的「這一幕的詞」因此混進五十音課本的卡片，
   //   而畫面看起來完全正常（那些詞確實出現在這一幕，只是連錯了卡）。

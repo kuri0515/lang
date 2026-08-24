@@ -227,6 +227,47 @@ chk('★ 還沒建卡的差額要說出來', /另有 1 個還沒建卡/.test($('
       `帶下去的是 ${JSON.stringify(cs.askedWith)}`);
 }
 
+// ── 載入成本 ──────────────────────────────────────────────
+// 這幾項壞了不會有任何跡象：畫面照樣正確，只是每次都多撈一份。
+{
+  const cs = await import(`${SHARED}/js/data/content.js`);
+  chk('★ 查詞只取畫面用到的欄位',
+      cs.askedFields.length > 0 && cs.askedFields.every((f) => f && f !== 'ALL' && !/example_/.test(f)),
+      `帶下去的是 ${JSON.stringify(cs.askedFields.slice(-1))} —— 整包會多帶整句台詞與備註（實測多 46%）`);
+
+  // 整集的行約 36 KB。來回切換集數時重新撈一遍沒有意義。
+  // 第 2 季那一集還沒撈過 —— 第一次會撈，之後來回切換都不該再撈。
+  data.resetCalls();
+  const goto = async (seasonIdx) => {
+    qsa('#sc-works [data-work]')[seasonIdx].click();
+    await tick();
+    qs('#sc-eps [data-ep]').click();
+    await tick();
+  };
+  await goto(1);                                 // 第 2 季（第一次，會撈）
+  chk('沒撈過的集要撈一次', data.lineCalls === 1, `撈了 ${data.lineCalls} 次`);
+  await goto(0);                                 // 第 1 季（稍早已快取）
+  await goto(1);
+  await goto(0);
+  chk('★ 撈過的集不再重撈', data.lineCalls === 1,
+      `來回切換三次之後仍應是 1 次（實際 ${data.lineCalls} 次）`);
+
+  view.invalidate();
+  await view.open();
+  qs('#sc-eps [data-ep]').click();
+  await tick();
+  chk('★ 內容變動後快取要失效', data.lineCalls > 1,
+      '不失效的話，匯入了新的一集也看不到更新的行');
+
+  // 把畫面還原到第 1 季第 1 集第 1 幕 —— 後面的斷言以它為前提
+  qsa('#sc-works [data-work]')[0].click();
+  await tick();
+  qs('#sc-eps [data-ep]').click();
+  await tick();
+  qs('#sc-scenes [data-scene="1"]').click();
+  await tick();
+}
+
 // ── 練這一幕的詞 ─────────────────────────────────────────
 // 那些詞卡在這之前唯一的入口是「詞庫 → 篩選那一副 → 學這組」，
 // 沒有人會自己走到那裡。內容從哪來與拿它做什麼，該接在一起。

@@ -35,6 +35,7 @@ export function initBrowse(d) {
   // 精讀是動態載入的，所以用 import() 取 —— 沒載過就代表還沒開過，本來就沒有快取。
   on(EVENTS.ITEMS_CHANGED, () => {
     tagsLoaded = false;
+    content.invalidateDecks();
     dialogue.invalidate();
     if (opt('b-pane-script')) import('./script.js').then((m) => m.invalidate()).catch(() => {});
   });

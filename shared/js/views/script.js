@@ -28,6 +28,9 @@ let eps = [];
 let counts = {};          // episode_id → 讀過幾幕
 let ep = null;            // 目前這一集
 let lines = [];           // 這一集的全部行
+// 整集的行約 36 KB。來回切換集數時重新撈一遍沒有意義 ——
+// 內容變動時由 invalidate() 一起清掉。
+const lineCache = new Map();
 let done = new Set();     // 這一集讀過的幕
 let scene = 0;            // 目前這一幕（1 起；0＝還沒選）
 let mode = 'both';        // both | ja | zh
@@ -131,7 +134,7 @@ export async function open() {
   if (back) {
     workFilter = workKeyOf(back);
     ep = back;
-    lines = await script.loadLines(back.id);
+    lines = await cachedLines(back.id);
     done = await script.loadProgress(deps.userId(), back.id);
     lastRead = pos.scene || 0;
   } else if (!workFilter && eps.length) {
@@ -203,14 +206,23 @@ function refreshPickCounts() {
   }
 }
 
-/** 內容變動（例如匯入了新的一集）就讓集清單失效，下次進來重抓 */
-export function invalidate() { eps = []; }
+async function cachedLines(id) {
+  if (!lineCache.has(id)) lineCache.set(id, await script.loadLines(id));
+  return lineCache.get(id);
+}
+
+/** 內容變動（例如匯入了新的一集）就讓集清單與行快取一起失效 */
+export function invalidate() {
+  eps = [];
+  lineCache.clear();
+  wordCache.clear();
+}
 
 async function openEp(id) {
   const next = eps.find((e) => e.id === id);
   if (!next) return;
   ep = next;
-  lines = await script.loadLines(id);
+  lines = await cachedLines(id);
   done = await script.loadProgress(deps.userId(), id);
   // 換集時把「上次讀到第幾幕」歸零 —— 那是上一集的幕號，
   // 套到新的一集只會指到一個不相干的地方
@@ -378,7 +390,10 @@ async function renderWords(rows) {
   const miss = want.filter((w) => !wordCache.has(key(w)));
   if (miss.length) {
     // 一次查完這一幕缺的，不要逐詞查 —— 一幕十幾個詞就是十幾趟往返
-    const got = await content.itemsByKo(miss, ep?.deck_slug).catch(() => []);
+    // 只取這張卡片在畫面上會顯示的欄位 —— 整包會多帶整句台詞與備註，
+    // 實測一幕 8 個詞就多 46% 的傳輸量
+    const got = await content.itemsByKo(miss, ep?.deck_slug, 'id, ko, zh, pos, hanja')
+      .catch(() => []);
     for (const it of got) wordCache.set(key(it.ko), it);
     for (const w of miss) if (!wordCache.has(key(w))) wordCache.set(key(w), null);
   }
