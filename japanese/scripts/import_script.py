@@ -84,6 +84,9 @@ def main():
         # 斷詞結果存下來 —— 前端要靠它列出「這一幕的詞」。
         # 用字串比對算的話，「気」會在「元気」裡誤中（見 migration 0023）
         "tokens": l.get("tokens", []),
+        # 句型代號。解說在站台設定裡（japanese/grammar.js），
+        # 這裡只存「這一行命中了哪幾個」
+        "grammar": l.get("grammar", []),
     } for l in d["lines"]]
 
     print(f"  {slug}：{len(lines)} 行 · {len(d['scenes'])} 幕 · 詞彙 {len(d['words'])} 個（本次不匯入）")
@@ -112,12 +115,17 @@ def main():
         call(url, key, "POST", "script_lines", chunk, prefer="return=minimal")
 
     back = call(url, key, "GET",
-                f"script_lines?select=idx,scene,tokens&episode_id=eq.{eid}&order=idx&limit=2000")
+                f"script_lines?select=idx,scene,tokens,grammar&episode_id=eq.{eid}"
+                f"&order=idx&limit=2000")
     scenes_back = len({r["scene"] for r in back})
-    toks = sum(len(r["tokens"]) for r in back)
-    want = sum(len(l["tokens"]) for l in lines)
-    ok = len(back) == len(lines) and scenes_back == len(d["scenes"]) and toks == want
-    print(f"  回讀：{len(back)} 行 · {scenes_back} 幕 · 詞 {toks}（預期 {want}）"
+    # ★ 每一個寫進去的欄位都要回讀對帳。
+    #   先前只驗了行數、幕數與 tokens，而 grammar 根本沒被放進 payload ——
+    #   回讀照樣亮綠燈，因為它沒有被問到。
+    got = {k: sum(len(r.get(k) or []) for r in back) for k in ("tokens", "grammar")}
+    want = {k: sum(len(l.get(k) or []) for l in lines) for k in ("tokens", "grammar")}
+    ok = (len(back) == len(lines) and scenes_back == len(d["scenes"]) and got == want)
+    print(f"  回讀：{len(back)} 行 · {scenes_back} 幕 · "
+          f"詞 {got['tokens']}／{want['tokens']} · 句型 {got['grammar']}／{want['grammar']}"
           f" → {'✅ 對得上' if ok else '❌ 對不上'}")
     if not ok:
         sys.exit(1)

@@ -33,7 +33,30 @@ set -a; . "$ENV_FILE"; set +a
 REF=$(echo "$SUPABASE_URL" | sed 's#https://##;s#\.supabase\.co##')
 echo "🎯 站台 $SITE · Supabase 專案 $REF" >&2
 export PGPASSWORD="$SUPABASE_DB_PASSWORD"
-PSQL=(psql -h "db.$REF.supabase.co" -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1 -q)
+# 連線主機：優先直連，解不到就走 pooler。
+#
+# ★ Supabase 已經把直連（db.<ref>.supabase.co）改成 IPv6-only，
+#   而多數網路沒有 IPv6 出口 —— 那個主機在這裡連 A 與 AAAA 紀錄都查不到。
+#   症狀是 psql 說「could not translate host name」，
+#   看起來像網路壞了，實際上是這條路已經沒有了。
+#   IPv4 要走 pooler，使用者名稱也不同（postgres.<ref>）。
+#
+#   區域寫在各站的 .env.local（SUPABASE_DB_REGION）——
+#   它不是密鑰，但每站不同，而且從 API 的回應標頭問不出來。
+DB_HOST="db.$REF.supabase.co"
+DB_USER="postgres"
+if ! python3 -c "import socket,sys; socket.getaddrinfo('$DB_HOST',5432)" 2>/dev/null; then
+  if [ -z "$SUPABASE_DB_REGION" ]; then
+    echo "❌ 直連主機 $DB_HOST 解不到，而 .env.local 裡沒有 SUPABASE_DB_REGION。"
+    echo "   Supabase 的直連已改成 IPv6-only，IPv4 要走 pooler。"
+    echo "   請在 <站台>/.env.local 加一行，例如：SUPABASE_DB_REGION=ap-northeast-1"
+    exit 1
+  fi
+  DB_HOST="aws-0-$SUPABASE_DB_REGION.pooler.supabase.com"
+  DB_USER="postgres.$REF"
+  echo "   （直連無 DNS，改走 pooler：${DB_HOST}）"
+fi
+PSQL=(psql -h "$DB_HOST" -p 5432 -U "$DB_USER" -d postgres -v ON_ERROR_STOP=1 -q)
 
 ensure_table() {
   "${PSQL[@]}" -c "
