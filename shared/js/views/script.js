@@ -213,14 +213,22 @@ const clock = (s) => {
 
 function renderLines() {
   const rows = sceneLines();
+  const dict = lang().grammar || {};
   $('sc-lines').innerHTML = rows.map((l) => {
     // 注音關掉時要顯示乾淨的原句 —— 直接印 ruby 欄位會露出 [かんじ] 這種標記
     const ja = showRuby && hasRuby(l.ruby) ? rubyHTML(l.ruby) : esc(stripRuby(l.ruby || l.ja));
+    // ★ 句型標回它出現的那一行。
+    //   只列在卡片上的話，學習者知道「這一幕有〜ている」，
+    //   卻不知道是哪一句 —— 而精讀的核心正是在句子裡看見文法。
+    //   只印形式不印解說：解說在下面那張卡，重複一次會把行擠爆。
+    const tags = (l.grammar || []).filter((k) => dict[k])
+      .map((k) => `<i class="sc-tag">${esc(dict[k].form)}</i>`).join('');
     return `<div class="sc-line" data-idx="${l.idx}">
       <button class="sc-say icon-btn" data-say="${l.idx}" title="朗讀">🔊</button>
       <div class="sc-body">
         ${mode === 'zh' ? '' : `<div class="sc-ja">${ja}</div>`}
         ${mode === 'ja' ? '' : `<div class="sc-zh">${esc(l.zh)}</div>`}
+        ${tags && mode !== 'zh' ? `<div class="sc-tags">${tags}</div>` : ''}
       </div>
     </div>`;
   }).join('');

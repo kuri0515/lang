@@ -1195,3 +1195,10 @@ button[aria-busy="true"]::after {
 /* 易錯點另起一行、降一級 —— 它是提醒不是定義，不該跟解釋搶位置 */
 .sc-gram > em { display: block; margin-top: 3px; font-size: 13px;
   font-style: normal; color: var(--muted); }
+
+/* 句型標回它出現的那一行。只印形式 —— 解說在下面那張卡，
+   重複一次會把行擠爆，而學習者要的只是「這一句用到了哪個」 */
+.sc-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+.sc-tag { font-style: normal; font-size: 11px; line-height: 1.7;
+  padding: 0 7px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent); white-space: nowrap; }

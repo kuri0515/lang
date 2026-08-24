@@ -167,6 +167,18 @@ chk('★ 詞來自斷詞結果，不是字串比對', /4 個/.test($('sc-words-n
   chk('★ 易錯點另起一行顯示', $('sc-gram').querySelectorAll('em').length >= 1,
       '「知っている」不是「正在知道」這種提醒，正是這張卡的價值');
 
+  // ★ 句型要標回它出現的那一行。
+  //   只列在卡片上的話，學習者知道「這一幕有〜ている」，卻不知道是哪一句 ——
+  //   而精讀的核心正是在句子裡看見文法。
+  const lineTags = qsa('#sc-lines .sc-tag');
+  chk('★ 句型標回它出現的那一行', lineTags.length === 3,
+      `第 1 幕：第 1 句 1 個、第 2 句 2 個、第 3 句 0 個（實際 ${lineTags.length}）`);
+  chk('沒有句型的那一行不掛標籤',
+      qsa('#sc-lines .sc-line')[2].querySelectorAll('.sc-tag').length === 0);
+  chk('行上只印形式，不重複印解說',
+      !/正在做/.test(qsa('#sc-lines .sc-tags').map((e) => e.textContent).join('')),
+      '解說在下面那張卡，重複一次會把行擠爆');
+
   // 沒命中就整張卡收起來 —— 一張寫著「沒有」的卡片只會讓人以為壞了。
   // 實測一集有 14/70 幕確實沒有可標的句型。
   qs('#sc-scenes [data-scene="2"]').click();

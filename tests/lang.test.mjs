@@ -238,5 +238,36 @@ for (const site of SITES) {
     grouped.pron.map(([x]) => x).join() === t.pronOrder.join());
 }
 
+
+// ── 句型偵測與解說必須對得上 ──
+//
+// 偵測寫在 japanese/scripts/extract_subtitles.py（Python），
+// 解說寫在 japanese/grammar.js（JS）—— 兩個檔、兩種語言，漂了沒有人會發現：
+//   有規則沒解說 → 那條句型永遠不顯示（renderGrammar 會略過查不到的代號）
+//   有解說沒規則 → 那條解說永遠不會出現
+// 兩種都不報錯。
+{
+  // 判斷抽成純函式，證明它會報警時不必去改真的檔案
+  const diff = (rules, docs) => [
+    ...[...rules].filter((k) => !docs.has(k)).map((k) => `規則 ${k} 沒有解說`),
+    ...[...docs].filter((k) => !rules.has(k)).map((k) => `解說 ${k} 沒有規則`),
+  ];
+  chk('★ 壞樣本：有規則沒解說 → 抓得到',
+      diff(new Set(['a', 'b']), new Set(['a'])).length === 1);
+  chk('★ 壞樣本：有解說沒規則 → 抓得到',
+      diff(new Set(['a']), new Set(['a', 'b'])).length === 1);
+  chk('乾淨樣本不誤報', diff(new Set(['a']), new Set(['a'])).length === 0);
+
+  const site = SITES.find((s2) => configs[s2].scriptReading);
+  if (site) {
+    const py = fs.readFileSync(`${ROOT}/${site}/scripts/extract_subtitles.py`, 'utf8');
+    const rules = new Set([...py.matchAll(/^\s*"([a-z0-9-]+)":\s*lambda/gm)].map((m) => m[1]));
+    const docs = new Set(Object.keys(configs[site].grammar || {}));
+    chk(`★ ${site}：偵測規則與解說一一對應（各 ${rules.size} / ${docs.size} 條）`,
+        rules.size > 0 && diff(rules, docs).length === 0,
+        diff(rules, docs).slice(0, 4).join('、'));
+  }
+}
+
 console.log(fails ? `\n❌ ${fails} 項不通過` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);
