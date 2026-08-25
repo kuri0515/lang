@@ -74,6 +74,7 @@ export function initStudy(d) {
     choices: $('choices'), grade: $('grade'),
     scramble: $('scramble'), sAnswer: $('s-answer'), sPool: $('s-pool'), sResult: $('s-result'),
     spell: $('spell'), spTyped: $('sp-typed'), spKeys: $('sp-keys'), spResult: $('sp-result'),
+    spHint: $('sp-hint'),
     show: $('btn-show'), prog: $('prog'), pos_: $('pos-label'),
   });
 

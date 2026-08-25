@@ -505,8 +505,11 @@ console.log('\n【拼出來】');
     let graded = null;
     // 題型只透過 els 這個對照表碰 DOM，所以測試自己組一份就好 ——
     // 不必把整個 study.js 的內部狀態拉進來。
+    // ★ 這份對照表要與 views/study.js 的 els 一致。
+    //   少一個鍵，題型就會在存取它的那一行炸掉 —— 而正式畫面其實有那個元素，
+    //   於是紅的是測試、不是產品（這次少的是 spHint，卡了整支測試）。
     const spEls = {
-      spell: $('spell'), spTyped: $('sp-typed'),
+      spell: $('spell'), spTyped: $('sp-typed'), spHint: $('sp-hint'),
       spKeys: $('sp-keys'), spResult: $('sp-result'), grade: $('grade'),
     };
     const ctx = {
@@ -524,6 +527,27 @@ console.log('\n【拼出來】');
         '固定格子會把長度送出去，而促音那一課的對比全靠長度');
     chk('有完成鍵（不靠字數自動判定）', !!$('sp-keys').querySelector('[data-done]'));
     chk('有退格鍵', !!$('sp-keys').querySelector('[data-back]'));
+
+    // ── 同一個中文對到多個詞時，要給讀音 ──────────────────────
+    // 實測日文站 985 張卡（14%）與別張共用同一個中文：
+    // 「道歉」可以是 謝る／わび／詫び／謝罪，而這一題不能自評、只認一個答案。
+    // 那不是難度，是題目沒有唯一解 —— 讀音才是指定「問的是哪一個」的線索。
+    {
+      const twin = { id: 'twin', ko: 'ゑゑ', zh: target.zh };   // 與 target 同中文
+      spell.mount({ ...ctx, pool: items.concat([twin]) });
+      chk('★ 中文有多種說法時給讀音線索', !$('sp-hint').classList.contains('hidden'),
+          '不給的話這一題無解，而學習者只會覺得自己一直被判錯');
+      chk('說出有幾種說法', /2 種說法/.test($('sp-hint').textContent), $('sp-hint').textContent);
+      chk('讀音是按鈕，不自動播', !!$('sp-hint').querySelector('[data-say]'),
+          '主動聽是複習，被動聽是干擾');
+
+      // 對照組：中文唯一時不該多出這一行
+      const onlyMe = items.filter((x) => x.zh !== target.zh).concat([target]);
+      spell.mount({ ...ctx, pool: onlyMe });
+      chk('★ 中文唯一時不出現線索', $('sp-hint').classList.contains('hidden'),
+          '每一題都給讀音，等於把這一題降級成聽寫 —— 而它要練的是從中文回想');
+      spell.mount(ctx);      // 還原，後面的斷言接著用
+    }
 
     // 拼對 → 記「記得」
     for (const c of target.ko) {

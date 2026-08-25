@@ -1262,3 +1262,12 @@ button[aria-busy="true"]::after {
 }
 /* 「還有 N 個」：與清單同寬的次要按鈕，不搶主要動作的視線 */
 .sc-more { margin-top: 8px; font-size: 13px; }
+
+/* 拼出來：同一個中文對到多個詞時的讀音線索。
+   沒有它，那 14% 的卡片是無解題 —— 學習者只會覺得自己一直被判錯。 */
+.sp-hint { display: flex; align-items: center; justify-content: center;
+  flex-wrap: wrap; gap: 8px; margin-bottom: 8px;
+  font-size: 13px; color: var(--muted); }
+.sp-hint-say { font-size: 13px; padding: 4px 10px; border-radius: 999px;
+  border: 1px solid var(--line, rgba(128,128,150,.35)); background: transparent;
+  color: inherit; cursor: pointer; }

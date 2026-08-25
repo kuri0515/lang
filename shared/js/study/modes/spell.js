@@ -30,6 +30,7 @@
 import { esc, shuffle } from '../../core/dom.js';
 import { lang } from '../../core/lang.js';
 import { stripRuby } from '../../core/ruby.js';
+import * as speech from '../../core/speech.js';
 import { confusableOf } from '../../core/taxonomy.js';
 
 /** 這個條目拼得出來嗎 —— 由站台宣告哪些字是「鍵盤打得出來的」 */
@@ -95,6 +96,29 @@ export default {
     let committed = false;   // 成績交出去了沒（避免 → 連按兩次跳兩題）
 
     setFront(item.zh, (item.zh || '').length > 12);
+
+    // ★ 同一個中文對到好幾個詞時，這一題本來是答不出來的。
+    //
+    //   實測日文站 985 張卡（14%）與別張共用同一個中文：
+    //   「道歉」可以是 謝る／わび／詫び／謝罪，而這一題不能自評、
+    //   程式只認一個答案 —— 那不是難度，是題目沒有唯一解。
+    //
+    //   解法是給讀音：聽得到唸的是哪一個，就知道要拼哪一個，
+    //   而「聽到音、寫得出字」本身正是這一題要練的能力（聽寫）。
+    //
+    //   不自動播：這個站的原則是「主動聽是複習，被動聽是干擾」。
+    //   但把話說清楚 —— 不說的話，學習者只會覺得自己一直被判錯。
+    //
+    //   同義詞是從干擾項池裡數的，不另外查一次 ——
+    //   那個池本來就為了四選一整份載入，裡面已經有每一張卡的中文。
+    const alts = pool.filter((o) => o.zh && o.zh === item.zh
+                                 && stripRuby(o.ko || '') !== answer).length;
+    els.spHint.classList.toggle('hidden', !alts);
+    if (alts) {
+      els.spHint.innerHTML = `「${esc(item.zh)}」有 ${alts + 1} 種說法`
+        + '<button class="sp-hint-say" data-say="1">🔊 聽讀音</button>';
+      els.spHint.querySelector('[data-say]').onclick = () => speech.speak(answer);
+    }
 
     els.spell.classList.remove('hidden');
     els.spell.classList.remove('shake');

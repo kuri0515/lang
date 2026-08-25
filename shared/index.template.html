@@ -589,6 +589,9 @@
          舉例寫在 study/modes/spell.js —— 樣板的註解會輸出到兩站的 HTML，
          舉日文的例子會讓韓文站的頁面夾帶假名（閘門會擋，我已經被擋過一次）。 -->
     <div id="spell" class="spell hidden">
+      <!-- 同一個中文對到好幾個詞時，光看中文是答不出來的（實測 14% 的卡片如此）。
+           讀音才是那個能指定「問的是哪一個」的線索。 -->
+      <div id="sp-hint" class="sp-hint hidden"></div>
       <div class="sp-line"><span id="sp-typed"></span><i class="sp-caret"></i></div>
       <div id="sp-keys" class="sp-keys"></div>
       <div id="sp-result" class="sp-result hidden"></div>
