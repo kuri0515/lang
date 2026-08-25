@@ -22,7 +22,11 @@ const LINES = [
     idx: 5 + i, scene: 3 + i, start_s: 40 + i * 5, end_s: 43 + i * 5,
     ruby: '水[みず]を飲[の]みます', zh: '喝水',
     tokens: i === 9 ? Array.from({ length: 20 }, (_, j) => `多${j}`) : ['水'],
-    grammar: [],
+    // 第 11 幕（i===8）刻意給 8 個句型：實測 23% 的幕有 8 個以上，最多 18 個，
+    // 而每一條還帶兩三行的易錯點 —— 攤開就是一整個螢幕的說明文字
+    grammar: i === 8
+      ? ['masu', 'te-iru', 'ta', 'da-desu', 'nai', 'ka', 'yo-ne', 'keishou']
+      : [],
   })),
 ];
 export const marked = [];

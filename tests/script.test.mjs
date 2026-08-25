@@ -257,8 +257,40 @@ chk('★ 還沒建卡的差額要說出來', /另有 1 個還沒建卡/.test($('
       $('sc-gram').querySelectorAll('.sc-gram').length === 0
       || !/undefined/.test($('sc-gram').textContent),
       '解說庫還沒補的代號會是 undefined —— 那會印出一整排空白');
+
+  // ── 句型多的時候也要有界 ─────────────────────────────────
+  // 句型庫擴到 59 條之後，一幕的句型數中位數仍是 4，
+  // 但 23% 的幕有 8 個以上、最多 18 個，而每一條還帶兩三行的易錯點。
+  qs('#sc-scenes [data-scene="11"]').click();
+  await tick(); await tick();
+  chk('★ 句型多時只先列出前 6 個',
+      $('sc-gram').querySelectorAll('.sc-gram').length === 6,
+      `列了 ${$('sc-gram').querySelectorAll('.sc-gram').length} 條`);
+  chk('標題仍說出實際總數', /8 個/.test($('sc-gram-n').textContent),
+      `${$('sc-gram-n').textContent} —— 收起來不等於變少`);
+  const gmore = $('sc-gram').querySelectorAll('.sc-more');
+  chk('有展開的出口', gmore.length === 1 && /還有 2 個句型/.test(gmore[0].textContent),
+      gmore[0]?.textContent || '（沒有按鈕）');
+  gmore[0].click();
+  chk('展開後全部列出', $('sc-gram').querySelectorAll('.sc-gram').length === 8);
+  chk('展開後收得回去',
+      [...$('sc-gram').querySelectorAll('.sc-more')].some((b) => /收起來/.test(b.textContent)));
+
+  // 換到別的幕再回來：展開狀態要歸零（回到句型多的那一幕才驗得出來）
   qs('#sc-scenes [data-scene="1"]').click();
-  await tick();
+  await tick(); await tick();
+  qs('#sc-scenes [data-scene="11"]').click();
+  await tick(); await tick();
+  chk('★ 換幕時展開狀態要歸零',
+      $('sc-gram').querySelectorAll('.sc-gram').length === 6,
+      '留著上一幕的展開狀態，下一幕就會直接攤開十八條說明');
+
+  // 句型不多的幕不該憑空多出一個按鈕
+  qs('#sc-scenes [data-scene="1"]').click();
+  await tick(); await tick();
+  chk('★ 句型不多時不出現多餘的按鈕',
+      $('sc-gram').querySelectorAll('.sc-more').length === 0,
+      '兩個句型還要按一下才看得完，是憑空多出來的一步');
 }
 
 // ── 查卡片要限定在這一集自己的詞庫 ───────────────────────

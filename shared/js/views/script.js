@@ -365,14 +365,42 @@ function renderGrammar(rows) {
   card.classList.toggle('hidden', !ids.length);
   $('sc-gram-n').textContent = ids.length ? `${ids.length} 個` : '';
   if (!ids.length) return;
-  $('sc-gram').innerHTML = ids.map((k) => {
+  gramOpen = false;
+  paintGrammar(ids, dict);
+}
+
+/**
+ * 句型清單：先給前 GRAM_PREVIEW 個。
+ *
+ * 【為什麼也要有界】
+ *   句型庫從 47 條擴到 59 條、覆蓋率 37%→67% 之後，一幕的句型數
+ *   中位數是 4（不受影響），但 23% 的幕有 8 個以上，最多一幕 18 個。
+ *   每一條還帶「易錯點」兩三行 —— 18 條攤開就是一整個螢幕的說明文字，
+ *   而它排在台詞下面，等於把「這一幕讀完了」推得更遠。
+ *
+ *   六個是刻意的：中位數 4 落在門檻內，也就是**多數的幕完全不受影響**，
+ *   只有真正過長的那幾幕才需要按一下。
+ */
+const GRAM_PREVIEW = 6;
+let gramOpen = false;
+
+function paintGrammar(ids, dict) {
+  const shown = gramOpen ? ids : ids.slice(0, GRAM_PREVIEW);
+  const rest = ids.length - shown.length;
+  $('sc-gram').innerHTML = shown.map((k) => {
     const g = dict[k];
     return `<div class="sc-gram">
       <b>${esc(g.form)}</b>
       <span>${esc(g.sense)}</span>
       ${g.watch ? `<em>⚠ ${esc(g.watch)}</em>` : ''}
     </div>`;
-  }).join('');
+  }).join('')
+    + (rest > 0 ? `<button class="block ghost sc-more">還有 ${rest} 個句型 ▾</button>` : '')
+    + (gramOpen && ids.length > GRAM_PREVIEW
+        ? '<button class="block ghost sc-more">收起來 ▴</button>' : '');
+  $('sc-gram').querySelectorAll('.sc-more').forEach((b) => {
+    b.onclick = () => { gramOpen = !gramOpen; paintGrammar(ids, dict); };
+  });
 }
 
 /**

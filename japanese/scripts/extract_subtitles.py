@@ -316,13 +316,19 @@ def build_rules():
     "tara": lambda w: has(w,0,'たら','だら'),
     "ba":   lambda w: any(x[1]=='ば' and x[2]=='助詞' for x in w),
     "nara": lambda w: has(w,0,'なら'),
-    "to-jouken": lambda w: any(w[i][0]=='と' and w[i][2]=='助詞' and w[i-1][2]=='動詞' for i in range(1,len(w))),
-    "kara-riyuu": lambda w: any(x[0]=='から' and x[2]=='助詞' for x in w),
+    # ★ と・から・し 都有兩種身分，而 Sudachi 分得出來（詞性細分類）。
+    #   不看細分類的話會教錯，且錯得很像對的：
+    #     「５番線から発車します」的から是「從」，不是「因為」（實測 182 行）
+    #     「行くと言った」的と是引用，不是條件（と當格助詞的有 908 行）
+    #     「ここしか」被切成 し＋か，し 會被當成並列的「〜し」
+    #   一律只認接續助詞 —— 那才是這三個句型真正的身分。
+    "to-jouken": lambda w: any(x[0]=='と' and x[2]=='助詞' and x[3]=='接続助詞' for x in w),
+    "kara-riyuu": lambda w: any(x[1]=='から' and x[2]=='助詞' and x[3]=='接続助詞' for x in w),
     "node":  lambda w: has(w,0,'ので','んで'),
     "noni":  lambda w: has(w,0,'のに'),
     "kedo":  lambda w: has(w,0,'けど','けれど','けれども','けども'),
     "ga-gyaku": lambda w: after_pred(w,'が'),
-    "shi":   lambda w: any(x[0]=='し' and x[2]=='助詞' for x in w),
+    "shi":   lambda w: any(x[0]=='し' and x[2]=='助詞' and x[3]=='接続助詞' for x in w),
     "tari":  lambda w: has(w,0,'たり','だり'),
     "nakereba": lambda w: has(w,0,'なけれ','なきゃ','なくちゃ','ねば'),
     "naide":    lambda w: has(w,0,'ないで','ずに'),
