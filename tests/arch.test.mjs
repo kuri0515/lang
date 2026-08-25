@@ -164,9 +164,11 @@ console.log('\n【分頁的唯一排序】');
   }
   chk('★ 每一次 fetchAll 都指定了 tiebreak', bad,
       '沒有唯一排序的分頁會重複或漏掉列，而筆數看起來是對的');
-  const client = fs.readFileSync(`${SHARED}/js/data/client.js`, 'utf8');
+  // 實作在 data/paginate.js（它不碰 supabase，所以能純 node 測試，
+  // 也能讓替身直接用同一份 —— 見 tests/paginate.test.mjs）
+  const paginate = fs.readFileSync(`${SHARED}/js/data/paginate.js`, 'utf8');
   chk('★ 沒給 tiebreak 時 fetchAll 直接拒絕',
-      /throw new Error\('fetchAll 需要 tiebreak/.test(client) ? [] : ['client.js 沒有那道閘門'],
+      /throw new Error\('fetchAll 需要 tiebreak/.test(paginate) ? [] : ['paginate.js 沒有那道閘門'],
       '只靠人記得的規矩，遲早會有人忘記 —— 而忘記的那次不會報錯');
 }
 
