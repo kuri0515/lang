@@ -1,10 +1,44 @@
 # 接手文件 · 單字卡（韓語 / 日語）
 
-> 停在 2026-08-19。接手先讀這份，讀完再動手。
-> 線上：`kuri0515.github.io/lang/korean/`　倉庫：github.com/kuri0515/lang
+> 停在 **2026-08-25**。接手先讀這份，讀完再動手。
+> 線上：`kuri0515.github.io/lang/{korean,japanese}/`　倉庫：github.com/kuri0515/lang
 >
 > 動手改邏輯前，另外讀 [`LESSONS.md`](LESSONS.md)：出過的錯與它們留下的規矩
-> （空集合翻轉完成判斷、發牌 ≠ 消費、導覽列不准攔截、兩站 migration 漂移……）。
+> （空集合翻轉完成判斷、發牌 ≠ 消費、導覽列不准攔截、取消一個 await 等於
+> resolve、替身必須比正式程式更嚴、沒有 ORDER BY 的分頁……）。
+
+---
+
+## 現況（2026-08-25）
+
+| | 韓文站 | 日文站 |
+|---|---|---|
+| Supabase | `vmztwoqguwljuxfdfzhl` | `ihkrmcbhzmzlczedswyv` |
+| 詞條 | 1289 | 7049 |
+| 精讀台詞 | 無 | 9949 行 · 2060 幕 · 25 集 |
+
+**測試共 23 組**，`npm test` 一次跑完（下面舊文寫「11 組」是 2026-08-17 的數字）。
+
+**日文站多了一個精讀模組**（`scriptReading` 旗標，韓文站沒有這塊畫面）：
+SPY×FAMILY 第一季 25 集，作品→集→幕三層篩選，一幕一幕讀，
+每一幕帶詞彙與句型。詞卡 6223 張在 `spy-s1` 這副詞庫。
+加一集的流程寫在 `japanese/data/spy/README.md`。
+
+**這一輪（08-24～25）改了什麼**，按影響排序：
+
+| 修的東西 | 之前 | 之後 |
+|---|---|---|
+| ★ 每一幕的詞與句型 | **從上線第一天就沒顯示過**（select 沒查 tokens/grammar） | 正常 |
+| 詞庫開頁 | 8 趟 · 3.9 s | 1 趟 · 0.30 s（伺服器端分頁） |
+| 標籤列 | 8 趟 · 2.4 s | 1 趟 · 0.29 s（migration 0027 `v_tag_counts`） |
+| 瀏覽頁的學習狀態 | 89 趟 | 1 趟 |
+| 干擾項池 | 8 趟 · 3.3 s | 約 1 s（`fetchAll` 成批發送） |
+| 情境對話 | 撈 7049 條 | 撈 188 條 |
+| 句型覆蓋 | 37% 的行 | 67%（並修掉 5 條會教錯的規則） |
+| 分頁正確性 | 15 處 `fetchAll` 有 13 處沒有唯一排序 | 沒給 `tiebreak` 直接拒絕 |
+
+**沒做、刻意留著的**：`shared/vendor/supabase.js` 216 KB 是開站最大的一塊，
+可以只打包用到的模組，但要重做 esbuild 設定並重驗登入流程 —— 使用者決定先不動。
 
 ---
 
@@ -13,7 +47,7 @@
 | 變更 | 影響 | 細節 |
 |---|---|---|
 | 拆成 monorepo | `js/` → `shared/js/`，`data/` → `korean/data/` | 見下一段 |
-| 新增日文站 | **97 課、826 條，入門書已完整收錄** | `japanese/` |
+| 新增日文站 | 當時 97 課、826 條（現已 7049 條，見上方「現況」） | `japanese/` |
 | **排程換成費氏階梯** | 1,2,3,5,8,13,21,34,55,89 天，不再乘係數 | README「幾個關鍵設計」 |
 | **新卡本輪循環到會為止** | 按「記得」的新卡會排回隊尾直到畢業 | 同上 |
 | **回顧清單** | 自己標 ☆，答得好不動排程、答不好才拉近 | 同上 |
@@ -22,7 +56,7 @@
 | **課程清單改為動態** | 加內容不必重新部署；片假名進雲端就自動出現 | 同上 |
 | **index.html 樣板化** | ⚠️ 兩站的 index.html 是產生物，別手改 | `shared/index.template.html` |
 
-**動手之前跑一次 `npm test`**（11 組），它會擋住這裡面大部分的坑。
+**動手之前跑一次 `npm test`**（現在 23 組），它會擋住這裡面大部分的坑。
 
 ---
 
@@ -68,7 +102,7 @@ NewJeans（尤其 해린）、三麗鷗、扭蛋、設計美學、打掃收納�
 技術上是靜態前端（GitHub Pages）+ Supabase（Auth／Postgres／RLS），沒有建置步驟。
 
 ```bash
-npm test                                  # 11 組，兩站一起驗，動任何 shared/js 之前先跑
+npm test                                  # 23 組，兩站一起驗，動任何 shared/js 之前先跑
 npm run build:sites                       # 改過 index.template.html 之後要重新產生
 python3 shared/scripts/audit_content.py   # 內容稽核，error 必須是 0
 SITE=japanese python3 shared/scripts/audit_content.py
