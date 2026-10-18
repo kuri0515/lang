@@ -19,5 +19,18 @@ function builder(table) {
   });
   return self;
 }
-export const sb = { from: (t) => builder(t) };
+export const storageCalls = [];
+export let storageFail = false;
+export const setStorageFail = (v) => { storageFail = v; };
+export const sb = {
+  from: (t) => builder(t),
+  // 簽名網址：照路徑回 https://signed.test/<桶>/<路徑>?t=1，並記下每一趟
+  storage: { from: (bucket) => ({
+    createSignedUrls: async (paths, ttl) => {
+      storageCalls.push({ bucket, paths, ttl });
+      if (storageFail) return { data: null, error: new Error('boom') };
+      return { data: paths.map((p) => ({ path: p, signedUrl: `https://signed.test/${bucket}/${p}?t=1` })), error: null };
+    },
+  }) },
+};
 export { fetchAll } from '../shared/js/data/paginate.js';

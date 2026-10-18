@@ -13,6 +13,8 @@ import { difficultyScore } from './core/srs.js';
 import * as auth from './data/auth.js';
 import * as content from './data/content.js';
 import * as progress from './data/progress.js';
+import * as audio from './data/audio.js';
+import * as speech from './core/speech.js';
 import { createSession, orderForDiscrimination, ROUND_SIZE } from './study/session.js';
 // 別名：app.js 已經有一個 nextRound()，那是「複習的下一批」，與輪次池無關
 import { isUsable as roundUsable, nextRound as buildRound,
@@ -88,6 +90,10 @@ async function ensurePool() {
 async function begin(entries, { freeMode = false, kind = 'review', note = '', lesson = '',
                                 roundOf = 0 } = {}) {
   roundPending = roundOf;
+  // 這一輪用得到的真人錄音，一次換好簽名網址（一趟批次）。
+  // 不等它：換不到就是退回 TTS，不該讓開始一輪多等一趟往返；
+  // 而第一題通常還有幾秒才會按「聽」，來得及。
+  audio.prefetch(entries.map((e) => e.item?.audio_url)).catch(() => {});
   // 導言與收尾話每輪都要重設 —— 不清掉的話，下一輪會掛著上一課的內容
   currentLesson = lesson;
   currentKind = kind;
@@ -740,6 +746,9 @@ browse.initBrowse({ ...deps,
 history.initHistory(deps);
 history.initWords((ids) => startFree({ ids, kind: 'drill' }));
 importer.initImporter();
+// 私密音檔（sb:<桶>/<路徑>）怎麼換成可播的網址：core/speech.js 不能 import data，
+// 由這裡注入。少了這一行，有錄音的卡會悄悄退回機器朗讀 —— 不報錯，只是永遠聽不到真人。
+speech.setAudioSource({ peek: audio.cachedUrl, get: audio.signedUrl });
 
 onEnter('view-home', () => home.load());
 // ★ 課程選擇（發音課程、生活場景）已經搬到詞庫分頁，

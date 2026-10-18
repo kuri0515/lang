@@ -114,6 +114,26 @@ function autoRate(text, base) {
   return base;
 }
 
+// ---------------------------------------------------------------------
+// 私密音檔
+//
+// items.audio_url 可能是 sb:<桶>/<路徑>（私密桶，要換成簽名網址才播得出來）。
+// core 不能 import data，所以由 app.js 把「怎麼換」注入進來 ——
+// 方向永遠是 app → core。沒注入（或換不到）就當作沒有音檔，退回 TTS。
+//
+//   peek(u) 同步取快取的網址（保留在使用者點擊的當下，手機才允許出聲）
+//   get(u)  快取沒有時現換（async，保底用）
+// ---------------------------------------------------------------------
+let audioSource = null;
+export function setAudioSource(src) { audioSource = src; }
+const isStored = (u) => typeof u === 'string' && u.startsWith('sb:');
+
+/** 同步解析：一般網址原樣、私密網址查快取、查不到回 null */
+function peekAudio(u) {
+  if (!isStored(u)) return u;
+  return audioSource?.peek?.(u) || null;
+}
+
 /**
  * 朗讀目標語言。有音檔優先播音檔。
  * @param {string} text
@@ -123,8 +143,19 @@ function autoRate(text, base) {
 export function speak(text, audioUrl = null, opts = {}) {
   if (audioUrl && !opts.slow) {
     // 慢速播放 TTS 才做得到，有音檔時的慢速仍走 TTS
-    new Audio(audioUrl).play().catch(() => speakTTS(text, opts));
-    return;
+    const url = peekAudio(audioUrl);
+    if (url) {
+      new Audio(url).play().catch(() => speakTTS(text, opts));
+      return;
+    }
+    if (isStored(audioUrl) && audioSource?.get) {
+      // 快取沒有：現換。這已不在點擊當下，手機可能拒絕 —— 拒絕就退回 TTS，
+      // 所以預先換好（開始一輪時）才是正路，這裡只是保底
+      audioSource.get(audioUrl)
+        .then((u) => (u ? new Audio(u).play() : Promise.reject(new Error('no url'))))
+        .catch(() => speakTTS(text, opts));
+      return;
+    }
   }
   speakTTS(text, opts);
 }
@@ -314,11 +345,19 @@ function speakTTS(text, { rate: override, slow = false, retry = false, bare = fa
 export function speakAwait(text, audioUrl = null, opts = {}) {
   return new Promise((resolve) => {
     if (audioUrl && !opts.slow) {
-      const a = new Audio(audioUrl);
-      a.onended = resolve;
-      a.onerror = () => ttsAwait(text, opts).then(resolve);
-      a.play().catch(() => ttsAwait(text, opts).then(resolve));
-      return;
+      const fallback = () => ttsAwait(text, opts).then(resolve);
+      const play = (url) => {
+        const a = new Audio(url);
+        a.onended = resolve;
+        a.onerror = fallback;
+        a.play().catch(fallback);
+      };
+      const url = peekAudio(audioUrl);
+      if (url) return play(url);
+      if (isStored(audioUrl) && audioSource?.get) {
+        // 整段朗讀本來就不在點擊當下（逐句自動接下去），現換網址不影響
+        return audioSource.get(audioUrl).then((u) => (u ? play(u) : fallback()), fallback);
+      }
     }
     ttsAwait(text, opts).then(resolve);
   });
