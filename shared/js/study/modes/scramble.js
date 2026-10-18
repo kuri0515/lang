@@ -90,7 +90,7 @@ export default {
       els.sResult.innerHTML = correct
         ? `✓ 正確<b>${esc(src.ko)}</b>`
         : `✗ 正確語序是<b>${esc(src.ko)}</b>`;
-      speech.speak(src.ko);
+      speech.speak(src.ko, item.audio_url);
       reveal();
       els.grade.classList.add('hidden');
       setTimeout(() => grade(correct ? RATING.GOOD : RATING.AGAIN), correct ? 1400 : 2800);

@@ -1,0 +1,36 @@
+[
+ {
+  "id": "aud-1",
+  "ko": "고맙습니다",
+  "zh": "謝謝",
+  "romanization": "gomapseumnida",
+  "hanja": null,
+  "pos": "인사말",
+  "item_type": "phrase",
+  "example_ko": null,
+  "example_zh": null,
+  "note": "語感比 감사합니다 親切一點",
+  "tags": [
+   "問候"
+  ],
+  "audio_url": "sb:haerin-audio/p01-01.mp3",
+  "sort_order": 1
+ },
+ {
+  "id": "aud-2",
+  "ko": "미안해요",
+  "zh": "對不起",
+  "romanization": "mianhaeyo",
+  "hanja": null,
+  "pos": "인사말",
+  "item_type": "phrase",
+  "example_ko": null,
+  "example_zh": null,
+  "note": "朋友之間用",
+  "tags": [
+   "問候"
+  ],
+  "audio_url": null,
+  "sort_order": 2
+ }
+]

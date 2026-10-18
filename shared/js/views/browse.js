@@ -11,6 +11,7 @@ import * as admin from '../data/admin.js';
 import * as progress from '../data/progress.js';
 import { openEditor } from './editor.js';
 import * as speech from '../core/speech.js';
+import * as audio from '../data/audio.js';
 
 let deps = null;              // { user, isAdmin, onPractice }
 let tag = '';
@@ -177,7 +178,7 @@ export async function render() {
             <span class="b-ko">${wordHTML(r)}</span><span class="muted"> — </span><span class="b-zh">${esc(r.zh)}</span>
           </div>
           <div class="b-badges">${badge('ko2zh')}${badge('zh2ko')}
-            <button class="b-speak" data-ko="${esc(r.ko)}" title="朗讀">🔊</button>
+            <button class="b-speak" data-ko="${esc(r.ko)}" data-say-id="${r.id}" title="朗讀">🔊</button>
             ${admin_ ? `<button class="b-speak" data-edit="${r.id}" title="編輯">✏️</button>` : ''}
           </div>
         </div>
@@ -212,6 +213,9 @@ export async function render() {
  */
 function paint() {
   $('b-list').innerHTML = lastRows.map(paintRows).join('');
+  // 這一頁用得到的私密錄音一次換好簽名網址（一趟批次）—— 點小喇叭時要能同步播，
+  // 否則手機不認那是點擊當下（見 data/audio.js）。換不到就退回機器朗讀，不擋畫面。
+  audio.prefetch(lastRows.map((r) => r.audio_url)).catch(() => {});
   const rest = total - lastRows.length;
   if (rest > 0) {
     // 不給它 id：DOM 契約檢查要的是「$() 取用的 id 都寫在 index.html 裡」，
@@ -253,7 +257,14 @@ async function loadMore() {
 
 /** 每次重畫清單後重掛事件（分頁載入更多會整份重畫） */
 function bindRows() {
-  qsa('[data-ko]', $('b-list')).forEach((b) => { b.onclick = () => speech.speak(b.dataset.ko); });
+  // ★ 要帶上這一行的 audio_url。只傳韓文的話，有真人錄音的句子在這裡仍是機器唸 ——
+  //   列表上的小喇叭是最常按的入口，漏掉它等於錄音只有學習頁聽得到。
+  qsa('[data-ko]', $('b-list')).forEach((b) => {
+    b.onclick = () => {
+      const row = lastRows.find((r) => r.id === b.dataset.sayId);
+      speech.speak(b.dataset.ko, row?.audio_url || null);
+    };
+  });
   qsa('[data-edit]', $('b-list')).forEach((b) => {
     b.onclick = () => openEditor(lastRows.find((r) => r.id === b.dataset.edit));
   });

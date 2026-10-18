@@ -117,7 +117,7 @@ export default {
     if (alts) {
       els.spHint.innerHTML = `「${esc(item.zh)}」有 ${alts + 1} 種說法`
         + '<button class="sp-hint-say" data-say="1">🔊 聽讀音</button>';
-      els.spHint.querySelector('[data-say]').onclick = () => speech.speak(answer);
+      els.spHint.querySelector('[data-say]').onclick = () => speech.speak(answer, item.audio_url);
     }
 
     els.spell.classList.remove('hidden');
