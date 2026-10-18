@@ -82,6 +82,10 @@ export const LANG = {
   // 留著只會讓學生點進一個永遠沒題目的模式。
   disabledModes: ['scramble'],
 
+  // ── 學習模組 ──
+  // 日文站只有一套內容，不分入口。空陣列是明確的宣告（見 korean/lang.config.js）。
+  modules: [],
+
   // ── hanja 欄的用途 ──
   // 日文站：hanja 欄存「ko 的注音版本」（駅[えき]は…），漢字上方標假名
   rubyFromHanja: true,

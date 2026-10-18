@@ -963,5 +963,87 @@ console.log('\n【三個入口】');
       + '而它其實是三個裡面最有系統的一個');
 }
 
+// =====================================================================
+console.log('\n【學習模組：並行的入口】');
+{
+  const home = await import(SHARED + '/js/views/home.js');
+  const calls = [];
+  home.initHome({
+    user: () => null,       // doLoad 提早結束，不打查詢；這裡驗的是「按下去走哪條路」
+    onStudyTag: (t) => calls.push(['tag', t]),
+    onNewDeck: (d) => calls.push(['deck', d]),
+    onNewScoped: () => calls.push(['scoped']),
+    onReview: () => {}, onFree: () => {}, onDrillWeak: () => {},
+    onRecall: () => {}, onStudyScene: () => {}, onPrefsChange: () => {},
+    onResumeRound: () => {}, roundLeft: () => 0, roundProgress: () => null,
+  });
+  const DECKS = [
+    { id: 'dk-daily', slug: 'daily-01' }, { id: 'dk-vocab', slug: 'vocab-01' },
+    { id: 'dk-life', slug: 'life-01' }, { id: 'dk-haerin', slug: 'haerin-schedule' },
+  ];
+  home.setModules(DECKS);
+
+  if (!(LANG.modules || []).length) {
+    // 日文站：沒有模組機制，整套行為與從前一致
+    chk('沒宣告模組的站台沒有入口卡', !home.hasModules());
+    chk('沒有模組時複習不限定詞庫', home.moduleDeckIds() === null);
+    chk('沒有模組時輪練用站台預設詞庫', home.roundDeckSlug() === LANG.roundDeck);
+    chk('入口卡的容器是隱藏的', $('module-pick').classList.contains('hidden'));
+  } else {
+    chk('韓文站有兩個並行的入口', home.hasModules());
+    chk('預設是第一個（課本）', home.activeModule().id === 'textbook');
+    chk('課本不含 Haerin 的詞庫',
+        !home.moduleDeckIds().includes('dk-haerin') && home.moduleDeckIds().includes('dk-vocab'));
+    chk('課本輪練掃自己的詞庫', home.roundDeckSlug() === 'vocab-01');
+
+    home.renderSuggestion(0, { reviewed: 0 }, DECKS, 0);
+    // 課本：帶課程的模組，沒有下一課時落到自己的第一副詞庫
+    calls.length = 0; home.startNext();
+    chk('課本的新課從課本自己的詞庫開始', calls[0]?.[0] === 'deck' && calls[0][1] === 'dk-daily',
+        JSON.stringify(calls));
+
+    // 切到 Haerin
+    home.setModule('haerin');
+    chk('切得過去', home.activeModule().id === 'haerin');
+    chk('★ 複習只限定 Haerin 的詞庫', home.moduleDeckIds().join() === 'dk-haerin',
+        home.moduleDeckIds().join());
+    chk('輪練改掃 Haerin 的詞庫（各自記進度）', home.roundDeckSlug() === 'haerin-schedule');
+    home.renderSuggestion(0, { reviewed: 0 }, DECKS, 0);
+    calls.length = 0; home.startNext();
+    chk('★ Haerin 的新課學 Haerin 的詞庫，不是課本的',
+        calls.length === 1 && calls[0][0] === 'deck' && calls[0][1] === 'dk-haerin',
+        JSON.stringify(calls));
+    const cards = [...document.querySelectorAll('#module-pick [data-module]')];
+    chk('★ 兩個入口卡畫出來了，且是並列的', cards.length === 2
+        && !$('module-pick').classList.contains('hidden'), `${cards.length} 張`);
+    chk('選中的那張有標示（高亮＋aria-pressed）',
+        cards.filter((c) => c.classList.contains('on')).map((c) => c.dataset.module).join() === 'haerin'
+        && cards.find((c) => c.dataset.module === 'haerin').getAttribute('aria-pressed') === 'true');
+    chk('入口卡寫的是模組名稱', /Haerin's Schedule/.test(cards[1].textContent) && /課本 A/.test(cards[0].textContent));
+    chk('Haerin 沒有「下一課」那種課程文案', !/第 \d+ 課/.test($('e-new').textContent),
+        $('e-new').textContent);
+
+    // 偏好：換裝置接得上
+    chk('★ 目前的模組跟著偏好存', home.readPrefs().module === 'haerin');
+    home.applyPrefs({ module: 'textbook' });
+    chk('偏好套得回來', home.activeModule().id === 'textbook');
+    home.applyPrefs({ module: 'gone' });
+    chk('偏好過期（認不得的 id）退回第一個', home.activeModule().id === 'textbook');
+    home.applyPrefs({ module: 42 });
+    chk('壞值不收', home.activeModule().id === 'textbook');
+    home.applyPrefs({ module: 'haerin' });
+
+    // Haerin 還沒匯入時：入口在，但不能悄悄掃到別的東西
+    home.setModules(DECKS.filter((d) => d.slug !== 'haerin-schedule'));
+    chk('入口仍然在', home.hasModules());
+    chk('★ 沒有詞庫時範圍是空集合，不是 null（null＝不限定＝全站）',
+        Array.isArray(home.moduleDeckIds()) && home.moduleDeckIds().length === 0);
+    home.renderSuggestion(0, { reviewed: 0 }, DECKS.filter((d) => d.slug !== 'haerin-schedule'), 0);
+    chk('★ 沒有內容時新課停用（不會落到課本的詞庫）', $('btn-new').disabled);
+    home.applyPrefs({ module: 'textbook' });
+    home.setModules(DECKS);
+  }
+}
+
 console.log(fails ? `\n❌ 失敗 ${fails} 項` : '\n✅ 全部通過');
 process.exit(fails ? 1 : 0);

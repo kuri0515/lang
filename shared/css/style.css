@@ -1094,6 +1094,27 @@ ruby rt { line-height: 1; }
 }
 .sp-next:active { transform: translateY(1px); }
 
+/* 學習模組的入口：兩個（以上）並行的內容，挑一個，下面的複習／新課／輪練就只動它。
+   與下面 .entry 刻意不同形：.entry 是「做什麼」，這裡是「做哪一份」。
+   選中的用實心邊框＋色塊，不依賴顏色以外的線索 —— 邊框粗細也不同。 */
+.module-pick {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+  margin: 0 0 12px;
+}
+.module {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-sm);
+  background: var(--surface); color: var(--text); text-align: left;
+}
+.module b { font-size: 15px; font-weight: 650; overflow-wrap: anywhere; }
+.module small {
+  font-size: 11px; color: var(--faint); min-height: 15px; line-height: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.module.on { border: 2px solid var(--accent); background: var(--accent-soft); padding: 11px 13px; }
+.module.on b { color: var(--accent); }
+.module:active { transform: translateY(1px); }
+
 /* 三個入口。平等呈現 —— 它們是三種不同的練習，沒有主次；
    系統推薦的那一個用顏色標出來，而不是用大小。 */
 /* 三個入口。

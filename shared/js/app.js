@@ -279,7 +279,9 @@ async function resumeRound() {
 
 async function startReview() {
   try {
-    const rows = await progress.fetchDue(user.id, [home.effectiveDir()], 200);
+    // 限定在目前的模組 —— 想複習 Haerin 的講話稿，不該先被課本的詞考一輪
+    const rows = await progress.fetchDue(user.id, [home.effectiveDir()], 200,
+                                         home.moduleDeckIds());
     if (!rows.length) return msg('沒有待複習的卡片', 'ok');
     // ★ 不打散整個佇列 —— fetchDue 已經照 due_at 排好，逾期最久的在最前面，
     //   那正是「今天沒做完的，明天排在最前面」的意思（順延）。
@@ -442,13 +444,17 @@ let roundPending = 0;      // 這一組發出去幾個、還沒答完
  * 共用一份的話，切換時會互相覆蓋，而覆蓋不報錯，
  * 只會讓另一邊悄悄回到某個舊位置。
  */
-const poolKey = () => poolKeyFor(home.newScope(), lang().roundDeck);
+const poolKey = () => poolKeyFor(home.newScope(), home.roundDeckSlug());
 
 /** 這一個池要掃哪些條目 */
 async function poolItemIds() {
   const sc = home.newScope();
   if (sc) return scopeItemIds(sc);
-  const deck = (await content.listDecks()).find((d) => d.slug === lang().roundDeck);
+  const deck = (await content.listDecks()).find((d) => d.slug === home.roundDeckSlug());
+  // ★ 有模組機制時，找不到它的詞庫＝這個模組還沒有內容，必須回空。
+  //   不能往下走：pickItems 的 deckId 是 null 就是「不限定」，
+  //   於是 Haerin 的輪練會悄悄掃整個課本 —— 空集合被當成「全部」（L-001）。
+  if (!deck && home.hasModules()) return [];
   // ★ 不給 limit —— pickItems 沒有 limit 時會分頁撈完。
   //   給 limit 會走單次查詢，而 PostgREST 單次最多回 1000 列：
   //   詞庫超過一千條之後，一輪會靜靜地少掉一截，
@@ -485,7 +491,7 @@ async function ensureRound() {
     const sc = home.newScope();
     throw new Error(sc
       ? `「${sc.label}」這一幕沒有可練的詞。到首頁點「改回照課本順序」。`
-      : `讀不到「${lang().roundDeck}」的內容，請確認連線後再試一次`);
+      : `讀不到「${home.roundDeckSlug()}」的內容，請確認連線後再試一次`);
   }
   round = buildRound(round, ids, shuffle);
   roundPending = 0;
@@ -512,7 +518,8 @@ async function commitRound() {
 
 /** 這一輪的進度，給首頁顯示用。發出去還沒答完的也算進去，數字才不會停著不動 */
 export function roundProgress() {
-  if (!round) return null;
+  // 換了模組之後，記憶體裡那一輪屬於另一個池 —— 不是這個入口的進度，不能顯示
+  if (!round || roundPool !== poolKey()) return null;
   return {
     roundNo: round.roundNo,
     done: Math.min(round.pos + roundPending, round.queue.length),
@@ -620,6 +627,7 @@ home.initHome({
     return st.total > 0 && st.idx < st.total ? st.total - st.idx : 0;
   },
   onResumeRound: () => resumeRound(),
+  onModuleChange: () => home.refreshRoundLabel(),
   onReview: startReview,
   onFree: () => startFree({}),
   roundProgress,

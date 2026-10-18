@@ -13,6 +13,7 @@ import { ROUND_CRITERION } from '../core/srs.js';
 import { matchesType as matchesTypePure } from '../study/session.js';
 import { computeStreak } from '../core/stats.js';
 import { lang, lsKey } from '../core/lang.js';
+import { resolveModules, pickModule } from '../core/modules.js';
 
 let nextLessonTag = null;   // 給首頁建議區用：課程的下一步
 let nextLessonNo = 0;
@@ -20,6 +21,75 @@ let deps = null;      // { user, profile, onReview, onFree, onNewDeck, onDrillWe
 let weakIds = [];
 let primaryAction = null;
 let firstDeckId = null;
+
+// ---------------------------------------------------------------------
+// 學習模組（課本 A／Haerin's Schedule 這種並行的入口）
+//
+// 站台沒宣告兩個以上的模組時，modules 是空陣列、activeId 不被使用，
+// 下面所有函式都退回「不限定」—— 整套行為與從前一致（日文站就是這樣）。
+// ---------------------------------------------------------------------
+let modules = [];          // resolveModules 的結果
+let activeId = null;       // 使用者挑的模組 id（存在偏好裡，換裝置接得上）
+let moduleDue = {};        // id → { total, carried }，給入口卡上的「到期 N」
+
+/** 目前的模組；沒有模組機制時回傳 null */
+export const activeModule = () => pickModule(modules, activeId);
+export const hasModules = () => modules.length > 1;
+
+/**
+ * 複習／新課要限定的詞庫 id。
+ *   null＝不限定（沒有模組機制）
+ *   []  ＝限定，但這個模組線上還沒有詞庫 —— 呼叫端必須當成「沒有內容」
+ */
+export const moduleDeckIds = () => activeModule()?.deckIds ?? null;
+
+/** 輪練掃哪一副詞庫（代號）。模組沒指定就用站台預設 */
+export const roundDeckSlug = () => activeModule()?.roundDeck || lang().roundDeck;
+
+/** 發音課程／生活場景只屬於標了 courses 的模組；沒有模組機制時照舊 */
+const usesCourses = () => { const m = activeModule(); return !m || m.courses; };
+const lessonTagNow = () => (usesCourses() ? nextLessonTag : null);
+
+/** 依詞庫清單算出各模組（doLoad 用；匯出是為了讓測試不必打網路就能走完這條路）*/
+export function setModules(decks) {
+  modules = resolveModules(lang().modules, decks);
+}
+
+export function setModule(id) {
+  if (!modules.some((m) => m.id === id) || id === activeModule()?.id) return Promise.resolve();
+  activeId = id;
+  renderModules();                    // 先換高亮，等資料時畫面不卡在舊的
+  deps?.onPrefsChange?.();
+  deps?.onModuleChange?.();
+  return (loading || Promise.resolve()).then(() => load());
+}
+
+function renderModules() {
+  const box = opt('module-pick');
+  if (!box) return;
+  box.classList.toggle('hidden', !hasModules());
+  if (!hasModules()) return;
+  const cur = activeModule();
+  box.innerHTML = modules.map((m) => {
+    const due = moduleDue[m.id];
+    const sub = !m.available ? '即將加入'
+      : (due ? (due.total ? `到期 ${due.total} 個` : '已清空') : (m.sub || ''));
+    return `<button class="module${m.id === cur.id ? ' on' : ''}" data-module="${esc(m.id)}"`
+      + ` aria-pressed="${m.id === cur.id}"><b>${esc(m.title)}</b><small>${esc(sub)}</small></button>`;
+  }).join('');
+  qsa('#module-pick [data-module]').forEach((b) => {
+    b.onclick = () => setModule(b.dataset.module);
+  });
+}
+
+/** 每個模組各自的到期數。失敗不該拖垮首頁 —— 那只是入口卡上的副標 */
+async function loadModuleDue(userId, dirs) {
+  const out = {};
+  await Promise.all(modules.map(async (m) => {
+    out[m.id] = await progress.dueCounts(userId, dirs, m.deckIds).catch(() => null);
+  }));
+  moduleDue = Object.fromEntries(Object.entries(out).filter(([, v]) => v));
+}
 
 export const studyMode = () => qs('#mode-pick input:checked')?.value || 'flip';
 
@@ -119,7 +189,8 @@ export function setScope(next) {
 }
 
 export function readPrefs() {
-  return { mode: studyMode(), dir: selectedDir(), type: studyType(), scope, readPos };
+  return { mode: studyMode(), dir: selectedDir(), type: studyType(), scope, readPos,
+           module: activeId };
 }
 
 /** 套用偏好到畫面。容忍缺欄位與壞值 —— jsonb 不幫忙驗證 */
@@ -139,6 +210,8 @@ export function applyPrefs(p) {
   // 而一個缺 epId 的範圍會讓「新課」查一個空集合，然後說「沒有新的了」
   scope = (p.scope && p.scope.epId && p.scope.scene) ? p.scope : null;
   readPos = (p.readPos && p.readPos.epId) ? p.readPos : null;
+  // 認不得的 id（模組改名／偏好過期）在 pickModule 退回第一個，這裡只收字串
+  if (typeof p.module === 'string') activeId = p.module;
   syncModeUI();                                // 依題型決定畫面上要顯示哪一個
 }
 
@@ -218,6 +291,16 @@ export async function refreshDue() {
     renderRing(masteredToday(), dailyTarget(due.total));
     refreshRoundLabel();
     dueNow = due.total;
+    if (hasModules()) {
+      // 方向變了，各模組的到期數跟著變；「複習」鈕的副標是目前這個模組的
+      await loadModuleDue(user.id, [effectiveDir()]);
+      renderModules();
+      const mine = moduleDue[activeModule().id];
+      if (mine) {
+        $('e-review').textContent = mine.total ? `到期 ${mine.total} 個` : '已清空';
+        $('btn-review').disabled = mine.total === 0;
+      }
+    }
   } catch (e) { msg('載入失敗：' + (e.message || e)); }
 }
 
@@ -273,6 +356,14 @@ async function doLoad() {
     $('s-all-acc').textContent = overall.mastered;
     renderStreak(daily);
 
+    // 模組要等詞庫清單才算得出各自的 deckIds，所以放在 decks 之後。
+    // 到期數是「總數」，首頁大環與「待複習」仍是整站的 ——
+    // 今天要做多少，不該因為切到另一個入口就少一截。
+    setModules(decks);
+    await loadModuleDue(user.id, dirs);
+    renderModules();
+    const modDue = (hasModules() && moduleDue[activeModule().id]) || due;
+
 
     // ★ 順序有意義：renderPron 會算出「下一課」，
     //   而建議區的大按鈕要指向它。反過來的話，第一次載入時
@@ -285,7 +376,7 @@ async function doLoad() {
                  new Set(pron.filter((r) => r.total > 0).map((r) => r.tag)));
     dueNow = due.total;
     renderRing(masteredToday(), dailyTarget(due.total));
-    renderSuggestion(due.total, today, decks, due.carried);
+    renderSuggestion(modDue.total, today, decks, modDue.carried);
 
     renderLife(life);
     renderWeak(weak);
@@ -481,8 +572,9 @@ export function startNext() {
   //   而那正好讓 startNew 判定「這次不是範圍模式」。
   //   功能上線了，按下去卻是舊行為，而且不報錯。
   if (scope) return deps.onNewScoped?.();
-  if (nextLessonTag) return deps.onStudyTag(nextLessonTag);
+  if (lessonTagNow()) return deps.onStudyTag(lessonTagNow());
   if (firstDeckId) return deps.onNewDeck(firstDeckId);
+  if (activeModule()) return msg(`「${activeModule().title}」還沒有內容`);
   msg('還沒有詞庫。到「我的 → 批次匯入」貼上你的詞表。');
 }
 
@@ -490,7 +582,11 @@ export function renderSuggestion(dueCount, today, decks, carried = 0) {
   const box = $('suggest');
   const big = $('btn-primary');
   box.classList.remove('done');
-  firstDeckId = decks[0]?.id ?? null;
+  // 有模組時「第一個詞庫」指目前模組自己的 —— 否則在 Haerin 的入口按「新課」，
+  // 學到的會是課本的詞。用 decks 的原順序挑，沒有模組時與從前完全相同。
+  const mod = activeModule();
+  firstDeckId = (mod ? decks.find((d) => mod.deckIds.includes(d.id)) : decks[0])?.id ?? null;
+  const lessonTag = lessonTagNow();
 
   // ── 三個入口的副標 ──────────────────────────────────────
   $('e-review').textContent = dueCount ? `到期 ${dueCount} 個` : '已清空';
@@ -499,19 +595,19 @@ export function renderSuggestion(dueCount, today, decks, carried = 0) {
   // 不說的話，使用者只會覺得「新課怎麼變成別的東西了」
   $('e-new').textContent = scope
     ? scope.label
-    : (nextLessonTag ? `第 ${nextLessonNo} 課：${nextLessonTag}`
+    : (lessonTag ? `第 ${nextLessonNo} 課：${lessonTag}`
                      : (firstDeckId ? '學幾個新詞' : '沒有詞庫'));
   // 清除的出口要放在看得到範圍的地方 ——
   // 設定在精讀裡、只能回精讀取消的話，就是一個找不到出口的狀態
   // opt()：這顆只有設得了範圍的站台才有（見樣板的 {{#script}}）
   opt('scope-clear')?.classList.toggle('hidden', !scope);
-  $('btn-new').disabled = !nextLessonTag && !firstDeckId;
+  $('btn-new').disabled = !lessonTag && !firstDeckId;
   refreshRoundLabel();
 
   // ── 推薦哪一個 ─────────────────────────────────────────
   //   用顏色標出來，不用大小 —— 三者是三種不同的練習，沒有主次，
   //   把其中一個做大會讓另外兩個看起來像次要功能。
-  const rec = dueCount > 0 ? 'btn-review' : (nextLessonTag ? 'btn-new' : 'btn-free');
+  const rec = dueCount > 0 ? 'btn-review' : (lessonTag ? 'btn-new' : 'btn-free');
   ['btn-review', 'btn-new', 'btn-free'].forEach((id) => {
     $(id).classList.toggle('on', id === rec);
   });

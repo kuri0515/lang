@@ -60,6 +60,19 @@ export const LANG = {
   // 短密碼補位到 Supabase 要求的 6 位。★ 不能改 —— 改了等於改掉所有既有帳號的密碼
   authPasswordPad: '-k0515',
 
+  // ── 學習模組：首頁並行的入口 ──
+  // 每個模組是一組詞庫；首頁挑一個，複習／新課／輪練就只在它的範圍裡動。
+  // 少於兩個就不顯示入口、行為與從前一致（日文站 = []）。
+  //   deckSlugs  詞庫代號；null＝「沒被別的模組認領的詞庫全部歸我」
+  //   roundDeck  輪練掃哪一副（各模組各自記進度，見 study_rounds.pool）
+  //   courses    要不要帶發音課程／生活場景（只有課本有）
+  modules: [
+    { id: 'textbook', title: '課本 A', sub: '單字・句子・發音',
+      deckSlugs: null, roundDeck: 'vocab-01', courses: true },
+    { id: 'haerin', title: "Haerin's Schedule", sub: '講話稿・單字・筆記',
+      deckSlugs: ['haerin-schedule'], roundDeck: 'haerin-schedule', courses: false },
+  ],
+
   // ── 這個語言用不了的題型 ──
   // 韓文站四種都能用。空陣列不是佔位 —— 它讓「本站不關任何題型」
   // 成為一個明確的宣告，而不是「欄位剛好沒寫」。

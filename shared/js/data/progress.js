@@ -26,17 +26,30 @@ import { scheduleRecall } from '../core/srs.js';
  *   分兩次查也可以，但那是兩趟往返換一個數字。
  *   兩個 count 可以並行，成本是一趟。
  */
-export async function dueCounts(userId, dirs = DIRECTIONS) {
+export async function dueCounts(userId, dirs = DIRECTIONS, deckIds = null) {
+  // ★ deckIds 為 null＝不限定；為空陣列＝「這個範圍裡沒有任何詞庫」，結果必須是 0。
+  //   兩者絕不能混為一談：空陣列若被當成不限定，一個還沒有內容的模組
+  //   會顯示整站的到期數（docs/LESSONS.md L-001：空集合不是「全部」）。
+  if (deckIds && !deckIds.length) return { total: 0, carried: 0 };
   // ★ 用 item_id 不是 id —— user_cards 沒有 id 欄位（複合主鍵）。
   //   寫 select('id') 會 400：column user_cards.id does not exist。
   //   而 home.load() 對這支是 .catch(() => ...) 之外的路徑，
   //   400 會讓整個首頁載入失敗 —— 這種錯必須在上線前抓到，
   //   而抓到它的方法就是拿真的資料庫打一次。
-  const base = () => sb.from('user_cards')
-    .select('item_id', { count: 'exact', head: true })
-    .eq('user_id', userId).in('direction', dirs)
-    .neq('state', 'suspended')
-    .lte('due_at', new Date().toISOString());
+  //
+  //   限定詞庫時用 items!inner：user_cards 自己沒有 deck_id，要靠關聯表過濾；
+  //   少了 !inner，PostgREST 只會把不符的列的 items 變成 null 而不是排除那一列，
+  //   計數照樣是全站的。
+  const base = () => {
+    let q = sb.from('user_cards')
+      .select(deckIds ? 'item_id, items!inner(deck_id)' : 'item_id',
+              { count: 'exact', head: true })
+      .eq('user_id', userId).in('direction', dirs)
+      .neq('state', 'suspended')
+      .lte('due_at', new Date().toISOString());
+    if (deckIds) q = q.in('items.deck_id', deckIds);
+    return q;
+  };
   // 逾期超過一天 = 之前排定、當天沒做完而順延過來的
   const yesterday = new Date(Date.now() - 86400000).toISOString();
   const [all, carried] = await Promise.all([
@@ -45,13 +58,15 @@ export async function dueCounts(userId, dirs = DIRECTIONS) {
   return { total: all.count ?? 0, carried: carried.count ?? 0 };
 }
 
-export async function fetchDue(userId, dirs = DIRECTIONS, limit = 200) {
-  const { data, error } = await sb.from('user_cards')
-    .select(`*, items(${ITEM_FIELDS})`)
+export async function fetchDue(userId, dirs = DIRECTIONS, limit = 200, deckIds = null) {
+  if (deckIds && !deckIds.length) return [];          // 同 dueCounts：空集合不是「全部」
+  let q = sb.from('user_cards')
+    .select(`*, items${deckIds ? '!inner' : ''}(${ITEM_FIELDS}${deckIds ? ', deck_id' : ''})`)
     .eq('user_id', userId).in('direction', dirs)
     .neq('state', 'suspended')
-    .lte('due_at', new Date().toISOString())
-    .order('due_at').limit(limit);
+    .lte('due_at', new Date().toISOString());
+  if (deckIds) q = q.in('items.deck_id', deckIds);
+  const { data, error } = await q.order('due_at').limit(limit);
   if (error) throw error;
   return (data ?? []).filter((c) => c.items);
 }

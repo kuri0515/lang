@@ -65,6 +65,10 @@
   <!-- ══════════════ ① 學習 ══════════════ -->
   <section id="view-home" class="hidden">
 
+    <!-- 學習模組的入口。只有站台宣告了兩個以上的模組才會顯示（見 core/modules.js），
+         內容由 views/home.js 畫 —— 這裡只放容器，不寫死任何模組名稱。 -->
+    <div id="module-pick" class="module-pick hidden" role="group" aria-label="學習內容"></div>
+
     <div class="card hero">
       <!-- 今日進度做成主視覺。
            先前是四個等權並排的數字（待複習／今日已答／今日正確／已掌握），

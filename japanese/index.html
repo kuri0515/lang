@@ -18,7 +18,7 @@
 
   <!-- ↓ 由 shared/scripts/build-sites.mjs 從真實的 import 圖產生，不要手改。
        沒有它的話瀏覽器要一層一層發現模組，實測 4 層 × 每次往返。 -->
-<meta name="build" content="a9a69fd2">
+<meta name="build" content="5d69349b">
   <link rel="modulepreload" href="main.js">
   <link rel="modulepreload" href="../shared/js/core/lang.js">
   <link rel="modulepreload" href="lang.config.js">
@@ -57,6 +57,7 @@
   <link rel="modulepreload" href="../shared/js/views/edits.js">
   <link rel="modulepreload" href="../shared/js/views/home.js">
   <link rel="modulepreload" href="../shared/js/core/stats.js">
+  <link rel="modulepreload" href="../shared/js/core/modules.js">
   <link rel="modulepreload" href="../shared/js/views/study.js">
   <link rel="modulepreload" href="../shared/js/core/dialogue.js">
   <link rel="modulepreload" href="../shared/js/views/browse.js">
@@ -110,6 +111,10 @@
 
   <!-- ══════════════ ① 學習 ══════════════ -->
   <section id="view-home" class="hidden">
+
+    <!-- 學習模組的入口。只有站台宣告了兩個以上的模組才會顯示（見 core/modules.js），
+         內容由 views/home.js 畫 —— 這裡只放容器，不寫死任何模組名稱。 -->
+    <div id="module-pick" class="module-pick hidden" role="group" aria-label="學習內容"></div>
 
     <div class="card hero">
       <!-- 今日進度做成主視覺。
