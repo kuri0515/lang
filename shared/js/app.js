@@ -360,7 +360,7 @@ async function startNew(deckId, tag = '') {
     //   room 仍保留 —— 它現在的作用是「這一批最多拿幾條」，
     //   不是「今天還剩幾條額度」。把它拿掉的話，一次點下去會把整個詞庫
     //   的新詞全部灌進一輪。
-    const room = NEW_BATCH;
+    const room = home.newBatchSize(NEW_BATCH);
 
     // 挑定了某一幕就只在那一幕的詞裡挑沒學過的。
     // ids 現場解析而不是存起來 —— 重新匯入一集之後 id 會全部換掉，

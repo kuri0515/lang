@@ -40,6 +40,8 @@ console.log('【模組怎麼認領詞庫】');
       !m[0].deckIds.some((id) => m[1].deckIds.includes(id)));
   const later = resolveModules(CFG, [...TEXTBOOK, D('haerin-schedule'), D('brand-new')]);
   chk('新詞庫預設歸課本，不會哪個入口都看不到', later[0].deckIds.includes('id-brand-new'));
+  chk('新課批量：沒指定是 null、指定 all 照傳',
+      m[0].newBatch === null && resolveModules([{ ...CFG[0] }, { ...CFG[1], newBatch: 'all' }], TEXTBOOK)[1].newBatch === 'all');
   chk('輪練詞庫與課程旗標照設定', m[1].roundDeck === 'haerin-schedule' && m[0].courses && !m[1].courses);
 }
 

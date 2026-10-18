@@ -1002,8 +1002,11 @@ console.log('\n【學習模組：並行的入口】');
     chk('課本的新課從課本自己的詞庫開始', calls[0]?.[0] === 'deck' && calls[0][1] === 'dk-daily',
         JSON.stringify(calls));
 
+    chk('課本的新課批量維持預設（20）', home.newBatchSize(20) === 20);
     // 切到 Haerin
     home.setModule('haerin');
+    chk('★ Haerin 的新課一次拿全部', home.newBatchSize(20) === Infinity,
+        '切成 20 一批會讓一段話在中間斷開');
     chk('切得過去', home.activeModule().id === 'haerin');
     chk('★ 複習只限定 Haerin 的詞庫', home.moduleDeckIds().join() === 'dk-haerin',
         home.moduleDeckIds().join());

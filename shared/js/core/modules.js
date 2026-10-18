@@ -19,7 +19,7 @@
 
 /**
  * @param cfgModules  lang().modules：
- *   [{ id, title, sub, deckSlugs: string[] | null, roundDeck, courses }]
+ *   [{ id, title, sub, deckSlugs: string[] | null, roundDeck, courses, newBatch }]
  *   deckSlugs 為 null 表示「沒被別的模組認領的詞庫全部歸我」——
  *   日後新增的詞庫預設落在這裡，不會因為忘了登記而哪個入口都看不到。
  * @param decks  content.listDecks() 的結果 [{ id, slug, ... }]
@@ -41,6 +41,7 @@ export function resolveModules(cfgModules, decks) {
       deckIds: mine.map((d) => d.id),
       roundDeck: m.roundDeck || null,
       courses: !!m.courses,
+      newBatch: m.newBatch ?? null,
       available: mine.length > 0,
     };
   });

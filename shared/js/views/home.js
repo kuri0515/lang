@@ -46,6 +46,20 @@ export const moduleDeckIds = () => activeModule()?.deckIds ?? null;
 /** 輪練掃哪一副詞庫（代號）。模組沒指定就用站台預設 */
 export const roundDeckSlug = () => activeModule()?.roundDeck || lang().roundDeck;
 
+/**
+ * 「新課」一次拿幾條。模組可以自己指定：數字，或 'all'＝這個詞庫還沒學的全部。
+ * 沒指定（或沒有模組機制）就用呼叫端給的預設。
+ *
+ * 【為什麼 Haerin 要 'all'】
+ *   課本一批 20 條是「不要一次把整個詞庫灌進來」。講話稿是一篇完整的東西，
+ *   切成 20 一批會讓一段話在中間斷開，使用者要的是整篇一起過。
+ */
+export function newBatchSize(dflt) {
+  const n = activeModule()?.newBatch;
+  if (n === 'all') return Infinity;
+  return Number.isFinite(n) && n > 0 ? n : dflt;
+}
+
 /** 發音課程／生活場景只屬於標了 courses 的模組；沒有模組機制時照舊 */
 const usesCourses = () => { const m = activeModule(); return !m || m.courses; };
 const lessonTagNow = () => (usesCourses() ? nextLessonTag : null);

@@ -66,11 +66,13 @@ export const LANG = {
   //   deckSlugs  詞庫代號；null＝「沒被別的模組認領的詞庫全部歸我」
   //   roundDeck  輪練掃哪一副（各模組各自記進度，見 study_rounds.pool）
   //   courses    要不要帶發音課程／生活場景（只有課本有）
+  //   newBatch   「新課」一次拿幾條：數字，或 'all'＝還沒學的全部；省略＝20
   modules: [
     { id: 'textbook', title: '課本 A', sub: '單字・句子・發音',
       deckSlugs: null, roundDeck: 'vocab-01', courses: true },
     { id: 'haerin', title: "Haerin's Schedule", sub: '講話稿・單字・筆記',
-      deckSlugs: ['haerin-schedule'], roundDeck: 'haerin-schedule', courses: false },
+      deckSlugs: ['haerin-schedule'], roundDeck: 'haerin-schedule', courses: false,
+      newBatch: 'all' },
   ],
 
   // ── 這個語言用不了的題型 ──
