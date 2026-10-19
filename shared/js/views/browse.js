@@ -12,6 +12,7 @@ import * as progress from '../data/progress.js';
 import { openEditor } from './editor.js';
 import * as speech from '../core/speech.js';
 import * as audio from '../data/audio.js';
+import { isLongItem } from '../core/layout.js';
 
 let deps = null;              // { user, isAdmin, onPractice }
 let tag = '';
@@ -171,11 +172,11 @@ export async function render() {
         const acc = c?.total_reviews ? ` ${Math.round(c.correct_reviews / c.total_reviews * 100)}%` : '';
         return `<span class="dot ${c ? c.state : ''}" title="${dirShort()[dir]}：${c ? STATE_LABEL[c.state] : '未學'}">${dirShort()[dir]}${acc}</span>`;
       };
-      return `<div class="b-row" data-id="${r.id}">
+      return `<div class="b-row${isLongItem(r) ? ' b-long' : ''}" data-id="${r.id}">
         <div class="b-main">
-          <div>
+          <div class="b-text">
             ${admin_ ? `<input type="checkbox" class="b-check" data-pick="${r.id}">` : ''}
-            <span class="b-ko">${wordHTML(r)}</span><span class="muted"> — </span><span class="b-zh">${esc(r.zh)}</span>
+            <span class="b-ko">${wordHTML(r)}</span><span class="b-sep muted"> — </span><span class="b-zh">${esc(r.zh)}</span>
           </div>
           <div class="b-badges">${badge('ko2zh')}${badge('zh2ko')}
             <button class="b-speak" data-ko="${esc(r.ko)}" data-say-id="${r.id}" title="朗讀">🔊</button>

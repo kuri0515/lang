@@ -301,7 +301,7 @@ export async function listSessions(userId, { limit = 30, before = null } = {}) {
 /** 某一場次的逐題明細（展開時才查，不預先載入） */
 export async function sessionDetail(userId, sessionId) {
   const { data, error } = await sb.from('reviews')
-    .select('rating, is_correct, elapsed_ms, reviewed_at, direction, items(ko, zh, romanization, hanja)')
+    .select('rating, is_correct, elapsed_ms, reviewed_at, direction, items(ko, zh, romanization, hanja, item_type)')
     .eq('user_id', userId).eq('session_id', sessionId)
     .order('reviewed_at');
   if (error) throw error;
@@ -330,7 +330,7 @@ export async function legacyDays(userId, limit = 400) {
 /** 某一天的舊記錄明細 */
 export async function legacyDayDetail(userId, day) {
   const { data, error } = await sb.from('reviews')
-    .select('rating, is_correct, elapsed_ms, reviewed_at, direction, source, items(ko, zh)')
+    .select('rating, is_correct, elapsed_ms, reviewed_at, direction, source, items(ko, zh, item_type)')
     .eq('user_id', userId).is('session_id', null)
     .gte('reviewed_at', `${day}T00:00:00`).lt('reviewed_at', `${day}T23:59:59.999`)
     .order('reviewed_at');

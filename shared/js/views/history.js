@@ -2,6 +2,7 @@
 import { $, esc, msg, skeleton, emptyState, qs, qsa, debounce, createPager } from '../core/dom.js';
 import { wordHTML } from '../core/ruby.js';
 import { lang } from '../core/lang.js';
+import { isLongItem } from '../core/layout.js';
 import { dirShort, dirLabel, RATE_LABEL } from '../data/client.js';
 import * as progress from '../data/progress.js';
 import { summarize, funnel, byDirection } from '../core/stats.js';
@@ -159,7 +160,7 @@ function bindToggles() {
           <div class="h-item">
             <span class="h-time">${fmtTime(r.reviewed_at)}</span>
             <span class="h-mark">${r.is_correct ? '✅' : '❌'}</span>
-            <span class="h-word">${wordHTML(r.items)} <small>${esc(r.items.zh)}</small>
+            <span class="h-word${isLongItem(r.items) ? ' h-long' : ''}">${wordHTML(r.items)} <small class="h-zh">${esc(r.items.zh)}</small>
               ${!lang().rubyFromHanja && r.items.hanja
               ? `<small class="b-hanja"> · 漢 ${esc(r.items.hanja)}</small>` : ''}</span>
             <span class="h-rate">${RATE_LABEL[r.rating] || ''}${
@@ -315,7 +316,7 @@ function renderWords() {
         : '尚未開始學';
     return `<div class="w-row" data-id="${esc(w.item_id)}">
       <button class="w-head">
-        <span class="w-main">
+        <span class="w-main${isLongItem(w) ? ' w-long' : ''}">
           <span class="w-ko">${wordHTML(w)}</span>
           <span class="w-zh"> ${esc(w.zh)}</span>
           ${!lang().rubyFromHanja && w.hanja

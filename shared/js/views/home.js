@@ -14,6 +14,7 @@ import { matchesType as matchesTypePure } from '../study/session.js';
 import { computeStreak } from '../core/stats.js';
 import { lang, lsKey } from '../core/lang.js';
 import { resolveModules, pickModule } from '../core/modules.js';
+import { isLongItem } from '../core/layout.js';
 
 let nextLessonTag = null;   // 給首頁建議區用：課程的下一步
 let nextLessonNo = 0;
@@ -823,7 +824,7 @@ export function renderRecall(rows) {
     // 印成「ぬ … ぬ」只是佔位置，還讓人以為是兩個不同的東西。
     const tag = (it.tags || []).find((t) => t.length === 1) || '';
     const lesson = tag === it.ko ? '' : tag;
-    return `<div class="recall-row">
+    return `<div class="recall-row${isLongItem(it) ? ' r-long' : ''}">
       <span class="r-ko">${wordHTML(it)}</span>
       <span class="r-zh muted">${esc(it.zh)}</span>
       ${lesson ? `<span class="r-tag">${esc(lesson)}</span>` : ''}

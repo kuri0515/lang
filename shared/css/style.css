@@ -348,6 +348,18 @@ label { font-size: 12.5px; color: var(--muted); }
 .b-row:last-child { border-bottom: none; padding-bottom: 0; }
 .b-row.sel { background: var(--accent-soft); border-radius: 9px; margin: 0 -9px; padding: 11px 9px; }
 .b-main { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.b-text { flex: 1; min-width: 0; }
+/* 長條目（句子）：中文換到自己的一行。
+   不再是「韓文 — 中文」擠在同一行 —— 韓文占滿之後中文被推到下一行、斷在半句中間，
+   實際看到的是一行只剩「麼細節。」三個字。單字維持一行，詞庫上千條不該全部拉成兩行。 */
+.b-row.b-long .b-main { align-items: flex-start; }
+.b-row.b-long .b-sep { display: none; }
+.b-row.b-long .b-ko { overflow-wrap: anywhere; }
+.b-row.b-long .b-zh {
+  display: block; margin-top: 1px; color: var(--muted);
+  font-size: 14px; line-height: 1.65; overflow-wrap: anywhere;
+}
+.b-row.b-long .b-badges { padding-top: 5px; }
 .b-check { margin-right: 7px; accent-color: var(--accent); width: 16px; height: 16px; vertical-align: -2px; }
 .b-ko { font-size: 16.5px; font-weight: 600; }
 .b-zh { font-size: 14.5px; }
@@ -402,6 +414,8 @@ label { font-size: 12.5px; color: var(--muted); }
 .h-time { font-size: 10.5px; color: var(--faint); width: 38px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .h-word { flex: 1; min-width: 0; }
 .h-word small { color: var(--faint); }
+.h-word.h-long .h-zh { display: block; line-height: 1.6; overflow-wrap: anywhere; }
+.h-word.h-long { overflow-wrap: anywhere; }
 .h-mark { width: 18px; text-align: center; flex-shrink: 0; font-size: 12px; }
 .h-rate { font-size: 10.5px; color: var(--faint); flex-shrink: 0; text-align: right; }
 .h-src {
@@ -645,6 +659,8 @@ kbd {
 
 /* ---------- 單詞列：長句不撐破 ---------- */
 .w-ko, .w-zh { overflow-wrap: anywhere; }
+/* 長條目：中文換行（見 .b-long） */
+.w-main.w-long .w-zh { display: block; line-height: 1.6; }
 /* 不在這裡裁 —— rt 畫在文字上方，父層一裁就把假名的頭切掉，
    看起來像「這個詞沒標音」而不是「被裁掉了」。
    省略號本來就由 .w-sub 自己的 overflow 負責，這一層不需要。 */
@@ -903,6 +919,11 @@ ruby rt { line-height: 1; }
 }
 .recall-row:last-child { border-bottom: 0; }
 .recall-row .r-ko { font-weight: 600; }
+/* 長條目：中文放到下一行並允許折行，不再被截成「…」。
+   用 order 把它排到同列其他元素（標籤、備註、移除鈕）之後，DOM 順序不用動 */
+.recall-row.r-long { flex-wrap: wrap; }
+.recall-row.r-long .r-ko { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.recall-row.r-long .r-zh { order: 5; flex: 1 1 100%; white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.6; }
 .recall-row .r-zh { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .recall-row .r-tag {
   font-size: 11px; padding: 1px 7px; border-radius: 999px;
